@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Testing out running the small Catalina periodic dataset through HTM
 classifier."""
 from __future__ import print_function
