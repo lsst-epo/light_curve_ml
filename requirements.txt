@@ -2,4 +2,5 @@ astropy>=2
 htmresearch
 numpy
 nupic>=1.0
+prettytable
 upsilon
