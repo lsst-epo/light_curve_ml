@@ -151,18 +151,19 @@ def runDataset(dataDir, randomForestModel, outDir, nThreads=4, maxRows=100):
                 logger.info("Classification: %s probability: %s flag: %s",
                             label, prob, flag)
 
-                outlines.append(",".join([file, label, prob, flag]))
+                outlines.append(",".join([file, label, str(prob), str(flag)]))
 
     with open(os.path.join(outDir, "batch-results.csv"), "w") as outFile:
         outFile.writelines(outlines)
-        
+
 
 def _getArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--threads", help="number of threads dedicated to"
-                                                " feature (period) processing")
-    parser.add_argument("-r", "--rows", help="limit on initial portion of "
-                                           "timeseries processed")
+    parser.add_argument("-t", "--threads", type=int,
+                        help="number of threads dedicated to feature (period) "
+                             "processing")
+    parser.add_argument("-r", "--rows", type=int,
+                        help="limit on initial portion of timeseries processed")
     return parser.parse_args()
 
 
