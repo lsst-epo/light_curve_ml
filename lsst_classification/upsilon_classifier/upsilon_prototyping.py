@@ -123,13 +123,13 @@ def loadMachoData(trainData, report=True):
 
 
 def runDataset(dataDir, randomForestModel, outDir, nThreads=4, maxRows=100):
-    outlines = [",".join(["file", "label", "prob", "flag"])]
-    for fieldDir in os.listdir(dataDir):
+    outlines = [",".join(["file", "label", "prob", "flag\n"])]
+    for fieldDir in sorted(os.listdir(dataDir)):
         fieldPath = os.path.join(dataDir, fieldDir)
         if not os.path.isdir(fieldPath):
             continue
 
-        for file in os.listdir(fieldPath):
+        for file in sorted(os.listdir(fieldPath)):
             filePath = os.path.join(fieldPath, file)
             logger.info("\nLoading datafile %s", filePath)
             trainData = np.genfromtxt(filePath, delimiter=';', dtype=None,
@@ -151,7 +151,8 @@ def runDataset(dataDir, randomForestModel, outDir, nThreads=4, maxRows=100):
                 logger.info("Classification: %s probability: %s flag: %s",
                             label, prob, flag)
 
-                outlines.append(",".join([file, label, str(prob), str(flag)]))
+                outlines.append(",".join([file, label, str(prob),
+                                          str(flag) + "\n"]))
 
     with open(os.path.join(outDir, "batch-results.csv"), "w") as outFile:
         outFile.writelines(outlines)
@@ -168,6 +169,7 @@ def _getArgs():
 
 
 def main():
+    start = time.time()
     args = _getArgs()
     dataset = "macho"
     dataDir = os.path.join(os.environ.get("LSST"), "data", dataset)
@@ -178,6 +180,7 @@ def main():
     logger.info("Loading RF classifier...")
     randomForestModel = upsilon.load_rf_model()
     runDataset(dataDir, randomForestModel, outDir, args.threads, args.rows)
+    logger.info("finished in: %.2fs", time.time() - start)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
+scikit-learn==0.18.1
 astropy>=2
-htmresearch
+# htmresearch
 numpy
 nupic>=1.0
 prettytable
