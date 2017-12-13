@@ -3,4 +3,5 @@ results
 
 *.pyc
 data
+logs
 
