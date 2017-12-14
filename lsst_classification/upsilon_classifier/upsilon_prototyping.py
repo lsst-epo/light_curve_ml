@@ -9,11 +9,11 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
+from lsst_classification.utils.data import (removeMachoOutliers,
+                                            SUFFICIENT_LC_DATA)
+
 
 _GARBAGE_VALUES = {float("NaN"), float("-Inf"), float("Inf")}
-
-
-SUFFICIENT_DATA = 80
 
 
 logger = logging.getLogger(__name__)
@@ -43,15 +43,6 @@ def removeOutliers(values, errors, numStds=3):
     errLwr, errUpr = confidenceInterval(errors, numStds)
     return zip(*[(v, errors[i]) for i, v in enumerate(values)
                  if valLwr < v < valUpr and errLwr < errors[i] < errUpr])
-
-
-def removeMachoOutliers(mjds, values, errors, threshold=-99.0):
-    """Simple threshold filter on macho magnitudes and mag errors."""
-    return zip(*[(mjds[i], v, errors[i]) for i, v in enumerate(values)
-                 if
-                 v > threshold
-                 and errors[i] > threshold
-                 ])
 
 
 def classifyLightCurve(mjds, magnitudes, errors, rfModel, nThreads=4):
@@ -135,9 +126,9 @@ def runDataset(dataDir, randomForestModel, outDir, nThreads=4, maxRows=100):
             trainData = np.genfromtxt(filePath, delimiter=';', dtype=None,
                                       max_rows=maxRows)
             for mjds, mags, errors in loadMachoData(trainData):
-                if len(mjds) < SUFFICIENT_DATA:
+                if len(mjds) < SUFFICIENT_LC_DATA:
                     logger.info("Skipping due to insufficient data %s < %s",
-                                len(mjds), SUFFICIENT_DATA)
+                                len(mjds), SUFFICIENT_LC_DATA)
                     continue
 
                 try:
