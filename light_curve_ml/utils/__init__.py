@@ -4,12 +4,12 @@ import os
 from astropy.time import Time
 import numpy as np
 
-from lsst_classification.utils import context
+from light_curve_ml.utils import context
 
 
 def getDatasetFilePaths(datasetName, ext):
     """Returns the full paths of all dataset files in project data directory:
-    ./lsst-classification/data/
+    ./light_curve_ml/data/
     :param datasetName - Name of specific data whose individual file paths will
     be returned
     :param ext - Required file extension of dataset files

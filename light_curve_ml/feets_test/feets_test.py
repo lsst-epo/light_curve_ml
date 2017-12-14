@@ -9,10 +9,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 from prettytable import PrettyTable
 
-from lsst_classification.utils import context
-from lsst_classification.utils.basic_logging import getBasicLogger
-from lsst_classification.utils.data import (removeMachoOutliers,
-                                            SUFFICIENT_LC_DATA)
+from light_curve_ml.utils import context
+from light_curve_ml.utils.basic_logging import getBasicLogger
+from light_curve_ml.utils.data import (removeMachoOutliers,
+                                       SUFFICIENT_LC_DATA)
 
 
 logger = getBasicLogger(__name__, __file__)

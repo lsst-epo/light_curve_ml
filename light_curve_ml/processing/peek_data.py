@@ -7,7 +7,7 @@ import os
 
 import numpy as np
 
-from lsst_classification import utils
+from light_curve_ml import utils
 
 
 def loadDataset(dataName, datasetName, useDeltaEncoder=False):
