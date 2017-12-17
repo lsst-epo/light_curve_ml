@@ -1,13 +1,11 @@
 """Testing out Feets on MACHO."""
+from collections import Counter
 import os
-import time
 
-from feets import datasets, FeatureSpace, preprocess
+from feets import preprocess
 from feets.datasets.base import Bunch
 from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
-from matplotlib import pyplot as plt
 import numpy as np
-from prettytable import PrettyTable
 
 from light_curve_ml.utils import context
 from light_curve_ml.utils.basic_logging import getBasicLogger
@@ -28,12 +26,26 @@ ALL_DATA_TYPES = ["time", "magnitude", "error", "magnitude2", "aligned_time",
 LC_DATA = (DATA_TIME, DATA_MAGNITUDE, DATA_ERROR)
 
 
-def parseCleanSeries(filePaths):
+#: Additional attribute for light curve Bunch data structure specifying the
+#: number of bogus values removed from original data
+DATA_BOGUS_REMOVED = "bogusRemoved"
+
+
+#: Additional attribute for light curve Bunch data structure specifying the
+#: number of statistical outliers removed from original data
+DATA_OUTLIER_REMOVED = "outlierRemoved"
+
+
+def parseCleanSeries(filePaths, sort=False):
     """Parses the given MACHO LC file into a list of noise-removed light curves
-    in red and blue bands."""
+    in red and blue bands.
+    :return list of Bunch"""
     lcs = []
     rSuccess = 0
     bSuccess = 0
+    bogusIssues = 0
+    outlierIssues = 0
+    sequenceCount = 0
     for fp in filePaths:
         # Data format - csv with header
         # 0-class, 1-fieldid, 2-tileid, 3-seqn, 4-obsid, 5-dateobs, 6-rmag,
@@ -51,26 +63,37 @@ def parseCleanSeries(filePaths):
                 logger.info("field: %s tile: %s seqn: %s", field, tile, seq)
                 series = tileData[np.where(tileData[:, 3] == seq)]
                 cat = series[0, 0]
+                if sort:
+                    # sort by mjd time to be sure
+                    series = series[series[:, 5].argsort()]
 
-                # sort by mjd time to be sure
-                series = series[series[:, 5].argsort()]
-                rBunch = parseMachoBunch(series[:, 5], series[:, 6],
-                                         series[:, 7])
+                rBunch, issue = parseMachoBunch(series[:, 5], series[:, 6],
+                                                series[:, 7])
                 if rBunch:
                     rSuccess += 1
+                elif issue == "bogus":
+                    bogusIssues += 1
+                else:
+                    outlierIssues += 1
 
-                bBunch = parseMachoBunch(series[:, 5], series[:, 8],
-                                         series[:, 9])
+                bBunch, issue = parseMachoBunch(series[:, 5], series[:, 8],
+                                                series[:, 9])
                 if bBunch:
                     bSuccess += 1
+                elif issue == "bogus":
+                    bogusIssues += 1
+                else:
+                    outlierIssues += 1
 
                 lcs.append(Bunch(field=field, tile=tile, sequence=seq,
                                  category=cat, data=LC_DATA,
                                  bands=Bunch(r=rBunch, b=bBunch)))
+                sequenceCount += 1
 
     logger.info("r success: %.02fs b success: %.02fs",
-                100.0 * rSuccess / len(filePaths),
-                100.0 * bSuccess / len(filePaths))
+                100.0 * rSuccess / sequenceCount,
+                100.0 * bSuccess / sequenceCount)
+    logger.info("bogus: %s outliers: %s", bogusIssues, outlierIssues)
     return lcs
 
 
@@ -78,26 +101,29 @@ def parseMachoBunch(timeData, magData, errorData):
     # removes -99's endemic to MACHO
     tm, mag, err = removeMachoOutliers(timeData, magData, errorData,
                                        remove=-99.0)
-    remove1 = len(timeData) - len(tm)
-    if remove1:
-        logger.info("macho remove %s", remove1)
+    bogusRemoved = len(timeData) - len(tm)
+    if bogusRemoved:
+        logger.debug("bogus removed %s", bogusRemoved)
 
     if len(tm) < SUFFICIENT_LC_DATA:
-        logger.warning("insufficient: %s after removing -99", len(tm))
-        return None
+        logger.debug("insufficient: %s after removing -99", len(tm))
+        return None, "bogus"
 
     # removes statistical outliers
     _tm, _mag, _err = preprocess.remove_noise(tm, mag, err)
-    remove2 = len(tm) - len(_tm)
-    if remove2:
-        logger.info("stats remove %s", remove2)
+    outlierRemoved = len(tm) - len(_tm)
+    if outlierRemoved:
+        logger.debug("outlier removed %s", outlierRemoved)
 
     if len(_tm) < SUFFICIENT_LC_DATA:
-        logger.warning("insufficient: %s after statistical outliers removed",
-                       len(_tm))
-        # return None  # TODO test with just -99 removed first
+        logger.debug("insufficient length: %s after statistical outliers "
+                       "removed", len(_tm))
+        return None, "outliers"
 
-    return Bunch(**{DATA_TIME: _tm, DATA_MAGNITUDE: _mag, DATA_ERROR: _err})
+    b = Bunch(**{DATA_TIME: _tm, DATA_MAGNITUDE: _mag, DATA_ERROR: _err})
+    b[DATA_BOGUS_REMOVED] = bogusRemoved
+    b[DATA_OUTLIER_REMOVED] = outlierRemoved
+    return b, None
 
 
 def absoluteFilePaths(directory):
@@ -107,101 +133,68 @@ def absoluteFilePaths(directory):
                      if f != ".DS_Store"]
 
 
+def testStats():
+    b1 = np.zeros(200)
+    b2 = np.zeros(60)
+    rBunch = Bunch(**{DATA_TIME: b1, DATA_MAGNITUDE: b1, DATA_ERROR: b1})
+    bBunch = Bunch(**{DATA_TIME: b2, DATA_MAGNITUDE: b2, DATA_ERROR: b2})
+    bnc = Bunch(bands=Bunch(r=rBunch, b=bBunch))
+    lightCurveStats([bnc])
+
+
+def lightCurveStats(lcs):
+    """Computes basic stats on light curves"""
+    bandCount = len(lcs[0].bands)
+    lcCount = len(lcs)
+
+    redBand = [lc.bands.r for lc in lcs if lc.bands.r]
+    redRate = "{:.2%}".format(len(redBand) / lcCount)
+
+    blueBand = [lc.bands.b for lc in lcs if lc.bands.b]
+    blueRate = "{:.2%}".format(len(blueBand) / lcCount)
+    removedLcs = lcCount - len(redBand) - len(blueBand)
+    logger.info("Bands: %s LCs: %s Removed: %s, Appearance rate: Red: %s "
+                "Blue: %s", bandCount, lcCount, removedLcs, redRate, blueRate)
+
+    logger.info("R-band length stats: %s", reportBandStats(redBand))
+    logger.info("B-band length stats: %s", reportBandStats(blueBand))
+
+
+def reportBandStats(band):
+    lens = [len(b[DATA_TIME]) for b in band]
+    bMin = min(lens)
+    bMax = max(lens)
+    bAve = np.average(lens)
+    bStd = np.std(lens, dtype=np.float64)
+    cntr = Counter([length < SUFFICIENT_LC_DATA for length in lens])
+    return "Ave: %.03f (%.03f) Min: %.02f Max: %.02f Too short: %s / %s" % (
+        bAve, bStd, bMin, bMax, cntr[True], len(band))
+
+
 def machoTest():
     dataDir = context.joinRoot("data/macho/raw")
     absPaths = absoluteFilePaths(dataDir)
     lcs = parseCleanSeries(absPaths)
-    # TODO simple fcn to compute min, max, ave and std for red and blue bands
-    print(len(lcs))
+    lightCurveStats(lcs)
 
-    # fileName = "c1_f1.csv"
-    # bunches = parseCleanSeries(fileName)
-    # for lc in bunches:
-    #     plotLc2(lc)
-
-
-def plotLc2(lc):
-    f = plt.figure(1)
-    plt.plot(lc.bands.B.time, lc.bands.B.magnitude, "*-", alpha=0.6)
-    plt.xlabel("Time")
-    plt.ylabel("Magnitude")
-    plt.gca().invert_yaxis()
-    f.show()
-
-
-def plotLc(lc):
-    f = plt.figure(1)
-    plt.plot(lc.bands.B.time, lc.bands.B.magnitude, "*-", alpha=0.6)
-    plt.xlabel("Time")
-    plt.ylabel("Magnitude")
-    plt.gca().invert_yaxis()
-    f.show()
-
-
-def tutorial():
-    plot = 0
-    lc = datasets.load_MACHO_example()
-    if plot:
-        plotLc(lc)
-
-    # 69 features with ALL_DATA_TYPES in 6.15s
-    # 64 features with time, magnitude, error in 6.14s
-    # 58 features with time, magnitude in 3.3s
-    # 22 features with magnitude in 0.02s
-    basicData = ["time", "magnitude", "error"]
-    basicData = ["time", "magnitude"]
-    basicData = ["magnitude"]
-
-    start = time.time()
-
-    # remove points beyond 5 stds of the mean
-    tm, mag, error = preprocess.remove_noise(**lc.bands.B)
-    tm2, mag2, error2 = preprocess.remove_noise(**lc.bands.R)
-
-    aTime, aMag, aMag2, aError, aError2 = preprocess.align(tm, tm2, mag,
-                                                           mag2, error, error2)
-    lc = [tm, mag, error, mag2, aTime, aMag, aMag2, aError, aError2]
-
-    # only calculate these features
-    # fs = feets.FeatureSpace(only=['Std', 'StetsonL'])
-
-    fs = FeatureSpace()
-    # fs = FeatureSpace(data=basicData)
-    features, values = fs.extract(*lc)
-
-    elapsed = time.time() - start
-    print("Computed %s features in %.02fs" % (len(features), elapsed))
-
-    if plot:
-        g = plt.figure(2)
-        plt.plot(lc[0], lc[1], "*-", alpha=0.6)
-        plt.xlabel("Time")
-        plt.ylabel("Magnitude")
-        plt.gca().invert_yaxis()
-        g.show()
-        input()
-
-    t = PrettyTable(["Feature", "Value"])
-    t.align = "l"
-    for i, feat in enumerate(features):
-        t.add_row([feat, values[i]])
-
-    if plot:
-        print(t)
-
-    fdict = dict(zip(features, values))
-
-    # Ploting the example lightcurve in phase
-    T = 2 * fdict["PeriodLS"]
-    new_b = np.mod(lc[0], T) / T
-    idx = np.argsort(2 * new_b)
-
-    plt.plot(new_b, lc[1], '*')
-    plt.xlabel("Phase")
-    plt.ylabel("Magnitude")
-    plt.gca().invert_yaxis()
-    plt.show()
+    # next...
+    # bands = [lc.bands.r for lc in lcs if lc.bands.r]
+    # bBands = [lc.bands.b for lc in lcs if lc.bands.b]
+    # bands.extend(bBands)
+    # for band in bands:
+    #     lc = [band[DATA_TIME], band[DATA_MAGNITUDE], band[DATA_ERROR]]
+    #
+    #     fs = FeatureSpace()
+    #     # fs = FeatureSpace(data=basicData)
+    #     features, values = fs.extract(*lc)
+    #
+    #     t = PrettyTable(["Feature", "Value"])
+    #     t.align = "l"
+    #     for i, feat in enumerate(features):
+    #         t.add_row([feat, values[i]])
 
 
 if __name__ == "__main__":
     machoTest()
+    # testStats()
+
