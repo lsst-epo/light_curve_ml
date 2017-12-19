@@ -3,10 +3,10 @@ import os
 import sys
 
 
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 
 
-DATE_FORMAT = "%H:%M:%S"
+DATE_FORMAT = "%Y.%m.%d %H:%M:%S"
 
 
 def getBasicLogger(name, fileName,

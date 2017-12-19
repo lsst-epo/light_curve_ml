@@ -9,8 +9,8 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
-from light_curve_ml.utils.data import (removeMachoOutliers,
-                                       SUFFICIENT_LC_DATA)
+from light_curve_ml.utils.data_util import (removeMachoOutliers,
+                                            SUFFICIENT_LC_DATA)
 
 
 _GARBAGE_VALUES = {float("NaN"), float("-Inf"), float("Inf")}

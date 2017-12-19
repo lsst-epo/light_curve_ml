@@ -7,7 +7,7 @@ import os
 
 import numpy as np
 
-from light_curve_ml import utils
+from light_curve_ml.utils import data_util, format_util
 
 
 def loadDataset(dataName, datasetName, useDeltaEncoder=False):
@@ -42,29 +42,29 @@ def loadDataset(dataName, datasetName, useDeltaEncoder=False):
 
 def _parseLightCurveCatalina(paths):
     """Parses a light curve time series from Catalina periodic dataset."""
-    lightCurves = []
+    lcs = []
     labels = []
     for path in paths:
         with open(path, "r") as f:
             reader = csv.reader(f)
 
             # indices for Catalina data: 9 - MJD, 2 - magnitude
-            lightCurves.append([(utils.toDatetime(row[9]), row[2])
-                            for i, row in enumerate(reader) if i])
+            lcs.append([(format_util.toDatetime(row[9]), row[2])
+                        for i, row in enumerate(reader) if i])
 
             fileName = path.split("/")[-1]
             category = "_".join(fileName.split("_")[:-1]).lower()
             labels.append(category)
 
-    return lightCurves, labels
+    return lcs, labels
 
 
 def peekCatalina():
     datasetName = "catalina/periodic"
     extension = ".csv"
-    paths = utils.getDatasetFilePaths(datasetName, extension)
+    paths = data_util.getDatasetFilePaths(datasetName, extension)
     lightCurves, labels = _parseLightCurveCatalina(paths)
-    utils.reportDataset(lightCurves, labels)
+    data_util.reportDataset(lightCurves, labels)
 
     datasets = lightCurves[:1]
     for i, d in enumerate(datasets):
@@ -75,7 +75,7 @@ def peekCatalina():
 
 
 def peekGaia(sampleSize=11):
-    paths = utils.getDatasetFilePaths("gaia", ".csv")
+    paths = data_util.getDatasetFilePaths("gaia", ".csv")
     for p in paths:
         if "16" not in p:
             continue

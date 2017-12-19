@@ -1,17 +1,19 @@
 """Testing out Feets on MACHO."""
-from collections import Counter
-import os
+import argparse
+import logging
+import time
 
 from feets import preprocess
 from feets.datasets.base import Bunch
 from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 import numpy as np
 
-from light_curve_ml.utils import context
+from light_curve_ml.utils import context_util
 from light_curve_ml.utils.basic_logging import getBasicLogger
-from light_curve_ml.utils.data import (removeMachoOutliers,
-                                       SUFFICIENT_LC_DATA)
-
+from light_curve_ml.utils.context_util import absoluteFilePaths
+from light_curve_ml.utils.data_util import (removeMachoOutliers,
+                                            SUFFICIENT_LC_DATA)
+from light_curve_ml.utils.format_util import fmtPct
 
 logger = getBasicLogger(__name__, __file__)
 
@@ -36,16 +38,17 @@ DATA_BOGUS_REMOVED = "bogusRemoved"
 DATA_OUTLIER_REMOVED = "outlierRemoved"
 
 
-def parseCleanSeries(filePaths, sort=False):
+def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2):
     """Parses the given MACHO LC file into a list of noise-removed light curves
     in red and blue bands.
     :return list of Bunch"""
     lcs = []
     rSuccess = 0
     bSuccess = 0
-    bogusIssues = 0
-    outlierIssues = 0
-    sequenceCount = 0
+    shortCnt = 0
+    bogusCnt = 0
+    outlierCnt = 0
+    totalSequences = 0
     for fp in filePaths:
         # Data format - csv with header
         # 0-class, 1-fieldid, 2-tileid, 3-seqn, 4-obsid, 5-dateobs, 6-rmag,
@@ -60,7 +63,10 @@ def parseCleanSeries(filePaths, sort=False):
             tileData = data[np.where(data[:, 2] == tile)]
             sequences = np.unique(tileData[:, 3])
             for seq in sorted(sequences):
-                logger.info("field: %s tile: %s seqn: %s", field, tile, seq)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("field: %s tile: %s seqn: %s", field, tile,
+                                 seq)
+
                 series = tileData[np.where(tileData[:, 3] == seq)]
                 cat = series[0, 0]
                 if sort:
@@ -68,36 +74,53 @@ def parseCleanSeries(filePaths, sort=False):
                     series = series[series[:, 5].argsort()]
 
                 rBunch, issue = parseMachoBunch(series[:, 5], series[:, 6],
-                                                series[:, 7])
-                if rBunch:
+                                                series[:, 7], stdLimit,
+                                                errorLimit)
+                if issue is None:
                     rSuccess += 1
+                elif issue == "short":
+                    shortCnt += 1
                 elif issue == "bogus":
-                    bogusIssues += 1
+                    bogusCnt += 1
                 else:
-                    outlierIssues += 1
+                    outlierCnt += 1
 
                 bBunch, issue = parseMachoBunch(series[:, 5], series[:, 8],
-                                                series[:, 9])
-                if bBunch:
+                                                series[:, 9], stdLimit,
+                                                errorLimit)
+                if issue is None:
                     bSuccess += 1
+                elif issue == "short":
+                    shortCnt += 1
                 elif issue == "bogus":
-                    bogusIssues += 1
+                    bogusCnt += 1
                 else:
-                    outlierIssues += 1
+                    outlierCnt += 1
 
                 lcs.append(Bunch(field=field, tile=tile, sequence=seq,
                                  category=cat, data=LC_DATA,
                                  bands=Bunch(r=rBunch, b=bBunch)))
-                sequenceCount += 1
+                totalSequences += 1
 
-    logger.info("r success: %.02fs b success: %.02fs",
-                100.0 * rSuccess / sequenceCount,
-                100.0 * bSuccess / sequenceCount)
-    logger.info("bogus: %s outliers: %s", bogusIssues, outlierIssues)
+    redRate = fmtPct(rSuccess, totalSequences)
+    blueRate = fmtPct(bSuccess, totalSequences)
+
+    totalBands = numBands * totalSequences
+    shortRate = fmtPct(shortCnt, totalBands)
+    bogusRate = fmtPct(bogusCnt, totalBands)
+    outlierRate = fmtPct(outlierCnt, totalBands)
+    logger.info("Total data files: %s bands: %s", totalSequences, totalBands)
+    logger.info("Success rate: R-band: %s B-band: %s", redRate, blueRate)
+    logger.info("All bands failure rate: short: %s bogus: %s outliers: %s",
+                shortRate, bogusRate, outlierRate)
     return lcs
 
 
-def parseMachoBunch(timeData, magData, errorData):
+def parseMachoBunch(timeData, magData, errorData, stdLimit, errorLimit):
+    if len(timeData) < SUFFICIENT_LC_DATA:
+        logger.debug("insufficient: %s to start", len(timeData))
+        return None, "short"
+
     # removes -99's endemic to MACHO
     tm, mag, err = removeMachoOutliers(timeData, magData, errorData,
                                        remove=-99.0)
@@ -110,7 +133,9 @@ def parseMachoBunch(timeData, magData, errorData):
         return None, "bogus"
 
     # removes statistical outliers
-    _tm, _mag, _err = preprocess.remove_noise(tm, mag, err)
+    _tm, _mag, _err = preprocess.remove_noise(tm, mag, err,
+                                              error_limit=errorLimit,
+                                              std_limit=stdLimit)
     outlierRemoved = len(tm) - len(_tm)
     if outlierRemoved:
         logger.debug("outlier removed %s", outlierRemoved)
@@ -124,13 +149,6 @@ def parseMachoBunch(timeData, magData, errorData):
     b[DATA_BOGUS_REMOVED] = bogusRemoved
     b[DATA_OUTLIER_REMOVED] = outlierRemoved
     return b, None
-
-
-def absoluteFilePaths(directory):
-    return [os.path.abspath(os.path.join(dirPath, f))
-            for dirPath, _, fileNames in os.walk(directory)
-                for f in fileNames
-                     if f != ".DS_Store"]
 
 
 def testStats():
@@ -148,16 +166,17 @@ def lightCurveStats(lcs):
     lcCount = len(lcs)
 
     redBand = [lc.bands.r for lc in lcs if lc.bands.r]
-    redRate = "{:.2%}".format(len(redBand) / lcCount)
+    redRate = fmtPct(len(redBand), lcCount)
 
     blueBand = [lc.bands.b for lc in lcs if lc.bands.b]
-    blueRate = "{:.2%}".format(len(blueBand) / lcCount)
-    removedLcs = lcCount - len(redBand) - len(blueBand)
-    logger.info("Bands: %s LCs: %s Removed: %s, Appearance rate: Red: %s "
-                "Blue: %s", bandCount, lcCount, removedLcs, redRate, blueRate)
-
-    logger.info("R-band length stats: %s", reportBandStats(redBand))
-    logger.info("B-band length stats: %s", reportBandStats(blueBand))
+    blueRate = fmtPct(len(blueBand), lcCount)
+    removedLcs = 2 * lcCount - len(redBand) - len(blueBand)
+    logger.info("LC report")
+    logger.info("Count: %s (bands: %s) Removed: %s Appearance rate: Red: %s"
+                " Blue: %s", lcCount, bandCount, removedLcs, redRate, blueRate)
+    logger.info("LC length stats")
+    logger.info("R-band: %s ", reportBandStats(redBand))
+    logger.info("B-band: %s ", reportBandStats(blueBand))
 
 
 def reportBandStats(band):
@@ -165,17 +184,43 @@ def reportBandStats(band):
     bMin = min(lens)
     bMax = max(lens)
     bAve = np.average(lens)
-    bStd = np.std(lens, dtype=np.float64)
-    cntr = Counter([length < SUFFICIENT_LC_DATA for length in lens])
-    return "Ave: %.03f (%.03f) Min: %.02f Max: %.02f Too short: %s / %s" % (
-        bAve, bStd, bMin, bMax, cntr[True], len(band))
+    bStd = float(np.std(lens, dtype=np.float64))
+    return "LCs: %s Ave: %.02f (%.02f) Min: %.02f Max: %.02f" % (
+        len(band), bAve, bStd, bMin, bMax)
+
+
+def _getArgs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-s", "--stdLimit", type=int,
+                        help="limit on the distance the DV value can be from "
+                             "the mean beyond which the data point is "
+                             "discarded")
+    parser.add_argument("-e", "--errorLimit", type=int,
+                        help="limit on the distance an error value can be from"
+                             "the error mean beyond which the data point is"
+                             "discarded")
+    parser.add_argument("-s", "--sort", type=bool, action="store_true",
+                        help="sort each light curve series by time")
+    return parser.parse_args()
 
 
 def machoTest():
-    dataDir = context.joinRoot("data/macho/raw")
+    s = time.time()
+    args = _getArgs()
+
+    # std_limit = 5, error_limit = 3  # Feets defaults
+    # stdLimit = 5
+    # errorLimit = 3
+    # sortSeries = False
+    logger.info("Parameters: stdLimit: %s errorLimit: %s", args.stdLimit,
+                args.errorLimit)
+    dataDir = context_util.joinRoot("data/macho/raw")
     absPaths = absoluteFilePaths(dataDir)
-    lcs = parseCleanSeries(absPaths)
+
+    lcs = parseCleanSeries(absPaths, args.stdLimit, args.errorLimit,
+                           sort=args.sortSeries)
     lightCurveStats(lcs)
+    logger.info("elapsed: %.2fs", time.time() - s)
 
     # next...
     # bands = [lc.bands.r for lc in lcs if lc.bands.r]
@@ -196,5 +241,4 @@ def machoTest():
 
 if __name__ == "__main__":
     machoTest()
-    # testStats()
-
+    # testStats()  # to do unit test

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-
 from pandas_datareader import data
 
 
@@ -45,6 +44,7 @@ def main():
     # convert df to ndarray to df
     df2 = pd.DataFrame(np.array(df[["Bounce_Rate", "Visitors"]]))
     print(df2)
+
 
 if __name__ == "__main__":
     main()

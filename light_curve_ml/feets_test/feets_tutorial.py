@@ -7,7 +7,6 @@ import numpy as np
 from prettytable import PrettyTable
 
 
-
 def plotLc2(lc):
     f = plt.figure(1)
     plt.plot(lc.bands.B.time, lc.bands.B.magnitude, "*-", alpha=0.6)
