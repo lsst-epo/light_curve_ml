@@ -1,5 +1,6 @@
 """Obtains MACHO lightcurves using STILTS command-line tool."""
 from collections import defaultdict
+import logging
 import os
 import subprocess
 from subprocess import CalledProcessError
@@ -17,12 +18,17 @@ def genList(start, end):
     return list(range(start, end + 1))
 
 
-def main():
+def getTapCommandBase():
     jreBinary = "/usr/bin/java"
     jarPath = os.path.join(os.environ["LSST"], "jars/stilts.jar")
-    outDir = os.path.join(os.environ["LSST"], "data/macho/raw")
     commandBase = [jreBinary, "-jar", jarPath, "tapquery"]
     commandBase += ["tapurl=http://machotap.asvo.nci.org.au/ncitap/tap"]
+    return commandBase
+
+
+def main():
+    outDir = os.path.join(os.environ["LSST"], "data/macho/raw")
+    commandBase = getTapCommandBase()
 
     returnedLimit = 500000
     limit = int(10e7)
@@ -59,9 +65,11 @@ def main():
                 logger.exception("JAR call failed")
                 return
 
-            logger.debug("call took: %.01fs", time.time() - apiStart)
-            if output:
-                logger.debug("subprocess output: %s", output.decode("utf-8"))
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("call took: %.01fs", time.time() - apiStart)
+                if output:
+                    logger.debug("subprocess output: %s",
+                                 output.decode("utf-8"))
 
             # if outfile is empty, print a warning and delete it
             with open(outPath, "r") as outFile:

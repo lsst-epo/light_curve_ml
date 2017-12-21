@@ -3,10 +3,11 @@ import argparse
 import logging
 import time
 
-from feets import preprocess
+from feets import FeatureSpace, preprocess
 from feets.datasets.base import Bunch
 from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 import numpy as np
+from prettytable import PrettyTable
 
 from light_curve_ml.utils import context_util
 from light_curve_ml.utils.basic_logging import getBasicLogger
@@ -15,6 +16,7 @@ from light_curve_ml.utils.data_util import (removeMachoOutliers,
                                             SUFFICIENT_LC_DATA)
 from light_curve_ml.utils.format_util import fmtPct
 
+
 logger = getBasicLogger(__name__, __file__)
 
 
@@ -22,6 +24,10 @@ logger = getBasicLogger(__name__, __file__)
 ALL_DATA_TYPES = ["time", "magnitude", "error", "magnitude2", "aligned_time",
                   "aligned_magnitude", "aligned_error", "aligned_magnitude2",
                   "aligned_error2"]
+
+
+#: Standard data types for EPO project
+STANDARD_DATA_TYPES = ["time", "magnitude", "error"]
 
 
 #: LC bands contain these time series datums
@@ -38,17 +44,20 @@ DATA_BOGUS_REMOVED = "bogusRemoved"
 DATA_OUTLIER_REMOVED = "outlierRemoved"
 
 
-def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2):
+def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
+                     limit=None):
     """Parses the given MACHO LC file into a list of noise-removed light curves
     in red and blue bands.
     :return list of Bunch"""
     lcs = []
-    rSuccess = 0
-    bSuccess = 0
     shortCnt = 0
     bogusCnt = 0
     outlierCnt = 0
     totalSequences = 0
+    actualBands = 0
+    if limit is None:
+        limit = float("inf")
+
     for fp in filePaths:
         # Data format - csv with header
         # 0-class, 1-fieldid, 2-tileid, 3-seqn, 4-obsid, 5-dateobs, 6-rmag,
@@ -76,42 +85,47 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2):
                 rBunch, issue = parseMachoBunch(series[:, 5], series[:, 6],
                                                 series[:, 7], stdLimit,
                                                 errorLimit)
-                if issue is None:
-                    rSuccess += 1
-                elif issue == "short":
-                    shortCnt += 1
-                elif issue == "bogus":
-                    bogusCnt += 1
+                if rBunch:
+                    actualBands += 1
                 else:
-                    outlierCnt += 1
+                    if issue == "short":
+                        shortCnt += 1
+                    elif issue == "bogus":
+                        bogusCnt += 1
+                    else:
+                        outlierCnt += 1
 
                 bBunch, issue = parseMachoBunch(series[:, 5], series[:, 8],
                                                 series[:, 9], stdLimit,
                                                 errorLimit)
-                if issue is None:
-                    bSuccess += 1
-                elif issue == "short":
-                    shortCnt += 1
-                elif issue == "bogus":
-                    bogusCnt += 1
+                if bBunch:
+                    actualBands += 1
                 else:
-                    outlierCnt += 1
+                    if issue == "short":
+                        shortCnt += 1
+                    elif issue == "bogus":
+                        bogusCnt += 1
+                    else:
+                        outlierCnt += 1
 
                 lcs.append(Bunch(field=field, tile=tile, sequence=seq,
                                  category=cat, data=LC_DATA,
                                  bands=Bunch(r=rBunch, b=bBunch)))
                 totalSequences += 1
 
-    redRate = fmtPct(rSuccess, totalSequences)
-    blueRate = fmtPct(bSuccess, totalSequences)
+            if actualBands >= limit:
+                break
 
-    totalBands = numBands * totalSequences
-    shortRate = fmtPct(shortCnt, totalBands)
-    bogusRate = fmtPct(bogusCnt, totalBands)
-    outlierRate = fmtPct(outlierCnt, totalBands)
-    logger.info("Total data files: %s bands: %s", totalSequences, totalBands)
-    logger.info("Success rate: R-band: %s B-band: %s", redRate, blueRate)
-    logger.info("All bands failure rate: short: %s bogus: %s outliers: %s",
+        if actualBands >= limit:
+            break
+
+    maxTotalBands = numBands * totalSequences
+    shortRate = fmtPct(shortCnt, maxTotalBands)
+    bogusRate = fmtPct(bogusCnt, maxTotalBands)
+    outlierRate = fmtPct(outlierCnt, maxTotalBands)
+    logger.info("Total data files: %s", totalSequences)
+    logger.info("Total time series all bands: %s", maxTotalBands)
+    logger.info("Failure rate all bands: short: %s bogus: %s outliers: %s",
                 shortRate, bogusRate, outlierRate)
     return lcs
 
@@ -170,75 +184,107 @@ def lightCurveStats(lcs):
 
     blueBand = [lc.bands.b for lc in lcs if lc.bands.b]
     blueRate = fmtPct(len(blueBand), lcCount)
-    removedLcs = 2 * lcCount - len(redBand) - len(blueBand)
-    logger.info("LC report")
-    logger.info("Count: %s (bands: %s) Removed: %s Appearance rate: Red: %s"
-                " Blue: %s", lcCount, bandCount, removedLcs, redRate, blueRate)
-    logger.info("LC length stats")
+    removedLcs = bandCount * lcCount - len(redBand) - len(blueBand)
+    logger.info("Bands removed: %s", removedLcs)
+    logger.info("Good band counts: Red: %s (%s) Blue: %s (%s)", len(redBand),
+                redRate, len(blueBand), blueRate)
+    logger.info("Time series length stats")
     logger.info("R-band: %s ", reportBandStats(redBand))
     logger.info("B-band: %s ", reportBandStats(blueBand))
 
 
 def reportBandStats(band):
+    if not band:
+        return None
+
     lens = [len(b[DATA_TIME]) for b in band]
     bMin = min(lens)
     bMax = max(lens)
     bAve = np.average(lens)
     bStd = float(np.std(lens, dtype=np.float64))
-    return "LCs: %s Ave: %.02f (%.02f) Min: %.02f Max: %.02f" % (
-        len(band), bAve, bStd, bMin, bMax)
+    return "Ave: %.02f (%.02f) Min: %.02f Max: %.02f" % (bAve, bStd, bMin, bMax)
 
 
 def _getArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--stdLimit", type=int,
-                        help="limit on the distance the DV value can be from "
-                             "the mean beyond which the data point is "
+    parser.add_argument("-s", "--stdLimit", type=int, default=5,
+                        help="limit on the number of std's a DV value can be "
+                             "from the mean beyond which the data point is "
                              "discarded")
-    parser.add_argument("-e", "--errorLimit", type=int,
-                        help="limit on the distance an error value can be from"
-                             "the error mean beyond which the data point is"
-                             "discarded")
-    parser.add_argument("-s", "--sort", type=bool, action="store_true",
+    parser.add_argument("-e", "--errorLimit", type=int, default=3,
+                        help="limit on the number of std's an error value can "
+                             "be from the error mean. if exceeded, the data "
+                             "point is discarded")
+    parser.add_argument("-t", "--limit", type=int, default=float("inf"),
+                        help="Limit script to running first n data files")
+    parser.add_argument("--sort", action="store_true",
                         help="sort each light curve series by time")
     return parser.parse_args()
+
+
+def _reportFeatures(features, values):
+    t = PrettyTable(["Feature", "Value"])
+    t.align = "l"
+    for i, feat in enumerate(features):
+        t.add_row([feat, values[i]])
+
+    logger.info(t)
 
 
 def machoTest():
     s = time.time()
     args = _getArgs()
+    logger.info("Program args: data limit: %s stdLimit: %s errorLimit: %s",
+                args.limit, args.stdLimit, args.errorLimit)
 
-    # std_limit = 5, error_limit = 3  # Feets defaults
-    # stdLimit = 5
-    # errorLimit = 3
-    # sortSeries = False
-    logger.info("Parameters: stdLimit: %s errorLimit: %s", args.stdLimit,
-                args.errorLimit)
+    # Load LCs
     dataDir = context_util.joinRoot("data/macho/raw")
-    absPaths = absoluteFilePaths(dataDir)
-
+    absPaths = sorted(absoluteFilePaths(dataDir))
     lcs = parseCleanSeries(absPaths, args.stdLimit, args.errorLimit,
-                           sort=args.sortSeries)
+                           sort=args.sort, limit=args.limit)
     lightCurveStats(lcs)
-    logger.info("elapsed: %.2fs", time.time() - s)
+    logger.info("data load elapsed: %.2fs\n", time.time() - s)
 
-    # next...
-    # bands = [lc.bands.r for lc in lcs if lc.bands.r]
-    # bBands = [lc.bands.b for lc in lcs if lc.bands.b]
-    # bands.extend(bBands)
-    # for band in bands:
-    #     lc = [band[DATA_TIME], band[DATA_MAGNITUDE], band[DATA_ERROR]]
-    #
-    #     fs = FeatureSpace()
-    #     # fs = FeatureSpace(data=basicData)
-    #     features, values = fs.extract(*lc)
-    #
-    #     t = PrettyTable(["Feature", "Value"])
-    #     t.align = "l"
-    #     for i, feat in enumerate(features):
-    #         t.add_row([feat, values[i]])
+    # compute features
+    allBands = [lc.bands.r for lc in lcs if lc.bands.r]
+    bBands = [lc.bands.b for lc in lcs if lc.bands.b]
+    allBands.extend(bBands)  # TODO probably run separately in a function?
+    if not allBands:
+        logger.info("No bands")
+        return
+
+    # Top slowest features: CAR, FourierComponents, & LombScargle
+    # correspond to: CAR_mean, CAR_sigma, CAR_tau,
+    exclude = ["CAR_mean", "CAR_sigma", "CAR_tau"]
+    fs = FeatureSpace(data=STANDARD_DATA_TYPES, exclude=exclude)
+    features = fs.features_as_array_
+    reportFeatures = False
+    extractTimes = []
+    extractLengths = []
+    featureCounts = []
+    for i, band in enumerate(allBands):
+        if i % 30 == 0:
+            logger.info("progress: %s / %s", i, len(allBands))
+
+        # cat = band.category
+        es = time.time()
+        _, values = fs.extract(time=band[DATA_TIME],
+                               magnitude=band[DATA_MAGNITUDE],
+                               error=band[DATA_ERROR])
+        extractTimes.append(time.time() - es)
+        extractLengths.append(len(band[DATA_TIME]))
+        featureCounts.append(len(values))
+        if reportFeatures:
+            _reportFeatures(features, values)
+
+    logger.info("Ave num features: %s", np.average(featureCounts))
+    totalExtractTime = np.sum(extractTimes)
+    tmPer1000Points = 1000 * totalExtractTime / np.sum(extractLengths)
+    logger.info("Time per 1000 data points: %.3fs", tmPer1000Points)
+    logger.info("Feature extraction time: total: %.2fs mean: %.2fs min: %.2fs "
+                "max: %.2fs", totalExtractTime, np.average(extractTimes),
+                min(extractTimes), max(extractTimes))
 
 
 if __name__ == "__main__":
     machoTest()
-    # testStats()  # to do unit test
