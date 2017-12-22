@@ -1,6 +1,8 @@
 """Testing out Feets on MACHO."""
 import argparse
 import logging
+import multiprocessing
+from multiprocessing import Pool
 import time
 
 from feets import FeatureSpace, preprocess
@@ -246,8 +248,8 @@ def machoTest():
     logger.info("data load elapsed: %.2fs\n", time.time() - s)
 
     # compute features
-    allBands = [lc.bands.r for lc in lcs if lc.bands.r]
-    bBands = [lc.bands.b for lc in lcs if lc.bands.b]
+    allBands = [(lc.category, lc.bands.r) for lc in lcs if lc.bands.r]
+    bBands = [(lc.category, lc.bands.b) for lc in lcs if lc.bands.b]
     allBands.extend(bBands)  # TODO probably run separately in a function?
     if not allBands:
         logger.info("No bands")
@@ -262,18 +264,16 @@ def machoTest():
     extractTimes = []
     extractLengths = []
     featureCounts = []
-    for i, band in enumerate(allBands):
-        if i % 30 == 0:
-            logger.info("progress: %s / %s", i, len(allBands))
 
-        # cat = band.category
-        es = time.time()
-        _, values = fs.extract(time=band[DATA_TIME],
-                               magnitude=band[DATA_MAGNITUDE],
-                               error=band[DATA_ERROR])
-        extractTimes.append(time.time() - es)
-        extractLengths.append(len(band[DATA_TIME]))
+    pool = Pool(processes=multiprocessing.cpu_count())
+    categoryValuesLengthRes = pool.map(extractWork, [(fs, cat, b)
+                                                     for cat, b in allBands])
+    for category, values, length, elapsed in categoryValuesLengthRes:
+
         featureCounts.append(len(values))
+        extractLengths.append(length)
+        extractTimes.append(elapsed)
+
         if reportFeatures:
             _reportFeatures(features, values)
 
@@ -284,6 +284,17 @@ def machoTest():
     logger.info("Feature extraction time: total: %.2fs mean: %.2fs min: %.2fs "
                 "max: %.2fs", totalExtractTime, np.average(extractTimes),
                 min(extractTimes), max(extractTimes))
+
+
+def extractWork(args):
+    band = args[2]
+    s = time.time()
+    _, values = args[0].extract(time=band[DATA_TIME],
+                                magnitude=band[DATA_MAGNITUDE],
+                                error=band[DATA_ERROR])
+    e = time.time() - s
+    return args[1], values, len(band[DATA_TIME]), e
+
 
 
 if __name__ == "__main__":
