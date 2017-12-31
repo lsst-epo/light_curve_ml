@@ -221,6 +221,9 @@ def _getArgs():
                         help="Limit script to running first n data files")
     parser.add_argument("--sort", action="store_true",
                         help="sort each light curve series by time")
+    parser.add_argument("--allFeatures", action="store_true", help="If "
+                        "specified, all features will be extracted, otherwise,"
+                        " some slow features will be omitted.")
     return parser.parse_args()
 
 
@@ -257,7 +260,8 @@ def machoTest():
 
     # Top slowest features: CAR, FourierComponents, & LombScargle
     # correspond to: CAR_mean, CAR_sigma, CAR_tau,
-    exclude = ["CAR_mean", "CAR_sigma", "CAR_tau"]
+    exclude = [] if args.allFeatures else ["CAR_mean", "CAR_sigma", "CAR_tau"]
+    logger.info("Excluded features: %s", exclude)
     fs = FeatureSpace(data=STANDARD_DATA_TYPES, exclude=exclude)
     features = fs.features_as_array_
     reportFeatures = False
@@ -266,8 +270,10 @@ def machoTest():
     featureCounts = []
 
     pool = Pool(processes=multiprocessing.cpu_count())
+    extractStart = time.time()
     categoryValuesLengthRes = pool.map(extractWork, [(fs, cat, b)
                                                      for cat, b in allBands])
+    extractElapsedMin = (time.time() - extractStart) / 60
     for category, values, length, elapsed in categoryValuesLengthRes:
 
         featureCounts.append(len(values))
@@ -277,6 +283,7 @@ def machoTest():
         if reportFeatures:
             _reportFeatures(features, values)
 
+    logger.info("Extract elapsed: %.2fm", extractElapsedMin)
     logger.info("Ave num features: %s", np.average(featureCounts))
     totalExtractTime = np.sum(extractTimes)
     tmPer1000Points = 1000 * totalExtractTime / np.sum(extractLengths)
@@ -294,7 +301,6 @@ def extractWork(args):
                                 error=band[DATA_ERROR])
     e = time.time() - s
     return args[1], values, len(band[DATA_TIME]), e
-
 
 
 if __name__ == "__main__":

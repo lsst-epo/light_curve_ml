@@ -36,8 +36,8 @@ def peekOgle():
 
     SUFFICIENT_LENGTH = 50
     validData = 0
-    insufficient = 0
-    bunchNone = 0
+    insufficientData = 0
+    bunchNoneData = 0
     pool = Pool(processes=multiprocessing.cpu_count())
     s = time.time()
     bunches = pool.map(fetchWork, ids[:args.limit])
@@ -47,18 +47,20 @@ def peekOgle():
                 if len(subBunch[DATA_TIME]) > SUFFICIENT_LENGTH:
                     validData += 1
                 else:
-                    insufficient += 1
+                    insufficientData += 1
 
         elif bunch is None:
-            bunchNone += 1
+            bunchNoneData += 1
 
-    print("Computation elapsed: %.2fs" % (time.time() - s))
-    print("All elapsed: %.2fs" % (time.time() - sAll))
-    print("Total OGLE3 ids: %s" % len(ids))
-    validRate = "{:.3%}".format(validData / len(ids))
-    insuffRate = "{:.3%}".format(insufficient / len(ids))
-    print("Valid: %s (%s) insufficient length: %s (%s) bunchNone: %s" % (
-        validData, validRate, insufficient, insuffRate, bunchNone))
+    print("\nScript total elapsed: %.2fs" % (time.time() - sAll))
+    print("Process data elapsed: %.2fs\n" % (time.time() - s))
+    totalProcessed = float(validData + insufficientData + bunchNoneData)
+    print("Processed %d of %s total OGLE3 ids" % (totalProcessed, len(ids)))
+    validRate = "{:.2%}".format(validData / totalProcessed)
+    insuffRate = "{:.2%}".format(insufficientData / totalProcessed)
+    print("Valid data: %s (%s)\nInsufficient length: %s (%s)\nBunch None: %s" %
+          (validData, validRate, insufficientData, insuffRate, bunchNoneData))
+
 
 
 if __name__ == "__main__":
