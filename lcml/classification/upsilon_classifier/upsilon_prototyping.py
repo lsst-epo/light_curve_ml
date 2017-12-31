@@ -9,7 +9,7 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
-from light_curve_ml.utils.data_util import (removeMachoOutliers,
+from lcml.utils.data_util import (removeMachoOutliers,
                                             SUFFICIENT_LC_DATA)
 
 

@@ -8,7 +8,7 @@ import time
 
 from prettytable import PrettyTable
 
-from light_curve_ml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import getBasicLogger
 
 
 logger = getBasicLogger(__name__, __file__)

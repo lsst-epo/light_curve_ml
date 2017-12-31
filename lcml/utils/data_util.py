@@ -4,7 +4,7 @@ import os
 
 import numpy as np
 
-from light_curve_ml.utils import context_util
+from lcml.utils import context_util
 
 
 SUFFICIENT_LC_DATA = 80

@@ -7,7 +7,7 @@ import os
 
 import numpy as np
 
-from light_curve_ml.utils import data_util, format_util
+from lcml.utils import data_util, format_util
 
 
 def loadDataset(dataName, datasetName, useDeltaEncoder=False):

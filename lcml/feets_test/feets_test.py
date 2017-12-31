@@ -11,12 +11,12 @@ from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 import numpy as np
 from prettytable import PrettyTable
 
-from light_curve_ml.utils import context_util
-from light_curve_ml.utils.basic_logging import getBasicLogger
-from light_curve_ml.utils.context_util import absoluteFilePaths
-from light_curve_ml.utils.data_util import (removeMachoOutliers,
+from lcml.utils import context_util
+from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.context_util import absoluteFilePaths
+from lcml.utils.data_util import (removeMachoOutliers,
                                             SUFFICIENT_LC_DATA)
-from light_curve_ml.utils.format_util import fmtPct
+from lcml.utils.format_util import fmtPct
 
 
 logger = getBasicLogger(__name__, __file__)
