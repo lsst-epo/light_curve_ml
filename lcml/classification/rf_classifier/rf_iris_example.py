@@ -1,5 +1,7 @@
-"""Random Forest tutorial adapted from
-chrisalbon.com/machine-learning/random_forest_classifier_example_scikit.html"""
+"""
+Random Forest tutorial adapted from
+chrisalbon.com/machine-learning/random_forest_classifier_example_scikit.html
+"""
 import numpy as np
 import pandas as pd
 from prettytable import PrettyTable
@@ -36,7 +38,8 @@ def main():
     # run clf on test
     predClasses = clf.predict(test[features])
 
-    predProbs = clf.predict_proba(test[features])[0:10]
+    # compute distribution of class likelihood
+    # predProbs = clf.predict_proba(test[features])[0:10]
 
     preds = iris.target_names[predClasses]
 
@@ -54,6 +57,7 @@ def main():
     t = PrettyTable(["Feature", "Importance"])
     for f, i in featImp:
         t.add_row([f, i])
+
     print(t)
 
 
