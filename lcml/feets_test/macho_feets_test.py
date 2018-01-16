@@ -5,17 +5,17 @@ import multiprocessing
 from multiprocessing import Pool
 import time
 
-from feets import FeatureSpace, preprocess
+from feets import FeatureSpace
 from feets.datasets.base import Bunch
 from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 import numpy as np
 from prettytable import PrettyTable
 
+from lcml.common import STANDARD_DATA_TYPES
+from lcml.processing.preprocess import preprocessLc
 from lcml.utils import context_util
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import absoluteFilePaths
-from lcml.utils.data_util import (removeMachoOutliers,
-                                            SUFFICIENT_LC_DATA)
 from lcml.utils.format_util import fmtPct
 
 
@@ -28,22 +28,8 @@ ALL_DATA_TYPES = ["time", "magnitude", "error", "magnitude2", "aligned_time",
                   "aligned_error2"]
 
 
-#: Standard data types for EPO project
-STANDARD_DATA_TYPES = ["time", "magnitude", "error"]
-
-
 #: LC bands contain these time series datums
 LC_DATA = (DATA_TIME, DATA_MAGNITUDE, DATA_ERROR)
-
-
-#: Additional attribute for light curve Bunch data structure specifying the
-#: number of bogus values removed from original data
-DATA_BOGUS_REMOVED = "bogusRemoved"
-
-
-#: Additional attribute for light curve Bunch data structure specifying the
-#: number of statistical outliers removed from original data
-DATA_OUTLIER_REMOVED = "outlierRemoved"
 
 
 def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
@@ -84,9 +70,9 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
                     # sort by mjd time to be sure
                     series = series[series[:, 5].argsort()]
 
-                rBunch, issue = parseMachoBunch(series[:, 5], series[:, 6],
+                rBunch, issue = preprocessLc(series[:, 5], series[:, 6],
                                                 series[:, 7], stdLimit,
-                                                errorLimit)
+                                             errorLimit)
                 if rBunch:
                     actualBands += 1
                 else:
@@ -97,9 +83,9 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
                     else:
                         outlierCnt += 1
 
-                bBunch, issue = parseMachoBunch(series[:, 5], series[:, 8],
+                bBunch, issue = preprocessLc(series[:, 5], series[:, 8],
                                                 series[:, 9], stdLimit,
-                                                errorLimit)
+                                             errorLimit)
                 if bBunch:
                     actualBands += 1
                 else:
@@ -130,41 +116,6 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
     logger.info("Failure rate all bands: short: %s bogus: %s outliers: %s",
                 shortRate, bogusRate, outlierRate)
     return lcs
-
-
-def parseMachoBunch(timeData, magData, errorData, stdLimit, errorLimit):
-    if len(timeData) < SUFFICIENT_LC_DATA:
-        logger.debug("insufficient: %s to start", len(timeData))
-        return None, "short"
-
-    # removes -99's endemic to MACHO
-    tm, mag, err = removeMachoOutliers(timeData, magData, errorData,
-                                       remove=-99.0)
-    bogusRemoved = len(timeData) - len(tm)
-    if bogusRemoved:
-        logger.debug("bogus removed %s", bogusRemoved)
-
-    if len(tm) < SUFFICIENT_LC_DATA:
-        logger.debug("insufficient: %s after removing -99", len(tm))
-        return None, "bogus"
-
-    # removes statistical outliers
-    _tm, _mag, _err = preprocess.remove_noise(tm, mag, err,
-                                              error_limit=errorLimit,
-                                              std_limit=stdLimit)
-    outlierRemoved = len(tm) - len(_tm)
-    if outlierRemoved:
-        logger.debug("outlier removed %s", outlierRemoved)
-
-    if len(_tm) < SUFFICIENT_LC_DATA:
-        logger.debug("insufficient length: %s after statistical outliers "
-                       "removed", len(_tm))
-        return None, "outliers"
-
-    b = Bunch(**{DATA_TIME: _tm, DATA_MAGNITUDE: _mag, DATA_ERROR: _err})
-    b[DATA_BOGUS_REMOVED] = bogusRemoved
-    b[DATA_OUTLIER_REMOVED] = outlierRemoved
-    return b, None
 
 
 def testStats():
@@ -244,7 +195,7 @@ def machoTest():
 
     # Load LCs
     dataDir = context_util.joinRoot("data/macho/raw")
-    absPaths = sorted(absoluteFilePaths(dataDir))
+    absPaths = sorted(absoluteFilePaths(dataDir, ext="csv"))
     lcs = parseCleanSeries(absPaths, args.stdLimit, args.errorLimit,
                            sort=args.sort, limit=args.limit)
     lightCurveStats(lcs)
@@ -294,13 +245,18 @@ def machoTest():
 
 
 def extractWork(args):
+    """Accepts a FeatureSpace, category, and LC band including time, magnitude,
+     and error. Returns the category, the feature values, LC length, and
+     feature extraction time."""
+    featureSpace = args[0]
+    category = args[1]
     band = args[2]
-    s = time.time()
-    _, values = args[0].extract(time=band[DATA_TIME],
-                                magnitude=band[DATA_MAGNITUDE],
-                                error=band[DATA_ERROR])
-    e = time.time() - s
-    return args[1], values, len(band[DATA_TIME]), e
+    startTime = time.time()
+    _, values = featureSpace.extract(time=band[DATA_TIME],
+                                     magnitude=band[DATA_MAGNITUDE],
+                                     error=band[DATA_ERROR])
+    elapsedTime = time.time() - startTime
+    return category, values, len(band[DATA_TIME]), elapsedTime
 
 
 if __name__ == "__main__":

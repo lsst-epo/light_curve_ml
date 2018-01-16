@@ -9,8 +9,8 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
-from lcml.utils.data_util import (removeMachoOutliers,
-                                            SUFFICIENT_LC_DATA)
+from lcml.utils.data_util import (lcFilterBogus,
+                                  SUFFICIENT_LC_DATA)
 
 
 _GARBAGE_VALUES = {float("NaN"), float("-Inf"), float("Inf")}
@@ -95,11 +95,11 @@ def loadMachoData(trainData, report=True):
         blueMags.append(bMag)
         blueErrors.append(bErr)
 
-    redMjds, clRedMags, clRedErrors = removeMachoOutliers(mjds, redMags,
-                                                          redErrors)
-    blueMjds, clBlueMags, clBlueErrors = removeMachoOutliers(mjds,
-                                                             blueMags,
-                                                             blueErrors)
+    redMjds, clRedMags, clRedErrors = lcFilterBogus(mjds, redMags,
+                                                    redErrors)
+    blueMjds, clBlueMags, clBlueErrors = lcFilterBogus(mjds,
+                                                       blueMags,
+                                                       blueErrors)
     if report:
         t = PrettyTable(field_names=["type", "original", "removed",
                                      "final"])

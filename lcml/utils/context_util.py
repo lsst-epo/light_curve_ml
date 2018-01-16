@@ -15,9 +15,17 @@ def joinRoot(*paths):
     return os.path.join(_ROOT_DIR, *paths)
 
 
-def absoluteFilePaths(directory):
-    """Returns all absolute files paths found in a directory (non-recursive)."""
-    return [os.path.abspath(os.path.join(dirPath, f))
-            for dirPath, _, fileNames in os.walk(directory)
+def absoluteFilePaths(directory, ext=None):
+    """Returns all absolute files paths found in a directory (non-recursive).
+    Can optionally filter for files with specified ext, e.g. 'csv' assuming a
+    '.' delimits the extension, 'foobar.csv'"""
+    if ext:
+        ext = ext.lower()
+        return [os.path.abspath(os.path.join(dirPath, f))
+                for dirPath, _, fileNames in os.walk(directory)
                 for f in fileNames
-                     if f != ".DS_Store"]
+                if f.split(".")[-1].lower() == ext]
+    else:
+        return [os.path.abspath(os.path.join(dirPath, f))
+                for dirPath, _, fileNames in os.walk(directory)
+                for f in fileNames]

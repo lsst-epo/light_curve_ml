@@ -1,17 +1,13 @@
 """Adapted from
 dataaspirant.com/2017/06/26/random-forest-classifier-python-scikit-learn/"""
-import os
-
 import numpy as np
 import pandas as pd
 from prettytable import PrettyTable
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix
 
 from lcml.utils.context_util import joinRoot
-
 
 
 def missingFeatures(dataset, description):
@@ -40,27 +36,27 @@ def main():
     featureHeaders = dataset[headers[1: -1]]
     targetHeaders = dataset[headers[-1]]
     trainRatio = 0.7
-    trainX, testX, trainY, testY = train_test_split(featureHeaders,
+    xTrain, xTest, yTrain, yTest = train_test_split(featureHeaders,
                                                     targetHeaders,
                                                     train_size=trainRatio)
 
     # Train and Test dataset size details
     print("\nTrain & Test sizes")
-    print("Train_x Shape: ", trainX.shape)
-    print("Train_y Shape: ", trainY.shape)
-    print("Test_x Shape: ", testX.shape)
-    print("Test_y Shape: ", testY.shape)
+    print("Train_x Shape: ", xTrain.shape)
+    print("Train_y Shape: ", yTrain.shape)
+    print("Test_x Shape: ", xTest.shape)
+    print("Test_y Shape: ", yTest.shape)
 
-    model = rfClassifier(trainX, trainY)
-    testPredictions = model.predict(testX)
-    trainPredictions = model.predict(trainX)
+    model = rfClassifier(xTrain, yTrain)
+    testPredictions = model.predict(xTest)
+    trainPredictions = model.predict(xTrain)
 
     reportSample = 10
     print("\nSample performance")
     t = PrettyTable(["Predicted", "Actual"])
 
     # convert the dataframe in to list object the indexes will be in order
-    testYList = list(testY)
+    testYList = list(yTest)
     for i in range(0, reportSample):
         t.add_row([testYList[i], testPredictions[i]])
 
@@ -68,9 +64,9 @@ def main():
 
     # accuracy
     print("\nFull performance")
-    print("Train accuracy: ", accuracy_score(trainY, trainPredictions))
-    print("Test accuracy: ", accuracy_score(testY, testPredictions))
-    print("Confusion: ", confusion_matrix(testY, testPredictions))
+    print("Train accuracy: ", accuracy_score(yTrain, trainPredictions))
+    print("Test accuracy: ", accuracy_score(yTest, testPredictions))
+    print("Confusion: ", confusion_matrix(yTest, testPredictions))
 
 
 if __name__ == "__main__":
