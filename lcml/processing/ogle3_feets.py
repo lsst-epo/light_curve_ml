@@ -114,6 +114,7 @@ def main():
     # parse out the label from file names, lowercase it, convert to number
     # associate label to the lc
     # compute class label histogram
+    start = time.time()
     limit = 50
     trainRatio = 0.75
 
@@ -162,6 +163,7 @@ def main():
     # research performance metrics from Kim's papers
     # record performance and time to process
     # create CV set and try RF variations
+    print("Elapsed %s" % (time.time() - start))
 
 
 if __name__ == "__main__":

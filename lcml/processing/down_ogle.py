@@ -42,6 +42,7 @@ def downOgle():
     args = _getArgs()
     df = load_OGLE3_catalog()
     ids = [i for i in df["ID"] if i != "-99.99"]
+    print("Found %d OGLE3 ids" % len(ids))
 
     validLc = 0
     tooShortLc = 0
@@ -78,7 +79,8 @@ def downOgle():
 
 
 def reportDownloaded():
-    _dir = [f for f in os.listdir("/Users/ryanjmccall/feets_data/ogle3")
+    downDir = os.path.join(os.path.expandvars("$HOME"), "feets_data/ogle3")
+    _dir = [f for f in os.listdir(downDir)
             if f.endswith(".tar")]
     print("found %d tarfiles" % len(_dir))
 

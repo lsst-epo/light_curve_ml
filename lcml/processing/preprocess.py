@@ -1,6 +1,10 @@
 from feets import preprocess
 from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
+from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.data_util import SUFFICIENT_LC_DATA, lcFilterBogus
+
+
+logger = getBasicLogger(__name__, __file__)
 
 
 #: Additional attribute for light curve Bunch data structure specifying the
@@ -38,7 +42,7 @@ def preprocessLc(timeData, magData, errorData, remove=(-99.0,), stdLimit=5,
         return None, INSUFFICIENT_DATA_REASON
 
     # remove bogus data
-    tm, mag, err = lcFilterBogus(timeData, magData, errorData, remove=remove))
+    tm, mag, err = lcFilterBogus(timeData, magData, errorData, remove=remove)
     bogusRemoved = len(timeData) - len(tm)
     if bogusRemoved:
         logger.debug("bogus removed %s", bogusRemoved)
