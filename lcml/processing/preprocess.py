@@ -2,6 +2,7 @@ from feets import preprocess
 from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.data_util import SUFFICIENT_LC_DATA, lcFilterBogus
+from lcml.utils.format_util import fmtPct
 
 
 logger = getBasicLogger(__name__, __file__)
@@ -30,41 +31,63 @@ BOGUS_DATA_REASON = "insufficient due to bogus data"
 OUTLIERS_REASON = "insufficient due to statistical outliers"
 
 
-def preprocessLc(timeData, magData, errorData, remove=(-99.0,), stdLimit=5,
-                 errorLimit=3):
+def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
     """Returns a cleaned version of an LC. LC may be deemed unfit for use, in
     which case the reason for rejection is specified.
 
     :returns processed lc as a tuple and failure reason (string)
     """
+    removedCounts = {DATA_BOGUS_REMOVED: 0, DATA_OUTLIER_REMOVED: 0}
     if len(timeData) < SUFFICIENT_LC_DATA:
         logger.debug("insufficient: %s to start", len(timeData))
-        return None, INSUFFICIENT_DATA_REASON
+        return None, INSUFFICIENT_DATA_REASON, removedCounts
 
     # remove bogus data
     tm, mag, err = lcFilterBogus(timeData, magData, errorData, remove=remove)
-    bogusRemoved = len(timeData) - len(tm)
-    if bogusRemoved:
-        logger.debug("bogus removed %s", bogusRemoved)
-
+    removedCounts[DATA_BOGUS_REMOVED] = len(timeData) - len(tm)
     if len(tm) < SUFFICIENT_LC_DATA:
         logger.debug("insufficient: %s after removing bogus values", len(tm))
-        return None, BOGUS_DATA_REASON
+        return None, BOGUS_DATA_REASON, removedCounts
 
     # removes statistical outliers
     _tm, _mag, _err = preprocess.remove_noise(tm, mag, err,
                                               error_limit=errorLimit,
                                               std_limit=stdLimit)
-    outlierRemoved = len(tm) - len(_tm)
-    if outlierRemoved:
-        logger.debug("outlier removed %s", outlierRemoved)
-
+    removedCounts[DATA_OUTLIER_REMOVED] = len(tm) - len(_tm)
     if len(_tm) < SUFFICIENT_LC_DATA:
         logger.debug("insufficient: %s after statistical outliers removed",
                      len(_tm))
-        return None, OUTLIERS_REASON
+        return None, OUTLIERS_REASON, removedCounts
 
-    lc = {DATA_TIME: _tm, DATA_MAGNITUDE: _mag, DATA_ERROR: _err,
-          DATA_BOGUS_REMOVED: bogusRemoved,
-          DATA_OUTLIER_REMOVED: outlierRemoved}
-    return lc, None
+    return (_tm, _mag, _err), None, removedCounts
+
+
+def cleanDataset(lcs, remove, stdLimit=5, errorLimit=3):
+    """Clean a list of lc's and report details on discards"""
+    cleaned = []
+    shortIssueCount = 0
+    bogusIssueCount = 0
+    outlierIssueCount = 0
+    for label, times, mags, errs in lcs:
+        lc, issue, _ = preprocessLc(times, mags, errs, remove=remove,
+                                    stdLimit=stdLimit, errorLimit=errorLimit)
+        if lc:
+            cleaned.append((label,) + lc)
+        else:
+            if issue == INSUFFICIENT_DATA_REASON:
+                shortIssueCount += 1
+            elif issue == BOGUS_DATA_REASON:
+                bogusIssueCount += 1
+            elif issue == OUTLIERS_REASON:
+                outlierIssueCount += 1
+            else:
+                raise ValueError("Bad reason: %s" % issue)
+
+    passRate = fmtPct(len(cleaned), len(lcs))
+    shortRate = fmtPct(shortIssueCount, len(lcs))
+    bogusRate = fmtPct(bogusIssueCount, len(lcs))
+    outlierRate = fmtPct(outlierIssueCount, len(lcs))
+    logger.info("Dataset size: %d Pass rate: %s", len(lcs), passRate)
+    logger.info("Discard rates: short: %s bogus: %s outlier: %s", shortRate,
+                bogusRate, outlierRate)
+    return cleaned

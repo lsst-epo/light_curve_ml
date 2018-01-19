@@ -1,8 +1,9 @@
 import os
+import tarfile
 
 import numpy as np
 
-from lcml.utils import context_util
+from lcml.utils.context_util import absoluteFilePaths, joinRoot
 
 
 #: Research by Kim suggests it best that light curves have at least 80 data
@@ -10,12 +11,24 @@ from lcml.utils import context_util
 SUFFICIENT_LC_DATA = 80
 
 
-def lcFilterBogus(mjds, values, errors, remove=(-99.0,)):
+def lcFilterBogus(mjds, values, errors, remove):
     """Simple light curve filter that removes bogus magnitude and error
     values."""
     return zip(*[(mjds[i], v, errors[i])
                  for i, v in enumerate(values)
                  if v not in remove and errors[i] not in remove])
+
+
+def unarchiveAll(directory, ext="tar", mode="r:", remove=False):
+    """Given a directory, untars all tar files found to that same dir.
+    Optionally specify archive extension, compression type, and whether to
+    remove archive file after unarchiving."""
+    for i, f in enumerate(absoluteFilePaths(directory, ext=ext)):
+        with tarfile.open(f, mode) as tar:
+            tar.extractall(path=directory)
+
+        if remove:
+            os.remove(f)
 
 
 def getDatasetFilePaths(datasetName, ext):
@@ -25,7 +38,7 @@ def getDatasetFilePaths(datasetName, ext):
     be returned
     :param ext - Required file extension of dataset files
     """
-    path = context_util.joinRoot("data", datasetName)
+    path = joinRoot("data", datasetName)
     return [os.path.join(path, f) for f in os.listdir(path) if f.endswith(ext)]
 
 

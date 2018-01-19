@@ -32,6 +32,10 @@ ALL_DATA_TYPES = ["time", "magnitude", "error", "magnitude2", "aligned_time",
 LC_DATA = (DATA_TIME, DATA_MAGNITUDE, DATA_ERROR)
 
 
+_GARBAGE_VALUES = {float("nan"), float("-inf"), float("inf")}
+_MACHO_REMOVE = _GARBAGE_VALUES.union({-99.0})
+
+
 def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
                      limit=None):
     """Parses the given MACHO LC file into a list of noise-removed light curves
@@ -70,10 +74,10 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
                     # sort by mjd time to be sure
                     series = series[series[:, 5].argsort()]
 
-                rBunch, issue = preprocessLc(series[:, 5], series[:, 6],
-                                                series[:, 7], stdLimit,
-                                             errorLimit)
-                if rBunch:
+                rLc, issue, _ = preprocessLc(series[:, 5], series[:, 6],
+                                             series[:, 7], _MACHO_REMOVE,
+                                             stdLimit, errorLimit)
+                if rLc:
                     actualBands += 1
                 else:
                     if issue == "short":
@@ -83,10 +87,10 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
                     else:
                         outlierCnt += 1
 
-                bBunch, issue = preprocessLc(series[:, 5], series[:, 8],
-                                                series[:, 9], stdLimit,
-                                             errorLimit)
-                if bBunch:
+                bLc, issue, _ = preprocessLc(series[:, 5], series[:, 8],
+                                             series[:, 9], _MACHO_REMOVE,
+                                             stdLimit, errorLimit)
+                if bLc:
                     actualBands += 1
                 else:
                     if issue == "short":
@@ -98,7 +102,7 @@ def parseCleanSeries(filePaths, stdLimit, errorLimit, sort=False, numBands=2,
 
                 lcs.append(Bunch(field=field, tile=tile, sequence=seq,
                                  category=cat, data=LC_DATA,
-                                 bands=Bunch(r=rBunch, b=bBunch)))
+                                 bands=Bunch(r=rLc, b=bLc)))
                 totalSequences += 1
 
             if actualBands >= limit:
@@ -150,7 +154,7 @@ def reportBandStats(band):
     if not band:
         return None
 
-    lens = [len(b[DATA_TIME]) for b in band]
+    lens = [len(b[0]) for b in band]
     bMin = min(lens)
     bMax = max(lens)
     bAve = np.average(lens)
@@ -204,7 +208,7 @@ def machoTest():
     # compute features
     allBands = [(lc.category, lc.bands.r) for lc in lcs if lc.bands.r]
     bBands = [(lc.category, lc.bands.b) for lc in lcs if lc.bands.b]
-    allBands.extend(bBands)  # TODO probably run separately in a function?
+    allBands.extend(bBands)
     if not allBands:
         logger.info("No bands")
         return
@@ -252,11 +256,11 @@ def extractWork(args):
     category = args[1]
     band = args[2]
     startTime = time.time()
-    _, values = featureSpace.extract(time=band[DATA_TIME],
-                                     magnitude=band[DATA_MAGNITUDE],
-                                     error=band[DATA_ERROR])
+    _, values = featureSpace.extract(time=band[0],
+                                     magnitude=band[1],
+                                     error=band[2])
     elapsedTime = time.time() - startTime
-    return category, values, len(band[DATA_TIME]), elapsedTime
+    return category, values, len(band[0]), elapsedTime
 
 
 if __name__ == "__main__":

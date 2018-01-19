@@ -13,11 +13,11 @@ def toDatetime(time, format="mjd", scale="tt"):
     return t.datetime
 
 
-if __name__ == "__main__":
-    print(toDatetime(2015, format="jyear", scale="tcb"))
-
-
 def fmtPct(a, b, places=2):
     """Given a ratio a / b formats a string representing the percentage."""
     _base = "{:.%s%%}" % places
     return _base.format(float(a) / float(b)) if b else "NaN"
+
+
+if __name__ == "__main__":
+    print(toDatetime(2015, format="jyear", scale="tcb"))

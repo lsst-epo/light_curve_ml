@@ -13,7 +13,8 @@ from lcml.utils.data_util import (lcFilterBogus,
                                   SUFFICIENT_LC_DATA)
 
 
-_GARBAGE_VALUES = {float("NaN"), float("-Inf"), float("Inf")}
+_GARBAGE_VALUES = {float("nan"), float("-inf"), float("inf")}
+_MACHO_REMOVE = _GARBAGE_VALUES.union({-99.0})
 
 
 logger = logging.getLogger(__name__)
@@ -96,10 +97,10 @@ def loadMachoData(trainData, report=True):
         blueErrors.append(bErr)
 
     redMjds, clRedMags, clRedErrors = lcFilterBogus(mjds, redMags,
-                                                    redErrors)
-    blueMjds, clBlueMags, clBlueErrors = lcFilterBogus(mjds,
-                                                       blueMags,
-                                                       blueErrors)
+                                                    redErrors, _MACHO_REMOVE)
+    blueMjds, clBlueMags, clBlueErrors = lcFilterBogus(mjds, blueMags,
+                                                       blueErrors,
+                                                       _MACHO_REMOVE)
     if report:
         t = PrettyTable(field_names=["type", "original", "removed",
                                      "final"])

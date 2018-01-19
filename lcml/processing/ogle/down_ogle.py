@@ -37,6 +37,9 @@ def fetchOgle3(vid):
     return fetch_OGLE3(vid)
 
 
+_REPORT_FREQ = 100
+
+
 def downOgle():
     sAll = time.time()
     args = _getArgs()
@@ -52,16 +55,14 @@ def downOgle():
     # pool = Pool(processes=multiprocessing.cpu_count())
     # datas = pool.map(ogleOrNone, ids[:args.limit])
 
-    c = 0
-    toProcess = args.end - args.start
+    c = args.start
     for vid in ids[args.start: args.end]:
-        c += 1
-        if c % 100 == 0:
-            logger.info("%s / %s", c, toProcess)
+        if c % _REPORT_FREQ == 0:
+            logger.info("%s / %s", c, args.end)
 
+        c += 1
         dataObj = fetchOgle3(vid)
-        bunch = dataObj.data
-        for bandChar, band in bunch.items():
+        for bandChar, band in dataObj.data.items():
             if len(band.time) > args.sufficientLength:
                 validLc += 1
             else:
@@ -70,7 +71,8 @@ def downOgle():
     logger.info("\nScript total elapsed: %.2fs",time.time() - sAll)
     logger.info("Process data elapsed: %.2fs\n", time.time() - s)
     totalLcs = float(validLc + tooShortLc)
-    logger.info("Processed %d / %s OGLE3 ids", toProcess, len(ids))
+    processed = args.end - args.start
+    logger.info("Processed %d / %s OGLE3 ids", processed, len(ids))
     logger.info("Found %d total light curves", totalLcs)
     validRate = "{:.2%}".format(validLc / totalLcs)
     insuffRate = "{:.2%}".format(tooShortLc / totalLcs)
