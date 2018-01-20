@@ -8,11 +8,12 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
 
-from lcml.common import STANDARD_DATA_TYPES
+from lcml.common import STANDARD_INPUT_DATA_TYPES
 from lcml.processing.preprocess import cleanDataset
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
 from lcml.utils.data_util import unarchiveAll
+from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
 
 
 logger = getBasicLogger(__name__, __file__)
@@ -78,7 +79,7 @@ def extractFeatures(lcs):
     features = list()
     exclude = [] if False else ["CAR_mean", "CAR_sigma", "CAR_tau"]
     logger.info("Excluded features: %s", exclude)
-    fs = FeatureSpace(data=STANDARD_DATA_TYPES, exclude=exclude)
+    fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
 
     startTime = time.time()
     for _, tm, mag, err in lcs:
@@ -106,8 +107,14 @@ def main():
     reportClassHistogram(cleanLcs)
 
     # run train set through the feets library to get feature vectors
-    classLabels = [lc[0] for lc in cleanLcs]
-    features = extractFeatures(cleanLcs)
+    allFeatures = False  # TO DO arg
+    exclude = [] if allFeatures else ["CAR_mean", "CAR_sigma", "CAR_tau"]
+    logger.info("Excluded features: %s", exclude)
+    fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
+    cleanLcs = [(fs,) + lc for lc in cleanLcs]
+    featureLabels, elapsedMin = mapMultiprocess(feetsExtract, cleanLcs)
+    features = [fl[0] for fl in featureLabels]
+    classLabels = [fl[1] for fl in featureLabels]
 
     # create a test and train set
     xTrain, xTest, yTrain, yTest = train_test_split(features, classLabels,
@@ -138,7 +145,7 @@ def main():
     # research performance metrics from Kim's papers
     # record performance and time to process
     # create CV set and try RF variations
-    print("Elapsed %s" % (time.time() - start))
+    print("Elapsed %.2fs" % (time.time() - start))
 
 
 if __name__ == "__main__":

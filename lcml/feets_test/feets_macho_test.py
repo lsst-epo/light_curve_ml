@@ -11,7 +11,7 @@ from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 import numpy as np
 from prettytable import PrettyTable
 
-from lcml.common import STANDARD_DATA_TYPES
+from lcml.common import STANDARD_INPUT_DATA_TYPES
 from lcml.processing.preprocess import preprocessLc
 from lcml.utils import context_util
 from lcml.utils.basic_logging import getBasicLogger
@@ -217,7 +217,7 @@ def machoTest():
     # correspond to: CAR_mean, CAR_sigma, CAR_tau,
     exclude = [] if args.allFeatures else ["CAR_mean", "CAR_sigma", "CAR_tau"]
     logger.info("Excluded features: %s", exclude)
-    fs = FeatureSpace(data=STANDARD_DATA_TYPES, exclude=exclude)
+    fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
     features = fs.features_as_array_
     reportFeatures = False
     extractTimes = []
