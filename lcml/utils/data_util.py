@@ -42,6 +42,19 @@ def getDatasetFilePaths(datasetName, ext):
     return [os.path.join(path, f) for f in os.listdir(path) if f.endswith(ext)]
 
 
+def convertClassLabels(classLabels):
+    """Converts all class labels to integer values unique to individual
+    classes. Labels are modified in-place.
+    :param classLabels: Class labels for a dataset as array or list
+    :return The mapping from integer to original class label for decoding
+    """
+    labelToInt = {v: i for i, v in enumerate(np.unique(classLabels))}
+    for i in range(len(classLabels)):
+        classLabels[i] = labelToInt[classLabels[i]]
+
+    return {i: v for v, i in labelToInt.items()}
+
+
 def reportDataset(dataset, labels=None):
     """Reports the characteristics of a dataset"""
     size = len(dataset)
