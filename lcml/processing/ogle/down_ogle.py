@@ -1,6 +1,7 @@
 import argparse
 import multiprocessing
 from multiprocessing import Pool
+import tarfile
 import time
 import os
 
@@ -34,7 +35,11 @@ def _getArgs():
 @retry(timeoutSec=120, initialRetryDelaySec=1, maxRetryDelaySec=100,
        retryExceptions=(requests.RequestException,), logger=logger)
 def fetchOgle3(vid):
-    return fetch_OGLE3(vid)
+    try:
+        return fetch_OGLE3(vid)
+    except tarfile.ReadError:
+        print("error reading tarfile: %s" % vid)
+        raise
 
 
 _REPORT_FREQ = 100
