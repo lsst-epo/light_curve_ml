@@ -3,6 +3,7 @@ import time
 
 from feets import FeatureSpace
 import numpy as np
+import pandas as pd
 from prettytable import PrettyTable
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -12,7 +13,7 @@ from lcml.common import STANDARD_INPUT_DATA_TYPES
 from lcml.processing.preprocess import cleanDataset
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
-from lcml.utils.data_util import unarchiveAll
+from lcml.utils.data_util import convertClassLabels, unarchiveAll
 from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
 
 
@@ -34,15 +35,17 @@ def _check_dim(lc):
 
 def parseOgle3Lc(filePath):
     lc = _check_dim(np.loadtxt(filePath))
-    return [lc[:, 0], lc[:, 1], lc[:, 2]]
+    return lc[:, 0], lc[:, 1], lc[:, 2]
 
 
 def ogle3ToLcs(dataDir, limit=float("inf")):
-    """Converts all OGLE3 dat's to light curves as tuples of the form:
-    (classLabel (int), time, magnitude, error). Parses class label from file
-    name."""
-    uniqueCats = set()
-    lcs = []
+    """Converts all OGLE3 dat's to a DataFrame of light curves. Each row
+    contains: (classLabel (int), time, magnitude, error). Parses class label
+    from file name."""
+    classLabel = list()
+    times = list()
+    magnitudes = list()
+    errors = list()
     for i, f in enumerate(absoluteFilePaths(dataDir, ext="dat")):
         if i == limit:
             break
@@ -55,17 +58,18 @@ def ogle3ToLcs(dataDir, limit=float("inf")):
             logger.warning("file name lacks category! %s", fileName)
             continue
 
-        uniqueCats.add(category)
-        catCode = OGLE3_LABEL_TO_NUM[category]
-        lc = parseOgle3Lc(f)
-        if lc:
-            lcs.append([catCode] + lc)
+        timeSeries, magnitudeSeries, errorSeries = parseOgle3Lc(f)
+        classLabel.append(category)
+        times.append(timeSeries)
+        magnitudes.append(magnitudeSeries)
+        errors.append(errorSeries)
 
-    return lcs, uniqueCats
+    return pd.DataFrame(data={"classLabel": classLabel, "time": times,
+                              "magnitude": magnitudes, "error": errors})
 
 
 def reportClassHistogram(lcs):
-    c = Counter([OGLE3_NUM_TO_LABEL[lc[0]] for lc in lcs])
+    c = Counter([lc[0] for lc in lcs])
     total = float(len(lcs))
     t = PrettyTable(["category", "count", "percentage"])
     t.align = "l"
@@ -97,14 +101,19 @@ def main():
     # for quick testing
     sampleLimit = 50
     trainRatio = 0.75
-
     dataDir = joinRoot("data/ogle3")
-
     unarchiveAll(dataDir, remove=True)
-    lcs, categories = ogle3ToLcs(dataDir, limit=sampleLimit)
+
+    lcs = ogle3ToLcs(dataDir, limit=sampleLimit)
+    # TODO now given a DataFrame, work through the rest
+
     reportClassHistogram(lcs)
     cleanLcs = cleanDataset(lcs, {float("nan")})
     reportClassHistogram(cleanLcs)
+
+    # TODO instead of using specific label mapping use
+    classLabels = [lc[0] for lc in cleanLcs]
+    categoryToLabel = convertClassLabels(classLabels=classLabels)
 
     # run train set through the feets library to get feature vectors
     allFeatures = False  # TO DO arg
