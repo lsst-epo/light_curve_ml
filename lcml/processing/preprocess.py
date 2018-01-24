@@ -1,5 +1,4 @@
 from feets import preprocess
-from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.data_util import SUFFICIENT_LC_DATA, lcFilterBogus
 from lcml.utils.format_util import fmtPct
@@ -62,17 +61,23 @@ def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
     return (_tm, _mag, _err), None, removedCounts
 
 
-def cleanDataset(lcs, remove, stdLimit=5, errorLimit=3):
-    """Clean a list of lc's and report details on discards"""
-    cleaned = []
+def cleanDataset(labels, times, mags, errors, remove, stdLimit=5, errorLimit=3):
+    """Clean a LC dataframe and report details on discards"""
     shortIssueCount = 0
     bogusIssueCount = 0
     outlierIssueCount = 0
-    for label, times, mags, errs in lcs:
-        lc, issue, _ = preprocessLc(times, mags, errs, remove=remove,
+    _classLabel = list()
+    _times = list()
+    _magnitudes = list()
+    _errors = list()
+    for i in range(len(labels)):
+        lc, issue, _ = preprocessLc(times[i], mags[i], errors[i], remove=remove,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
         if lc:
-            cleaned.append((label,) + lc)
+            _classLabel.append(labels[i])
+            _times.append(lc[0])
+            _magnitudes.append(lc[1])
+            _errors.append(lc[2])
         else:
             if issue == INSUFFICIENT_DATA_REASON:
                 shortIssueCount += 1
@@ -83,11 +88,11 @@ def cleanDataset(lcs, remove, stdLimit=5, errorLimit=3):
             else:
                 raise ValueError("Bad reason: %s" % issue)
 
-    passRate = fmtPct(len(cleaned), len(lcs))
-    shortRate = fmtPct(shortIssueCount, len(lcs))
-    bogusRate = fmtPct(bogusIssueCount, len(lcs))
-    outlierRate = fmtPct(outlierIssueCount, len(lcs))
-    logger.info("Dataset size: %d Pass rate: %s", len(lcs), passRate)
+    passRate = fmtPct(len(_classLabel), len(labels))
+    shortRate = fmtPct(shortIssueCount, len(labels))
+    bogusRate = fmtPct(bogusIssueCount, len(labels))
+    outlierRate = fmtPct(outlierIssueCount, len(labels))
+    logger.info("Dataset size: %d Pass rate: %s", len(labels), passRate)
     logger.info("Discard rates: short: %s bogus: %s outlier: %s", shortRate,
                 bogusRate, outlierRate)
-    return cleaned
+    return _classLabel, _times, _magnitudes, _errors

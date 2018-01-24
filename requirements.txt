@@ -4,5 +4,6 @@ astropy>=2
 feets
 numpy
 nupic>=1.0
+pandas
 prettytable
 upsilon
