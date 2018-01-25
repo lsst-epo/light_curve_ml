@@ -15,6 +15,15 @@ def joinRoot(*paths):
     return os.path.join(_ROOT_DIR, *paths)
 
 
+def ensureRootPath(*paths):
+    fullPath = joinRoot(*paths)
+    if not os.path.exists(fullPath):
+        os.makedirs(fullPath)
+
+    return fullPath
+
+
+
 def absoluteFilePaths(directory, ext=None):
     """Returns all absolute files paths found in a directory (non-recursive).
     Can optionally filter for files with specified ext, e.g. 'csv' assuming a
