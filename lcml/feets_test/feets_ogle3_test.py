@@ -1,12 +1,14 @@
 import argparse
 from collections import Counter
+import json
 import os
+import platform
 import time
 
 from feets import FeatureSpace
 import numpy as np
-import pandas as pd
 from prettytable import PrettyTable
+import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -15,7 +17,7 @@ from sklearn.model_selection import train_test_split
 from lcml.common import STANDARD_INPUT_DATA_TYPES
 from lcml.processing.preprocess import cleanDataset
 from lcml.utils.basic_logging import getBasicLogger
-from lcml.utils.context_util import absoluteFilePaths, ensureRootPath, joinRoot
+from lcml.utils.context_util import absoluteFilePaths, joinRoot
 from lcml.utils.data_util import convertClassLabels, unarchiveAll
 from lcml.utils.format_util import fmtPct
 from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
@@ -30,14 +32,17 @@ REMOVE_SET = {float("nan"), float("inf"), float("-inf")}
 
 def _getArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--sampleLimit", type=int, default=50,
+    parser.add_argument("-t", "--sampleLimit", type=int, default=50,
                         help="limit on the number of light curves to process")
     parser.add_argument("-a", "--trainRatio", type=float, default=0.75,
                         help="ratio of desired train set size to entire "
                              "dataset size")
 
-    parser.add_argument("--skipTrain", action="store_true", help="attempt to "
-                        "load model from disk instead of training model")
+    parser.add_argument("-l", "--modelPath", type=str, help="path from "
+                        "which to load random forest classifier")
+    parser.add_argument("-s", "--saveModel", action="store_true",
+                        help="Specify to save the model to the 'loadModelPath'")
+
     # TODO support feature
     parser.add_argument("-c", "--cvRatio", type=float, default=0.0,
                         help="ratio of desired cross-validation set size to "
@@ -60,10 +65,7 @@ def loadOgle3Dataset(dataDir, limit=float("inf")):
     errors = list()
     paths = absoluteFilePaths(dataDir, ext="dat")
     logger.info("Found %s files", len(paths))
-    for i, f in enumerate(paths):
-        if i == limit:
-            break
-
+    for i, f in enumerate(paths[:limit]):
         fileName = f.split("/")[-1]
         fnSplits = fileName.split("-")
         if len(fnSplits) > 2:
@@ -143,10 +145,80 @@ def allFinite(X):
             else True)
 
 
+def trainRfClassifier(xTrain, yTrain, numTrees=10, maxFeatures="auto",
+                      numJobs=-1):
+    """Trains an sklearn.ensemble.RandomForestClassifier.
+
+    :param xTrain: ndarray of features
+    :param yTrain: ndarray of labels
+    :param numTrees: see n_estimators in
+        sklearn.ensemble.forest.RandomForestClassifier
+    :param maxFeatures: see max_features in
+        sklearn.ensemble.forest.RandomForestClassifier
+    :param numJobs: see n_jobs in sklearn.ensemble.forest.RandomForestClassifier
+    """
+    model = RandomForestClassifier(n_estimators=numTrees,
+                                   max_features=maxFeatures, n_jobs=numJobs)
+    s = time.time()
+    model.fit(xTrain, yTrain)
+    logger.info("Trained model in %.2fs", time.time() - s)
+    return model
+
+
+def saveModel(model, modelPath, trainParams=None, cvScore=None):
+    """If 'modelPath' is specified, the model and its metadata, including
+    'trainParams' and 'cvScore' are saved to disk.
+
+    :param model: any Python object
+    :param modelPath: save path
+    :param trainParams: metadata dict containing details of training
+    :param cvScore: metadata containing details of cvScore
+    """
+    joblib.dump(model, modelPath)
+    logger.info("Dumped model to: %s", modelPath)
+
+    metadataPath = _metadataPath(modelPath)
+    archBits = platform.architecture()[0]
+    metadata = {"archBits": archBits, "sklearnVersion": sklearn.__version__,
+                "pythonSource": __name__, "trainParams": trainParams,
+                "cvScore": cvScore}
+    with open(metadataPath, "w") as f:
+        json.dump(metadata, f)
+
+
+def loadModel(modelPath):
+    try:
+        model = joblib.load(modelPath)
+    except IOError:
+        logger.warning("Failed to load model from: %s", modelPath)
+        return None
+
+    logger.info("Loaded model from: %s", modelPath)
+    metadataPath = _metadataPath(modelPath)
+    try:
+        with open(metadataPath) as mFile:
+            metadata = json.load(mFile)
+    except IOError:
+        logger.warning("Metadata file doesn't exist: %s", metadataPath)
+        return model
+
+    if metadata["archBits"] != platform.architecture()[0]:
+        logger.critical("Model created on arch: %s but current arch is %s",
+                        metadata["archBits"], platform.architecture()[0])
+        raise ValueError("Unusable model")
+
+    logger.info("Model metadata: %s", metadata)
+    return model
+
+
+def _metadataPath(modelPath):
+    finalDirLoc = modelPath.rfind(os.sep)
+    return os.path.join(modelPath[:finalDirLoc], "metadata.json")
+
+
 def main():
     """Runs feets on ogle and classifies resultant features with a RF."""
     args = _getArgs()
-
     dataDir = joinRoot("data/ogle3")
     unarchiveAll(dataDir, remove=True)
     _labels, _times, _mags, _errors = loadOgle3Dataset(dataDir,
@@ -165,57 +237,57 @@ def main():
                                                     labelsProcessed,
                                                     train_size=args.trainRatio)
     logger.info("Train size: %s Test size: %s", len(xTrain), len(xTest))
-
-    # train RF on train set feature vectors
     model = None
-    modelPath = os.path.join(ensureRootPath("models/ogle3"),
-                             "rf-classifier.pkl")
-    if args.skipTrain:
-        try:
-            model = joblib.load(modelPath)
-        except Exception as e:
-            logger.warning("model loading failed %s" % e)
-
-        logger.info("Loaded model from: %s", modelPath)
+    if args.modelPath:
+        # try request to load model from disk
+        model = loadModel(args.modelPath)
 
     if not model:
-        model = RandomForestClassifier()
-        s = time.time()
-        model.fit(xTrain, yTrain)
-        logger.info("Trained model in %.2fs", time.time() - s)
-        if not args.skipTrain:
-            logger.info("Dumped model to: %s", modelPath)
-            joblib.dump(model, modelPath)
-
-    # TODO also save metadata: training data, python source code, version of
-    # scikit-learn
-    # cross validation score obtained on training data,
-    # This should make it possible to check that the cross-validation score is
-    # in the same range as before.
-    # finally the architecture show be the same for dumping and loading
+        # if no model from disk, then train one
+        # TODO hyperparameters
+        # explore features around these defaults
+        numTrees = 10
+        maxFeatures = "auto"
+        # import math
+        # maxFeatures = math.sqrt(60)
+        model = trainRfClassifier(xTrain, yTrain, numTrees=numTrees,
+                                  maxFeatures=maxFeatures)
 
     trainPredictions = model.predict(xTrain)
     testPredictions = model.predict(xTest)
 
+    trainAccuracy = accuracy_score(yTrain, trainPredictions)
+    testAccuracy = accuracy_score(yTest, testPredictions)
+
+    trainParams = {"allFeatures": args.allFeatures,
+                   "trainRatio": args.trainRatio}
+    # TODO update when cv is available
+    if args.saveModel:
+        # save regardless of args.modelPath value
+        saveModel(model, args.modelPath, trainParams, cvScore=trainAccuracy)
+
     logger.info("__Metrics__")
-    logger.info("Train accuracy: %.5f", accuracy_score(yTrain, trainPredictions))
-    logger.info("Test accuracy: %.5f", accuracy_score(yTest, testPredictions))
+    logger.info("Train accuracy: %.5f", trainAccuracy)
+    logger.info("Test accuracy: %.5f", testAccuracy)
     _confusionMat = confusion_matrix(yTest, testPredictions)
     logger.info("Confusion matrix:\n%s", _confusionMat)
 
-    # TODO revisit using the label mapping to convert ints to strings
+    # TO DO revisit using the label mapping to convert ints to strings
     # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
     # logger.info("\n" + str(confusionMatrix))
-    logger.info(["%s=%s" % (i, label)
-                 for i, label in sorted(intToClassLabel.items())])
+    logger.info("Label mapping: %s", ["%s=%s" % (i, label)
+                                      for i, label in
+                                      sorted(intToClassLabel.items())])
 
     # TODO
-    # research performance metrics from Kim's papers
-    # record performance and time to process to file
-    # create CV set and try RF variations
-    elapsed = time.time() - startAll
-    logger.info("Completed in: %.1fs", elapsed)
-    logger.info("time per lc: %.3fs", elapsed / len(featuresProcessed))
+    # performance metrics
+    # - true class normalized confusion matrix with number and grayscale
+    # intensity
+    # - precision, recall, f1 for each class, with weighted average overall
+    # measure
+    elapsedMins = (time.time() - startAll) / 60
+    logger.info("Completed in: %.1f min", elapsedMins)
+    logger.info("%.3f min / lc", elapsedMins / len(featuresProcessed))
 
 
 if __name__ == "__main__":
