@@ -1,13 +1,10 @@
 import functools
-import logging
 import time
-import traceback
 
 
 def retry(timeoutSec, initialRetryDelaySec, maxRetryDelaySec,
           retryExceptions=(Exception,),
-          retryFilter=lambda e, args, kwargs: True,
-          logger=None, clientLabel=""):
+          retryFilter=lambda e, args, kwargs: True):
     """ Returns a closure suitable for use as function/method decorator for
     retrying a function being decorated.
 
@@ -28,9 +25,6 @@ def retry(timeoutSec, initialRetryDelaySec, maxRetryDelaySec,
         function, and returns True to retry, False to allow the exception to be
         re-raised without retrying. Default: permits any exception that matches
         retryExceptions to be retried.
-    :param logger: User-supplied logger instance to use for logging.
-        None=defaults to MistyLogging.getMistyLogger(__name__)
-    :param clientLabel: Label for caller used in logging error messages
 
     Example:
     ::
@@ -51,9 +45,6 @@ def retry(timeoutSec, initialRetryDelaySec, maxRetryDelaySec,
     assert isinstance(retryExceptions, tuple), (
         "retryExceptions must be tuple, but got %r") % (type(retryExceptions),)
 
-    if logger is None:
-        logger = logging.getLogger(__name__)
-
     def retryDecorator(func):
 
         @functools.wraps(func)
@@ -69,12 +60,6 @@ def retry(timeoutSec, initialRetryDelaySec, maxRetryDelaySec,
                     result = func(*args, **kwargs)
                 except retryExceptions as e:
                     if not retryFilter(e, args, kwargs):
-                        if logger.isEnabledFor(logging.DEBUG):
-                            logger.debug(
-                                '[%s] Failure in %r; retries aborted by custom '
-                                'retryFilter. Caller stack:\n%s', clientLabel,
-                                func, ''.join(traceback.format_stack()),
-                                exc_info=True)
                         raise e
 
                     now = time.time()
@@ -84,33 +69,12 @@ def retry(timeoutSec, initialRetryDelaySec, maxRetryDelaySec,
                     if now < startTime:
                         startTime = now
                     if (now - startTime) >= timeoutSec:
-                        logger.exception(
-                            '[%s] Exhausted retry timeout (%s sec.; %s '
-                            'attempts) for %r. Caller stack:\n%s', clientLabel,
-                            timeoutSec, numAttempts, func,
-                            ''.join(traceback.format_stack()))
                         raise e
-
-                    if numAttempts == 1:
-                        logger.warning(
-                            '[%s] First failure in %r; initial retry in %s '
-                            'sec.; timeoutSec=%s.',
-                            clientLabel, func, delaySec, timeoutSec,
-                            exc_info=True)
-                    else:
-                        logger.debug(
-                            '[%s] %r failed %s times; retrying in %s sec.; '
-                            'timeoutSec=%s. Caller stack:\n%s', clientLabel,
-                            func, numAttempts, delaySec, timeoutSec,
-                            ''.join(traceback.format_stack()), exc_info=True)
 
                     time.sleep(delaySec)
 
                     delaySec = min(delaySec * 2, maxRetryDelaySec)
                 else:
-                    if numAttempts > 1:
-                        logger.info('[%s] %r succeeded on attempt # %d',
-                                    clientLabel, func, numAttempts)
 
                     return result
 
