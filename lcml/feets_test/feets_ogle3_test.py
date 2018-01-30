@@ -12,8 +12,8 @@ import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.metrics import accuracy_score, confusion_matrix
-from sklearn.model_selection import train_test_split
-
+from sklearn.model_selection import (cross_val_predict, cross_val_score,
+                                     cross_validate, train_test_split)
 from lcml.common import STANDARD_INPUT_DATA_TYPES
 from lcml.processing.preprocess import cleanDataset
 from lcml.utils.basic_logging import getBasicLogger
@@ -42,11 +42,8 @@ def _getArgs():
                         "which to load random forest classifier")
     parser.add_argument("-s", "--saveModel", action="store_true",
                         help="Specify to save the model to the 'loadModelPath'")
-
-    # TODO support feature
-    parser.add_argument("-c", "--cvRatio", type=float, default=0.0,
-                        help="ratio of desired cross-validation set size to "
-                             "entire dataset length")
+    parser.add_argument("-c", "--cv", type=int, default=5,
+                        help="number of cross-validation folds")
     parser.add_argument("--allFeatures", action="store_true",
                         help="if specified, all 'feets' features will be "
                              "extracted, otherwise, slow features will be "
@@ -233,58 +230,76 @@ def main():
                                                              mags, times,
                                                              args.allFeatures)
 
-    xTrain, xTest, yTrain, yTest = train_test_split(featuresProcessed,
-                                                    labelsProcessed,
-                                                    train_size=args.trainRatio)
-    logger.info("Train size: %s Test size: %s", len(xTrain), len(xTest))
-    model = None
+    # xTrain, xTest, yTrain, yTest = train_test_split(featuresProcessed,
+    #                                                 labelsProcessed,
+    #                                                 train_size=args.trainRatio)
+    # logger.info("Train size: %s Test size: %s", len(xTrain), len(xTest))
+    models = None
     if args.modelPath:
+        # TODO consider a separate script for just running a serialized model
         # try request to load model from disk
-        model = loadModel(args.modelPath)
+        models = [(0, 0, loadModel(args.modelPath))]
 
-    if not model:
-        # if no model from disk, then train one
-        # TODO hyperparameters
-        # explore features around these defaults
-        numTrees = 10
-        maxFeatures = "auto"
-        # import math
-        # maxFeatures = math.sqrt(60)
-        model = trainRfClassifier(xTrain, yTrain, numTrees=numTrees,
-                                  maxFeatures=maxFeatures)
+    if not models:
+        # default for num estimators is 10
+        estimatorsStart = 5
+        estimatorsStop = 16
 
-    trainPredictions = model.predict(xTrain)
-    testPredictions = model.predict(xTest)
+        # default for max features is sqrt(len(features))
+        # for feets len(features) ~= 64
+        rfFeaturesStart = 5
+        rfFeaturesStop = 11
+        models = [(t, f, RandomForestClassifier(n_estimators=t, max_features=f,
+                                                n_jobs=-1))
+                  for f in range(rfFeaturesStart, rfFeaturesStop)
+                  for t in range(estimatorsStart, estimatorsStop)]
 
-    trainAccuracy = accuracy_score(yTrain, trainPredictions)
-    testAccuracy = accuracy_score(yTest, testPredictions)
+    # N.B. common classification scoring types from :
+    # scikit-learn.org/stable/modules/model_evaluation.html
+    scoring = ['accuracy', 'average_precision', 'f1', 'f1_micro', 'f1_macro',
+               'f1_weighted', 'f1_samples', 'neg_log_loss', 'precision',
+               'recall', 'roc_auc']
+    winner = None
+    maxAccuracy = 0
+    maxF1 = 0
+    for trees, maxFeats, model in models:
+        scores = cross_validate(model, featuresProcessed, labelsProcessed,
+                                scoring=scoring, cv=args.cv,
+                                return_train_score=False, n_jobs=-1)
+        if scores["test_f1"] > maxF1:
+            winner = (trees, maxFeats, model,)
+            maxF1 = scores["test_f1"]
+
+        maxAccuracy = max(maxAccuracy, scores["test_accuracy"])
+        print("- test_accuracy: %s" % scores.pop("test_accuracy"))
+        print("- test_f1: %s" % scores.pop("test_f1"))
+        print("- others: %s" % scores)
+
+        # TODO true class normalized confusion matrix with number and grayscale
+        # intensity
+        # replace above with:
+        # predicted = cross_val_predict(clf, iris.data, iris.target, n_jobs=-1)
+        # _confusionMat = confusion_matrix(featuresProcessed, predicted)
+        # logger.info("Confusion matrix:\n%s", _confusionMat)
+        # TO DO revisit using the label mapping to convert ints to strings
+        # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
+        # logger.info("\n" + str(confusionMatrix))
+
+        # TODO using confusion matrix, compute, for each class the precision,
+        # recall, f1 with weighted average overall measure
+
 
     trainParams = {"allFeatures": args.allFeatures,
-                   "trainRatio": args.trainRatio}
-    # TODO update when cv is available
+                   "cv": args.cv, "trees": winner[0], "maxFeatures": winner[1]}
     if args.saveModel:
         # save regardless of args.modelPath value
-        saveModel(model, args.modelPath, trainParams, cvScore=trainAccuracy)
+        saveModel(winner[-1], args.modelPath, trainParams, cvScore=maxF1)
 
-    logger.info("__Metrics__")
-    logger.info("Train accuracy: %.5f", trainAccuracy)
-    logger.info("Test accuracy: %.5f", testAccuracy)
-    _confusionMat = confusion_matrix(yTest, testPredictions)
-    logger.info("Confusion matrix:\n%s", _confusionMat)
 
-    # TO DO revisit using the label mapping to convert ints to strings
-    # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
-    # logger.info("\n" + str(confusionMatrix))
     logger.info("Label mapping: %s", ["%s=%s" % (i, label)
                                       for i, label in
                                       sorted(intToClassLabel.items())])
 
-    # TODO
-    # performance metrics
-    # - true class normalized confusion matrix with number and grayscale
-    # intensity
-    # - precision, recall, f1 for each class, with weighted average overall
-    # measure
     elapsedMins = (time.time() - startAll) / 60
     logger.info("Completed in: %.1f min", elapsedMins)
     logger.info("%.3f min / lc", elapsedMins / len(featuresProcessed))
