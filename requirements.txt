@@ -1,4 +1,4 @@
-scikit-learn==0.18.1
+scikit-learn
 astropy>=2
 # htmresearch
 feets
