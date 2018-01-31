@@ -34,20 +34,20 @@ def _getArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--sampleLimit", type=int, default=50,
                         help="limit on the number of light curves to process")
-    parser.add_argument("-a", "--trainRatio", type=float, default=0.75,
-                        help="ratio of desired train set size to entire "
-                             "dataset size")
-
-    parser.add_argument("-l", "--modelPath", type=str, help="path from "
-                        "which to load random forest classifier")
-    parser.add_argument("-s", "--saveModel", action="store_true",
-                        help="Specify to save the model to the 'loadModelPath'")
     parser.add_argument("-c", "--cv", type=int, default=5,
                         help="number of cross-validation folds")
     parser.add_argument("--allFeatures", action="store_true",
                         help="if specified, all 'feets' features will be "
                              "extracted, otherwise, slow features will be "
                              "omitted")
+    parser.add_argument("-j", "--jobs", type=int, default=1,
+                        help="number of processes to use for ML model "
+                             "computation. -1 implies all available cores")
+    parser.add_argument("-l", "--modelPath", type=str, help="path from "
+                        "which to load random forest classifier")
+    parser.add_argument("-s", "--saveModel", action="store_true",
+                        help="Specify to save the model to the 'loadModelPath'")
+
     return parser.parse_args()
 
 
@@ -230,10 +230,6 @@ def main():
                                                              mags, times,
                                                              args.allFeatures)
 
-    # xTrain, xTest, yTrain, yTest = train_test_split(featuresProcessed,
-    #                                                 labelsProcessed,
-    #                                                 train_size=args.trainRatio)
-    # logger.info("Train size: %s Test size: %s", len(xTrain), len(xTest))
     models = None
     if args.modelPath:
         # TODO consider a separate script for just running a serialized model
@@ -250,7 +246,7 @@ def main():
         rfFeaturesStart = 5
         rfFeaturesStop = 11
         models = [(t, f, RandomForestClassifier(n_estimators=t, max_features=f,
-                                                n_jobs=-1))
+                                                n_jobs=args.jobs))
                   for f in range(rfFeaturesStart, rfFeaturesStop)
                   for t in range(estimatorsStart, estimatorsStop)]
 
@@ -265,7 +261,7 @@ def main():
     for trees, maxFeats, model in models:
         scores = cross_validate(model, featuresProcessed, labelsProcessed,
                                 scoring=scoring, cv=args.cv,
-                                return_train_score=False, n_jobs=-1)
+                                return_train_score=False, n_jobs=args.jobs)
         if scores["test_f1"] > maxF1:
             winner = (trees, maxFeats, model,)
             maxF1 = scores["test_f1"]
@@ -278,16 +274,16 @@ def main():
         # TODO true class normalized confusion matrix with number and grayscale
         # intensity
         # replace above with:
-        # predicted = cross_val_predict(clf, iris.data, iris.target, n_jobs=-1)
+        # predicted = cross_val_predict(clf, iris.data, iris.target,
+        # n_jobs=args.jobs)
         # _confusionMat = confusion_matrix(featuresProcessed, predicted)
         # logger.info("Confusion matrix:\n%s", _confusionMat)
         # TO DO revisit using the label mapping to convert ints to strings
         # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
         # logger.info("\n" + str(confusionMatrix))
 
-        # TODO using confusion matrix, compute, for each class the precision,
+        # TODO using confusion matrix, compute, for each class, the precision,
         # recall, f1 with weighted average overall measure
-
 
     trainParams = {"allFeatures": args.allFeatures,
                    "cv": args.cv, "trees": winner[0], "maxFeatures": winner[1]}
