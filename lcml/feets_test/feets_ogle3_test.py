@@ -11,7 +11,7 @@ from prettytable import PrettyTable
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.model_selection import (cross_val_predict, cross_val_score,
                                      cross_validate, train_test_split)
 from lcml.common import STANDARD_INPUT_DATA_TYPES
@@ -28,6 +28,16 @@ logger = getBasicLogger(__name__, __file__)
 
 #: data value to scrub
 REMOVE_SET = {float("nan"), float("inf"), float("-inf")}
+
+
+#: N.B. common classification scoring types from:
+#: scikit-learn.org/stable/modules/model_evaluation.html
+DEFAULT_SCORING = ["accuracy", "average_precision", "f1", "f1_micro",
+                   "f1_macro", "f1_weighted", "f1_samples", "neg_log_loss",
+                   "precision", "recall", "roc_auc"]
+
+
+_REL_DATA_DIR = "data/ogle3"
 
 
 def _getArgs():
@@ -162,23 +172,22 @@ def trainRfClassifier(xTrain, yTrain, numTrees=10, maxFeatures="auto",
     return model
 
 
-def saveModel(model, modelPath, trainParams=None, cvScore=None):
+def saveModel(model, modelPath, hyperparams=None, metrics=None):
     """If 'modelPath' is specified, the model and its metadata, including
     'trainParams' and 'cvScore' are saved to disk.
 
-    :param model: any Python object
+    :param model: a trained ML model, could be any Python object
     :param modelPath: save path
-    :param trainParams: metadata dict containing details of training
-    :param cvScore: metadata containing details of cvScore
+    :param hyperparams: all model hyperparameters
+    :param metrics: metric values obtained from running model on test data
     """
     joblib.dump(model, modelPath)
     logger.info("Dumped model to: %s", modelPath)
-
     metadataPath = _metadataPath(modelPath)
     archBits = platform.architecture()[0]
     metadata = {"archBits": archBits, "sklearnVersion": sklearn.__version__,
-                "pythonSource": __name__, "trainParams": trainParams,
-                "cvScore": cvScore}
+                "pythonSource": __name__, "hyperparameters": hyperparams,
+                "metrics": metrics}
     with open(metadataPath, "w") as f:
         json.dump(metadata, f)
 
@@ -215,8 +224,9 @@ def _metadataPath(modelPath):
 
 def main():
     """Runs feets on ogle and classifies resultant features with a RF."""
+    startAll = time.time()
     args = _getArgs()
-    dataDir = joinRoot("data/ogle3")
+    dataDir = joinRoot(_REL_DATA_DIR)
     unarchiveAll(dataDir, remove=True)
     _labels, _times, _mags, _errors = loadOgle3Dataset(dataDir,
                                                        limit=args.sampleLimit)
@@ -225,14 +235,16 @@ def main():
     reportClassHistogram(labels)
     intToClassLabel = convertClassLabels(labels)
 
-    startAll = time.time()
+    logger.info("Extracting features...")
+    featuresStart = time.time()
     featuresProcessed, labelsProcessed = multiprocessExtract(errors, labels,
                                                              mags, times,
                                                              args.allFeatures)
+    logger.info("took %.2fs", time.time() - featuresStart)
 
     models = None
     if args.modelPath:
-        # TODO consider a separate script for just running a serialized model
+        # consider a separate script for just running a serialized model
         # try request to load model from disk
         models = [(0, 0, loadModel(args.modelPath))]
 
@@ -242,7 +254,7 @@ def main():
         estimatorsStop = 16
 
         # default for max features is sqrt(len(features))
-        # for feets len(features) ~= 64
+        # for feets len(features) ~= 64 => 8
         rfFeaturesStart = 5
         rfFeaturesStop = 11
         models = [(t, f, RandomForestClassifier(n_estimators=t, max_features=f,
@@ -250,32 +262,66 @@ def main():
                   for f in range(rfFeaturesStart, rfFeaturesStop)
                   for t in range(estimatorsStart, estimatorsStop)]
 
-    # N.B. common classification scoring types from :
-    # scikit-learn.org/stable/modules/model_evaluation.html
-    scoring = ['accuracy', 'average_precision', 'f1', 'f1_micro', 'f1_macro',
-               'f1_weighted', 'f1_samples', 'neg_log_loss', 'precision',
-               'recall', 'roc_auc']
-    winner = None
-    maxAccuracy = 0
-    maxF1 = 0
-    for trees, maxFeats, model in models:
-        scores = cross_validate(model, featuresProcessed, labelsProcessed,
-                                scoring=scoring, cv=args.cv,
-                                return_train_score=False, n_jobs=args.jobs)
-        if scores["test_f1"] > maxF1:
-            winner = (trees, maxFeats, model,)
-            maxF1 = scores["test_f1"]
+    scoring = ["accuracy"]
+    bestModel, bestParams, bestMetrics = searchBestModel(models,
+                                                         featuresProcessed,
+                                                         labelsProcessed,
+                                                         scoring,
+                                                         args.cv, args.jobs)
+    logger.info("__ Winning model __")
+    logger.info("hyperparameters: %s", bestParams)
+    logger.info("accuracy: %.5fs", bestMetrics["test_accuracy"])
 
-        maxAccuracy = max(maxAccuracy, scores["test_accuracy"])
-        print("- test_accuracy: %s" % scores.pop("test_accuracy"))
-        print("- test_f1: %s" % scores.pop("test_f1"))
-        print("- others: %s" % scores)
+    bestParams["allFeatures"] = args.allFeatures
+    bestParams["cv"] = args.cv
+    if args.saveModel:
+        # save regardless of args.modelPath value
+        saveModel(bestModel, args.modelPath, bestParams, bestMetrics)
+
+    logger.info("Label mapping: %s", ["%s=%s" % (i, label)
+                                      for i, label in
+                                      sorted(intToClassLabel.items())])
+    elapsedMins = (time.time() - startAll) / 60
+    logger.info("Completed in: %.3f min", elapsedMins)
+
+
+def searchBestModel(models, features, labels, scoring, cv, jobs):
+    """Tries all specified models and select one with highest F1 score". Returns
+    the best model, the model's associated hyperparameters, """
+    bestModel = None
+    bestTrees = None
+    bestMaxFeats = None
+    bestMetrics = None
+    maxAveAccuracy = 0
+    fitTimes = []
+    scoreTimes = []
+    for trees, maxFeats, model in models:
+        logger.info("trees: %s max features: %s", trees, maxFeats)
+        scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
+                                n_jobs=jobs, return_train_score=False)
+        scores["test_accuracy"] = np.average(scores["test_accuracy"])
+        fitTimes.append(np.average(scores.pop("fit_time")))
+        scoreTimes.append(np.average(scores.pop("score_time")))
+        if scores["test_accuracy"] > maxAveAccuracy:
+            maxAveAccuracy = scores["test_accuracy"]
+            bestModel = model
+            bestTrees = trees
+            bestMaxFeats = maxFeats
+            bestMetrics = scores
+
+        _reportScores(scores)
+
+        # trying other route
+        predicted = cross_val_predict(model, features, labels, cv=cv,
+                                      n_jobs=jobs)
+        print("current accuracy: %s new accuracy %s", scores["test_accuracy"],
+              accuracy_score(labels, predicted))
 
         # TODO true class normalized confusion matrix with number and grayscale
         # intensity
         # replace above with:
-        # predicted = cross_val_predict(clf, iris.data, iris.target,
-        # n_jobs=args.jobs)
+        # predicted = cross_val_predict(model, features, labels, cv=cv,
+        #                               n_jobs=jobs)
         # _confusionMat = confusion_matrix(featuresProcessed, predicted)
         # logger.info("Confusion matrix:\n%s", _confusionMat)
         # TO DO revisit using the label mapping to convert ints to strings
@@ -285,20 +331,14 @@ def main():
         # TODO using confusion matrix, compute, for each class, the precision,
         # recall, f1 with weighted average overall measure
 
-    trainParams = {"allFeatures": args.allFeatures,
-                   "cv": args.cv, "trees": winner[0], "maxFeatures": winner[1]}
-    if args.saveModel:
-        # save regardless of args.modelPath value
-        saveModel(winner[-1], args.modelPath, trainParams, cvScore=maxF1)
+    logger.info("average fit time: %.2fs", np.average(fitTimes))
+    logger.info("average score time: %.2fs", np.average(scoreTimes))
+    return (bestModel, {"trees": bestTrees, "maxFeatures": bestMaxFeats},
+            bestMetrics)
 
 
-    logger.info("Label mapping: %s", ["%s=%s" % (i, label)
-                                      for i, label in
-                                      sorted(intToClassLabel.items())])
-
-    elapsedMins = (time.time() - startAll) / 60
-    logger.info("Completed in: %.1f min", elapsedMins)
-    logger.info("%.3f min / lc", elapsedMins / len(featuresProcessed))
+def _reportScores(scores):
+    logger.info("accuracy: %.5fs", scores["test_accuracy"])
 
 
 if __name__ == "__main__":
