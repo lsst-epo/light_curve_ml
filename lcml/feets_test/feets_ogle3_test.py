@@ -8,12 +8,14 @@ import time
 from feets import FeatureSpace
 import numpy as np
 from prettytable import PrettyTable
+from scipy import stats
 import sklearn
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.externals import joblib
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.model_selection import (cross_val_predict, cross_val_score,
                                      cross_validate, train_test_split)
+
 from lcml.common import STANDARD_INPUT_DATA_TYPES
 from lcml.processing.preprocess import cleanDataset
 from lcml.utils.basic_logging import getBasicLogger
@@ -300,24 +302,32 @@ def searchBestModel(models, features, labels, scoring, cv, jobs):
         logger.info("trees: %s max features: %s", trees, maxFeats)
         scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
                                 n_jobs=jobs, return_train_score=False)
-        scores["test_accuracy_std"] = np.std(scores["test_accuracy"])
-        scores["test_accuracy"] = np.average(scores["test_accuracy"])
+
+        scores["test_accuracy_mean"] = np.mean(scores["test_accuracy"])
+        scores["test_accuracy_ci"] = confidenceInterval(scores["test_accuracy"],
+            scores["test_accuracy_mean"])
+
         fitTimes.append(np.average(scores.pop("fit_time")))
         scoreTimes.append(np.average(scores.pop("score_time")))
-        if scores["test_accuracy"] > maxAveAccuracy:
-            maxAveAccuracy = scores["test_accuracy"]
+        if scores["test_accuracy_mean"] > maxAveAccuracy:
+            maxAveAccuracy = scores["test_accuracy_mean"]
             bestModel = model
             bestTrees = trees
             bestMaxFeats = maxFeats
             bestMetrics = scores
 
-        _reportScores(scores)
+
+        logger.info("accuracy: %.7f ci: %.7f %.7f",
+                    scores["test_accuracy_mean"],
+                    scores["test_accuracy_ci"][0],
+                    scores["test_accuracy_ci"][1])
 
         # trying other route
         predicted = cross_val_predict(model, features, labels, cv=cv,
                                       n_jobs=jobs)
         logger.info("current accuracy approach: %.5f new approach %.5f",
-                    scores["test_accuracy"], accuracy_score(labels, predicted))
+                    scores["test_accuracy_mean"],
+                    accuracy_score(labels, predicted))
 
         # TODO true class normalized confusion matrix with number and grayscale
         # intensity
@@ -339,9 +349,11 @@ def searchBestModel(models, features, labels, scoring, cv, jobs):
             bestMetrics)
 
 
-def _reportScores(scores):
-    logger.info("accuracy: %.7f std: %.7f", scores["test_accuracy"],
-                scores["test_accuracy_std"])
+def confidenceInterval(values, mean, confidence=0.99):
+    """Calculates confidence interval using Student's t-distribution and
+    standard error of mean"""
+    return stats.t.interval(confidence, len(values) - 1, loc=mean,
+                            scale=stats.sem(values))
 
 
 if __name__ == "__main__":
