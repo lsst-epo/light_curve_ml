@@ -268,6 +268,7 @@ def main():
                                                          labelsProcessed,
                                                          scoring,
                                                          args.cv, args.jobs)
+    logger.info("")
     logger.info("__ Winning model __")
     logger.info("hyperparameters: %s", bestParams)
     logger.info("accuracy: %.5fs", bestMetrics["test_accuracy"])
@@ -299,6 +300,7 @@ def searchBestModel(models, features, labels, scoring, cv, jobs):
         logger.info("trees: %s max features: %s", trees, maxFeats)
         scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
                                 n_jobs=jobs, return_train_score=False)
+        scores["test_accuracy_std"] = np.std(scores["test_accuracy"])
         scores["test_accuracy"] = np.average(scores["test_accuracy"])
         fitTimes.append(np.average(scores.pop("fit_time")))
         scoreTimes.append(np.average(scores.pop("score_time")))
@@ -314,8 +316,8 @@ def searchBestModel(models, features, labels, scoring, cv, jobs):
         # trying other route
         predicted = cross_val_predict(model, features, labels, cv=cv,
                                       n_jobs=jobs)
-        print("current accuracy: %s new accuracy %s", scores["test_accuracy"],
-              accuracy_score(labels, predicted))
+        logger.info("current accuracy approach: %.5f new approach %.5f",
+                    scores["test_accuracy"], accuracy_score(labels, predicted))
 
         # TODO true class normalized confusion matrix with number and grayscale
         # intensity
@@ -338,7 +340,8 @@ def searchBestModel(models, features, labels, scoring, cv, jobs):
 
 
 def _reportScores(scores):
-    logger.info("accuracy: %.5fs", scores["test_accuracy"])
+    logger.info("accuracy: %.7f std: %.7f", scores["test_accuracy"],
+                scores["test_accuracy_std"])
 
 
 if __name__ == "__main__":
