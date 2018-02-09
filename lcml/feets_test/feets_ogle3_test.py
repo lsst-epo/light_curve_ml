@@ -39,11 +39,13 @@ DEFAULT_SCORING = ["accuracy", "average_precision", "f1", "f1_micro",
                    "precision", "recall", "roc_auc"]
 
 
-_REL_DATA_DIR = "data/ogle3"
+_REL_DATA_DIR = "../data/ogle3"
 
 
 def _getArgs():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-u", "--unarchive", action="store_true",
+                        help="unarchive files in data dir")
     parser.add_argument("-t", "--sampleLimit", type=int, default=50,
                         help="limit on the number of light curves to process")
     parser.add_argument("-c", "--cv", type=int, default=5,
@@ -63,7 +65,7 @@ def _getArgs():
     return parser.parse_args()
 
 
-def loadOgle3Dataset(dataDir, limit=float("inf")):
+def loadOgle3Dataset(dataDir, limit):
     """Loads all OGLE3 data files from specified directory as light curves
     represented as lists of the following values: classLabels, times,
     magnitudes, and magnitude errors. Class labels are parsed from originating
@@ -72,9 +74,11 @@ def loadOgle3Dataset(dataDir, limit=float("inf")):
     times = list()
     magnitudes = list()
     errors = list()
-    paths = absoluteFilePaths(dataDir, ext="dat")
-    logger.info("Found %s files", len(paths))
-    for i, f in enumerate(paths[:limit]):
+    paths = absoluteFilePaths(dataDir, ext="dat", limit=limit)
+    if not paths:
+        raise ValueError("No data files found in %s with ext dat" % dataDir)
+
+    for i, f in enumerate(paths):
         fileName = f.split("/")[-1]
         fnSplits = fileName.split("-")
         if len(fnSplits) > 2:
@@ -224,25 +228,118 @@ def _metadataPath(modelPath):
     return os.path.join(modelPath[:finalDirLoc], "metadata.json")
 
 
+def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
+                    keyMetric="test_f1_micro"):
+    """Tries all specified models and select one with highest key metric score.
+    Returns the best model, its hyperparameters, and its scoring metrics."""
+    bestModel = None
+    bestTrees = None
+    bestMaxFeats = None
+    bestMetrics = None
+    maxMetricValue = 0
+    fitTimes = []
+    scoreTimes = []
+    for trees, maxFeats, model in models:
+        logger.info("")
+        logger.info("Evaluating: trees: %s max features: %s", trees, maxFeats)
+        scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
+                                n_jobs=jobs, return_train_score=False)
+
+        scores["test_accuracy_mean"] = np.mean(scores["test_accuracy"])
+        scores["test_accuracy_ci"] = confidenceInterval(scores["test_accuracy"],
+            scores["test_accuracy_mean"])
+
+        fitTimes.append(np.average(scores.pop("fit_time")))
+        scoreTimes.append(np.average(scores.pop("score_time")))
+
+        # this method allows us more flexibility in computing metrics
+        predicted = cross_val_predict(model, features, labels, cv=cv,
+                                      n_jobs=jobs)
+
+        origAccu = scores["test_accuracy_mean"]
+        newAccu = accuracy_score(labels, predicted)
+        accuPercentDiff = fmtPct(abs(origAccu - newAccu), origAccu, places=5)
+        logger.info("percent diff in accuracy: %s", accuPercentDiff)
+
+        scores["test_f1_micro"] = f1_score(labels, predicted, average="micro")
+        scores["test_f1_class"] = f1_score(labels, predicted, average=None)
+        logger.info("micro F1: %.5f", scores["test_f1_micro"])
+        logger.info("class F1: %s", attachLabels(scores["test_f1_class"],
+                                                 classToLabel))
+
+        if scores[keyMetric] > maxMetricValue:
+            maxMetricValue = scores[keyMetric]
+            bestModel = model
+            bestTrees = trees
+            bestMaxFeats = maxFeats
+            bestMetrics = scores
+
+        logger.info("- accuracy: %.5f ci: %.5f %.5f",
+                    scores["test_accuracy_mean"],
+                    scores["test_accuracy_ci"][0],
+                    scores["test_accuracy_ci"][1])
+
+        # TODO decide on a function that supports labeling, normalizing, etc
+        # confusionMatrix = confusion_matrix(featuresProcessed, predicted)
+        # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
+
+        # nice to have - true-class-normalized confusion matrix where cells have
+        # float & grayscale intensity
+
+        # nice to have - using confusion matrix, compute, for each
+        # class, the precision, recall, f1 with weighted average overall measure
+
+    logger.info("")
+    logger.info("Finished searching")
+    logger.info("average fit time: %.2fs", np.average(fitTimes))
+    logger.info("average score time: %.2fs", np.average(scoreTimes))
+    return (bestModel, {"trees": bestTrees, "maxFeatures": bestMaxFeats},
+            bestMetrics)
+
+
+def attachLabels(values, indexToLabel):
+    """Attaches readable labels to a list of values.
+
+    :param values: a list of object to be labeled
+    :param indexToLabel: a mapping from index (int) to label (string
+    :return list of two-tuples containing label and score
+    """
+    return [(indexToLabel[i], v) for i, v in enumerate(values)]
+
+
+def confidenceInterval(values, mean, confidence=0.99):
+    """Calculates confidence interval using Student's t-distribution and
+    standard error of mean"""
+    return stats.t.interval(confidence, len(values) - 1, loc=mean,
+                            scale=stats.sem(values))
+
+
 def main():
     """Runs feets on ogle and classifies resultant features with a RF."""
     startAll = time.time()
     args = _getArgs()
     dataDir = joinRoot(_REL_DATA_DIR)
-    unarchiveAll(dataDir, remove=True)
+
+    if args.unarchive:
+        logger.info("Unarchiving files in %s ...", dataDir)
+        unarchiveAll(dataDir, remove=True)
+
+    logger.info("Loading dataset...")
     _labels, _times, _mags, _errors = loadOgle3Dataset(dataDir,
                                                        limit=args.sampleLimit)
+
+    logger.info("Cleaning dataset...")
     labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors,
                                                REMOVE_SET)
     reportClassHistogram(labels)
-    intToClassLabel = convertClassLabels(labels)
+    classToLabel = convertClassLabels(labels)
 
     logger.info("Extracting features...")
     featuresStart = time.time()
     featuresProcessed, labelsProcessed = multiprocessExtract(errors, labels,
                                                              mags, times,
                                                              args.allFeatures)
-    logger.info("took %.2fs", time.time() - featuresStart)
+    logger.info("extracted in %.2fs", time.time() - featuresStart)
 
     models = None
     if args.modelPath:
@@ -269,11 +366,15 @@ def main():
                                                          featuresProcessed,
                                                          labelsProcessed,
                                                          scoring,
+                                                         classToLabel,
                                                          args.cv, args.jobs)
     logger.info("")
     logger.info("__ Winning model __")
     logger.info("hyperparameters: %s", bestParams)
-    logger.info("accuracy: %.5fs", bestMetrics["test_accuracy"])
+    logger.info("mean accuracy: %.5f", bestMetrics["test_accuracy_mean"])
+    logger.info("micro F1: %.5f", bestMetrics["test_f1_micro"])
+    logger.info("class F1: %s", attachLabels(bestMetrics["test_f1_class"],
+                                             classToLabel))
 
     bestParams["allFeatures"] = args.allFeatures
     bestParams["cv"] = args.cv
@@ -281,79 +382,8 @@ def main():
         # save regardless of args.modelPath value
         saveModel(bestModel, args.modelPath, bestParams, bestMetrics)
 
-    logger.info("Label mapping: %s", ["%s=%s" % (i, label)
-                                      for i, label in
-                                      sorted(intToClassLabel.items())])
     elapsedMins = (time.time() - startAll) / 60
     logger.info("Completed in: %.3f min", elapsedMins)
-
-
-def searchBestModel(models, features, labels, scoring, cv, jobs):
-    """Tries all specified models and select one with highest F1 score". Returns
-    the best model, the model's associated hyperparameters, """
-    bestModel = None
-    bestTrees = None
-    bestMaxFeats = None
-    bestMetrics = None
-    maxAveAccuracy = 0
-    fitTimes = []
-    scoreTimes = []
-    for trees, maxFeats, model in models:
-        logger.info("trees: %s max features: %s", trees, maxFeats)
-        scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
-                                n_jobs=jobs, return_train_score=False)
-
-        scores["test_accuracy_mean"] = np.mean(scores["test_accuracy"])
-        scores["test_accuracy_ci"] = confidenceInterval(scores["test_accuracy"],
-            scores["test_accuracy_mean"])
-
-        fitTimes.append(np.average(scores.pop("fit_time")))
-        scoreTimes.append(np.average(scores.pop("score_time")))
-        if scores["test_accuracy_mean"] > maxAveAccuracy:
-            maxAveAccuracy = scores["test_accuracy_mean"]
-            bestModel = model
-            bestTrees = trees
-            bestMaxFeats = maxFeats
-            bestMetrics = scores
-
-
-        logger.info("accuracy: %.7f ci: %.7f %.7f",
-                    scores["test_accuracy_mean"],
-                    scores["test_accuracy_ci"][0],
-                    scores["test_accuracy_ci"][1])
-
-        # trying other route
-        predicted = cross_val_predict(model, features, labels, cv=cv,
-                                      n_jobs=jobs)
-        logger.info("current accuracy approach: %.5f new approach %.5f",
-                    scores["test_accuracy_mean"],
-                    accuracy_score(labels, predicted))
-
-        # TODO true class normalized confusion matrix with number and grayscale
-        # intensity
-        # replace above with:
-        # predicted = cross_val_predict(model, features, labels, cv=cv,
-        #                               n_jobs=jobs)
-        # _confusionMat = confusion_matrix(featuresProcessed, predicted)
-        # logger.info("Confusion matrix:\n%s", _confusionMat)
-        # TO DO revisit using the label mapping to convert ints to strings
-        # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
-        # logger.info("\n" + str(confusionMatrix))
-
-        # TODO using confusion matrix, compute, for each class, the precision,
-        # recall, f1 with weighted average overall measure
-
-    logger.info("average fit time: %.2fs", np.average(fitTimes))
-    logger.info("average score time: %.2fs", np.average(scoreTimes))
-    return (bestModel, {"trees": bestTrees, "maxFeatures": bestMaxFeats},
-            bestMetrics)
-
-
-def confidenceInterval(values, mean, confidence=0.99):
-    """Calculates confidence interval using Student's t-distribution and
-    standard error of mean"""
-    return stats.t.interval(confidence, len(values) - 1, loc=mean,
-                            scale=stats.sem(values))
 
 
 if __name__ == "__main__":

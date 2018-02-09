@@ -23,18 +23,16 @@ def ensureRootPath(*paths):
     return fullPath
 
 
-
-def absoluteFilePaths(directory, ext=None):
+def absoluteFilePaths(directory, ext=None, limit=float("inf")):
     """Returns all absolute files paths found in a directory (non-recursive).
     Can optionally filter for files with specified ext, e.g. 'csv' assuming a
     '.' delimits the extension, 'foobar.csv'"""
-    if ext:
-        ext = ext.lower()
-        return [os.path.abspath(os.path.join(dirPath, f))
-                for dirPath, _, fileNames in os.walk(directory)
-                for f in fileNames
-                if f.split(".")[-1].lower() == ext]
-    else:
-        return [os.path.abspath(os.path.join(dirPath, f))
-                for dirPath, _, fileNames in os.walk(directory)
-                for f in fileNames]
+
+    paths = []
+    for filename in os.listdir(directory):
+        if not ext or filename.split(".")[-1].lower() == ext:
+            paths.append(os.path.abspath(os.path.join(directory, filename)))
+            if len(paths) >= limit:
+                break
+
+    return paths
