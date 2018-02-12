@@ -152,7 +152,7 @@ def _getArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--threads", type=int,
                         help="number of threads dedicated to feature (period) "
-                             "data_acq")
+                             "data")
     parser.add_argument("-r", "--rows", type=int,
                         help="limit on initial portion of timeseries processed")
     return parser.parse_args()

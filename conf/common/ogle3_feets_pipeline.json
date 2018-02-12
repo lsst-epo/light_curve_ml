@@ -1,0 +1,21 @@
+{
+  "loadData": {
+    "function": "ogle3",
+    "params": {
+      "limit": 50
+    }
+  },
+  "extractFeatures": {
+    "function": "feets"
+  },
+  "modelSelection": {
+    "method": "grid",
+    "params": {
+        "estimatorsStart": 6,
+        "estimatorsStop": 16,
+        "rfFeaturesStart": 6,
+        "rfFeaturesStop": 10,
+        "jobs": -1
+    }
+  }
+}

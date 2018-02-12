@@ -8,10 +8,11 @@ from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
+from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.persistence import loadModel, saveModel
 from lcml.pipeline.preprocess import cleanDataset, allFinite
 from lcml.utils.basic_logging import getBasicLogger
-from lcml.utils.context_util import absoluteFilePaths, joinRoot
+from lcml.utils.context_util import joinRoot
 from lcml.utils.data_util import (attachLabels, convertClassLabels,
                                   unarchiveAll, reportClassHistogram)
 from lcml.utils.format_util import fmtPct, truncatedFloat
@@ -29,11 +30,10 @@ DEFAULT_SCORING = ["accuracy", "average_precision", "f1", "f1_micro",
                    "precision", "recall", "roc_auc"]
 
 
-_REL_DATA_DIR = "../data/ogle3"
-
-
 def _getArgs():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--pipelinePath", required=True,
+                        help="relative path to pipeline conf")
     parser.add_argument("-u", "--unarchive", action="store_true",
                         help="unarchive files in data dir")
     parser.add_argument("-t", "--limit", type=int, default=50,
@@ -54,47 +54,6 @@ def _getArgs():
     parser.add_argument("-p", "--places", default=5, type=int,
                         help="number digits after the decimal to display")
     return parser.parse_args()
-
-
-def loadOgle3Dataset(dataDir, limit):
-    """Loads all OGLE3 data files from specified directory as light curves
-    represented as lists of the following values: classLabels, times,
-    magnitudes, and magnitude errors. Class labels are parsed from originating
-    data file name."""
-    labels = list()
-    times = list()
-    magnitudes = list()
-    errors = list()
-    paths = absoluteFilePaths(dataDir, ext="dat", limit=limit)
-    if not paths:
-        raise ValueError("No data files found in %s with ext dat" % dataDir)
-
-    for i, f in enumerate(paths):
-        fileName = f.split("/")[-1]
-        fnSplits = fileName.split("-")
-        if len(fnSplits) > 2:
-            category = fnSplits[2].lower()
-        else:
-            logger.warning("file name lacks category! %s", fileName)
-            continue
-
-        timeSeries, magnitudeSeries, errorSeries = _parseOgle3Lc(f)
-        labels.append(category)
-        times.append(timeSeries)
-        magnitudes.append(magnitudeSeries)
-        errors.append(errorSeries)
-
-    return labels, times, magnitudes, errors
-
-
-def _parseOgle3Lc(filePath):
-    """Parses a light curve as a tuple of numpy arrays from specified OGLE3
-    file."""
-    lc = np.loadtxt(filePath)
-    if lc.ndim == 1:
-        lc.shape = 1, 3
-
-    return lc[:, 0], lc[:, 1], lc[:, 2]
 
 
 def feetsExtractFeatures(labels, times, mags, errors, exclude=None):
@@ -135,8 +94,9 @@ def feetsExtractFeatures(labels, times, mags, errors, exclude=None):
     return validFeatures, validLabels
 
 
-def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
-                    places, keyMetric="test_f1_micro"):
+# TODO this function is doing too much Remove classToLabel, places, scoring?
+def searchBestRfModel(models, features, labels, scoring, classToLabel, cv, jobs,
+                      places, keyMetric="test_f1_micro"):
     """Tries all specified models and select one with highest key metric score.
     Returns the best model, its hyperparameters, and its scoring metrics."""
     bestModel = None
@@ -150,9 +110,11 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
     for trees, maxFeats, model in models:
         logger.info("")
         logger.info("Evaluating: trees: %s max features: %s", trees, maxFeats)
+
+        # TODO remove this and use second approach below to derive accuracy w/o
+        # mean and ci
         scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
                                 n_jobs=jobs, return_train_score=False)
-
         scores["test_accuracy_mean"] = np.mean(scores["test_accuracy"])
         scores["test_accuracy_ci"] = confidenceInterval(scores["test_accuracy"],
             scores["test_accuracy_mean"])
@@ -166,37 +128,29 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
 
         origAccu = scores["test_accuracy_mean"]
         newAccu = accuracy_score(labels, predicted)
+
+        # TODO remove
         accuPercentDiff = fmtPct(abs(origAccu - newAccu), origAccu, places)
         logger.info("percent diff in accuracy: %s", accuPercentDiff)
 
         scores["test_f1_micro"] = f1_score(labels, predicted, average="micro")
         scores["test_f1_class"] = [round(x, places) for x in
                                    f1_score(labels, predicted, average=None)]
+
+        # TODO instead of logging here, simple return the scores in a list
         logger.info("micro F1: " + roundFlt, scores["test_f1_micro"])
         logger.info("class F1: %s", attachLabels(scores["test_f1_class"],
                                                  classToLabel))
-
+        logger.info("accuracy: %s ci: %s %s" % (roundFlt,  roundFlt,  roundFlt),
+                    scores["test_accuracy_mean"],
+                    scores["test_accuracy_ci"][0],
+                    scores["test_accuracy_ci"][1])
         if scores[keyMetric] > maxMetricValue:
             maxMetricValue = scores[keyMetric]
             bestModel = model
             bestTrees = trees
             bestMaxFeats = maxFeats
             bestMetrics = scores
-
-        logger.info("accuracy: %s ci: %s %s" % (roundFlt,  roundFlt,  roundFlt),
-                    scores["test_accuracy_mean"],
-                    scores["test_accuracy_ci"][0],
-                    scores["test_accuracy_ci"][1])
-
-        # TODO decide on a function that supports labeling, normalizing, etc
-        # confusionMatrix = confusion_matrix(featuresProcessed, predicted)
-        # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
-
-        # nice to have - true-class-normalized confusion matrix where cells have
-        # float & grayscale intensity
-
-        # nice to have - using confusion matrix, compute, for each
-        # class, the precision, recall, f1 with weighted average overall measure
 
     logger.info("")
     logger.info("Finished searching")
@@ -206,10 +160,51 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
             bestMetrics)
 
 
+def reportResults(bestParams, bestMetrics, classToLabel, places):
+    logger.info("")
+    logger.info("__ Winning model __")
+    logger.info("hyperparameters: %s", bestParams)
+    logger.info("mean accuracy: " + truncatedFloat(places),
+                bestMetrics["test_accuracy_mean"])
+    logger.info("micro F1: " + truncatedFloat(places),
+                bestMetrics["test_f1_micro"])
+    logger.info("class F1: %s", attachLabels(bestMetrics["test_f1_class"],
+                                             classToLabel))
+
+    # TODO visualization, reporting
+    # decide on a function that supports labeling, normalizing, etc
+    # confusionMatrix = confusion_matrix(featuresProcessed, predicted)
+    # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
+
+    # nice to have - true-class-normalized confusion matrix where cells have
+    # float & grayscale intensity
+
+    # nice to have - using confusion matrix, compute, for each
+    # class, the precision, recall, f1 with weighted average overall measure
+
+
+def gridSearchSelection(params):
+    # default for num estimators is 10
+    estimatorsStart = params["estimatorsStart"]
+    estimatorsStop = params["estimatorsStop"]
+
+    # default for max features is sqrt(len(features))
+    # for feets len(features) ~= 64 => 8
+    rfFeaturesStart = params["rfFeaturesStart"]
+    rfFeaturesStop = params["rfFeaturesStop"]
+    return [(t, f, RandomForestClassifier(n_estimators=t, max_features=f,
+                                          n_jobs=params["jobs"]))
+            for f in range(rfFeaturesStart, rfFeaturesStop)
+            for t in range(estimatorsStart, estimatorsStop)]
+
+
 def main():
     """Runs feets on ogle and classifies resultant features with a RF."""
     startAll = time.time()
     args = _getArgs()
+    pipe = fromRelativePath(args.pipelinePath)
+
+    _REL_DATA_DIR = "../data/ogle3"  # TODO add to conf
     dataDir = joinRoot(_REL_DATA_DIR)
 
     if args.unarchive:
@@ -217,8 +212,7 @@ def main():
         unarchiveAll(dataDir, remove=True)
 
     logger.info("Loading dataset...")
-    _labels, _times, _mags, _errors = loadOgle3Dataset(dataDir,
-                                                       limit=args.limit)
+    _labels, _times, _mags, _errors = pipe.loadData.fcn(dataDir, args.limit)
 
     logger.info("Cleaning dataset...")
     labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors)
@@ -241,45 +235,23 @@ def main():
         models = [(0, 0, loadModel(args.modelPath))]
 
     if not models:
-        # FIXME Abstract model selection including search params, search method
-        # into a fcn
-        # default for num estimators is 10
-        estimatorsStart = 6
-        estimatorsStop = 16
-
-        # default for max features is sqrt(len(features))
-        # for feets len(features) ~= 64 => 8
-        rfFeaturesStart = 6
-        rfFeaturesStop = 10
-        models = [(t, f, RandomForestClassifier(n_estimators=t, max_features=f,
-                                                n_jobs=args.jobs))
-                  for f in range(rfFeaturesStart, rfFeaturesStop)
-                  for t in range(estimatorsStart, estimatorsStop)]
+        # TODO fcn from pipe
+        models = gridSearchSelection(pipe.modelSelection.args)
 
     scoring = ["accuracy"]
-    bestModel, bestParams, bestMetrics = searchBestModel(models,
-                                                         featuresProcessed,
-                                                         labelsProcessed,
-                                                         scoring,
-                                                         classToLabel,
-                                                         args.cv, args.jobs,
-                                                         args.places)
-    logger.info("")
-    logger.info("__ Winning model __")
-    logger.info("hyperparameters: %s", bestParams)
-    logger.info("mean accuracy: " + truncatedFloat(args.places),
-                bestMetrics["test_accuracy_mean"])
-    logger.info("micro F1: " + truncatedFloat(args.places),
-                bestMetrics["test_f1_micro"])
-    logger.info("class F1: %s", attachLabels(bestMetrics["test_f1_class"],
-                                             classToLabel))
-
+    bestModel, bestParams, bestMetrics = searchBestRfModel(models,
+                                                           featuresProcessed,
+                                                           labelsProcessed,
+                                                           scoring,
+                                                           classToLabel,
+                                                           args.cv, args.jobs,
+                                                           args.places)
     bestParams["allFeatures"] = args.allFeatures
     bestParams["cv"] = args.cv
     if args.saveModel:
-        # save regardless of args.modelPath value
         saveModel(bestModel, args.modelPath, bestParams, bestMetrics)
 
+    reportResults(bestParams, bestMetrics, classToLabel, args.places)
     elapsedMins = (time.time() - startAll) / 60
     logger.info("Completed in: %.3f min", elapsedMins)
 
