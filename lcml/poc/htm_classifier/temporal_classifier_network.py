@@ -1,6 +1,6 @@
 
 """Classifier network using the NuPIC Network API.
-Consists of Spatial Pooler -> Temporal Memory -> Union Pooler processing.
+Consists of Spatial Pooler -> Temporal Memory -> Union Pooler data_acq.
 Anomaly Likelihood is calculated from Temporal Memory and Sequence
 Classification is trained and later evaluated using Union Pooler output.
 """

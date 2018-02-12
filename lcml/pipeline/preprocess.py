@@ -1,6 +1,7 @@
+import numpy as np
+
 from feets import preprocess
 from lcml.utils.basic_logging import getBasicLogger
-from lcml.utils.data_util import SUFFICIENT_LC_DATA, lcFilterBogus
 from lcml.utils.format_util import fmtPct
 
 
@@ -28,6 +29,15 @@ BOGUS_DATA_REASON = "insufficient due to bogus data"
 #: cannot use LC because there is insufficient data after removing statistical
 #: outliers
 OUTLIERS_REASON = "insufficient due to statistical outliers"
+
+
+#: Research by Kim suggests it best that light curves have at least 80 data
+#: points for accurate poc
+SUFFICIENT_LC_DATA = 80
+
+
+#: data value to scrub
+REMOVE_SET = {float("nan"), float("inf"), float("-inf")}
 
 
 def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
@@ -61,7 +71,8 @@ def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
     return (_tm, _mag, _err), None, removedCounts
 
 
-def cleanDataset(labels, times, mags, errors, remove, stdLimit=5, errorLimit=3):
+def cleanDataset(labels, times, mags, errors, remove=REMOVE_SET, stdLimit=5,
+                 errorLimit=3):
     """Clean a LC dataframe and report details on discards"""
     shortIssueCount = 0
     bogusIssueCount = 0
@@ -70,8 +81,9 @@ def cleanDataset(labels, times, mags, errors, remove, stdLimit=5, errorLimit=3):
     _times = list()
     _magnitudes = list()
     _errors = list()
+    rm = remove if remove else set()
     for i in range(len(labels)):
-        lc, issue, _ = preprocessLc(times[i], mags[i], errors[i], remove=remove,
+        lc, issue, _ = preprocessLc(times[i], mags[i], errors[i], remove=rm,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
         if lc:
             _classLabel.append(labels[i])
@@ -96,3 +108,23 @@ def cleanDataset(labels, times, mags, errors, remove, stdLimit=5, errorLimit=3):
     logger.info("Discard rates: short: %s bogus: %s outlier: %s", shortRate,
                 bogusRate, outlierRate)
     return _classLabel, _times, _magnitudes, _errors
+
+
+def lcFilterBogus(mjds, values, errors, remove):
+    """Simple light curve filter that removes bogus magnitude and error
+    values."""
+    return zip(*[(mjds[i], v, errors[i])
+                 for i, v in enumerate(values)
+                 if v not in remove and errors[i] not in remove])
+
+
+def allFinite(X):
+    """Adapted from sklearn.utils.validation._assert_all_finite"""
+    X = np.asanyarray(X)
+    # First try an O(n) time, O(1) space solution for the common case that
+    # everything is finite; fall back to O(n) space np.isfinite to prevent
+    # false positives from overflow in sum method.
+    return (False
+            if X.dtype.char in np.typecodes['AllFloat'] and
+               not np.isfinite(X.sum()) and not np.isfinite(X).all()
+            else True)

@@ -1,22 +1,16 @@
 import os
 import tarfile
+from collections import Counter
 
 import numpy as np
+from prettytable import PrettyTable
 
+from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
+from lcml.utils.format_util import fmtPct
 
 
-#: Research by Kim suggests it best that light curves have at least 80 data
-#: points for accurate classification
-SUFFICIENT_LC_DATA = 80
-
-
-def lcFilterBogus(mjds, values, errors, remove):
-    """Simple light curve filter that removes bogus magnitude and error
-    values."""
-    return zip(*[(mjds[i], v, errors[i])
-                 for i, v in enumerate(values)
-                 if v not in remove and errors[i] not in remove])
+logger = getBasicLogger(__name__, __file__)
 
 
 def unarchiveAll(directory, ext="tar", mode="r:", remove=False):
@@ -68,3 +62,24 @@ def reportDataset(dataset, labels=None):
         size, minSize, ave, std, maxSize))
     if labels:
         print("Unique labels: %s" % sorted(np.unique(labels)))
+
+
+def attachLabels(values, indexToLabel):
+    """Attaches readable labels to a list of values.
+
+    :param values: a list of object to be labeled
+    :param indexToLabel: a mapping from index (int) to label (string
+    :return list of two-tuples containing label and score
+    """
+    return [(indexToLabel[i], v) for i, v in enumerate(values)]
+
+
+def reportClassHistogram(labels):
+    """Logs a histogram of the distribution of class labels"""
+    c = Counter([l for l in labels])
+    t = PrettyTable(["category", "count", "percentage"])
+    t.align = "l"
+    for k, v in sorted(c.items(), key=lambda x: x[1], reverse=True):
+        t.add_row([k, v, fmtPct(v, len(labels))])
+
+    logger.info("Class histogram:\n" + str(t))

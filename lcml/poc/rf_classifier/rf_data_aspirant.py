@@ -1,5 +1,7 @@
 """Adapted from
 dataaspirant.com/2017/06/26/random-forest-classifier-python-scikit-learn/"""
+import time
+
 import numpy as np
 import pandas as pd
 from prettytable import PrettyTable
@@ -15,10 +17,24 @@ def missingFeatures(dataset, description):
     return list(set(dataset) - set(description))
 
 
-def rfClassifier(features, target):
-    clf = RandomForestClassifier()
-    clf.fit(features, target)
-    return clf
+def trainRfClassifier(xTrain, yTrain, numTrees=10, maxFeatures="auto",
+                      numJobs=-1):
+    """Trains an sklearn.ensemble.RandomForestClassifier.
+
+    :param xTrain: ndarray of features
+    :param yTrain: ndarray of labels
+    :param numTrees: see n_estimators in
+        sklearn.ensemble.forest.RandomForestClassifier
+    :param maxFeatures: see max_features in
+        sklearn.ensemble.forest.RandomForestClassifier
+    :param numJobs: see n_jobs in sklearn.ensemble.forest.RandomForestClassifier
+    """
+    model = RandomForestClassifier(n_estimators=numTrees,
+                                   max_features=maxFeatures, n_jobs=numJobs)
+    s = time.time()
+    model.fit(xTrain, yTrain)
+    print("Trained model in %.2fs", time.time() - s)
+    return model
 
 
 def main():
@@ -47,7 +63,7 @@ def main():
     print("Test_x Shape: ", xTest.shape)
     print("Test_y Shape: ", yTest.shape)
 
-    model = rfClassifier(xTrain, yTrain)
+    model = trainRfClassifier(xTrain, yTrain)
     testPredictions = model.predict(xTest)
     trainPredictions = model.predict(xTrain)
 

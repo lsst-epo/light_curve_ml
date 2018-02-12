@@ -19,5 +19,11 @@ def fmtPct(a, b, places=2):
     return _base.format(float(a) / float(b)) if b else "NaN"
 
 
+def truncatedFloat(places):
+    """Produces a string suitable for sprintf-style formatting of a float to
+    specified number of places after decimal. E.g., 5 -> '%.5f' """
+    return "%%.%sf" % places
+
+
 if __name__ == "__main__":
     print(toDatetime(2015, format="jyear", scale="tcb"))

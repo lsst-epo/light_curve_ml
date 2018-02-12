@@ -11,8 +11,8 @@ from feets.extractors.core import DATA_TIME, DATA_MAGNITUDE, DATA_ERROR
 import numpy as np
 from prettytable import PrettyTable
 
-from lcml.common import STANDARD_INPUT_DATA_TYPES
-from lcml.processing.preprocess import preprocessLc
+from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
+from lcml.pipeline.preprocess import preprocessLc
 from lcml.utils import context_util
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import absoluteFilePaths

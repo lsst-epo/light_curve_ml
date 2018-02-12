@@ -1,35 +1,25 @@
 import argparse
-from collections import Counter
-import json
-import os
-import platform
 import time
 
 from feets import FeatureSpace
 import numpy as np
-from prettytable import PrettyTable
-from scipy import stats
-import sklearn
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.externals import joblib
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from sklearn.model_selection import (cross_val_predict, cross_val_score,
-                                     cross_validate, train_test_split)
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.model_selection import cross_val_predict, cross_validate
 
-from lcml.common import STANDARD_INPUT_DATA_TYPES
-from lcml.processing.preprocess import cleanDataset
+from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
+from lcml.pipeline.persistence import loadModel, saveModel
+from lcml.pipeline.preprocess import cleanDataset, allFinite
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
-from lcml.utils.data_util import convertClassLabels, unarchiveAll
-from lcml.utils.format_util import fmtPct
+from lcml.utils.data_util import (attachLabels, convertClassLabels,
+                                  unarchiveAll, reportClassHistogram)
+from lcml.utils.format_util import fmtPct, truncatedFloat
 from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
+from lcml.utils.stats_utils import confidenceInterval
 
 
 logger = getBasicLogger(__name__, __file__)
-
-
-#: data value to scrub
-REMOVE_SET = {float("nan"), float("inf"), float("-inf")}
 
 
 #: N.B. common classification scoring types from:
@@ -46,7 +36,7 @@ def _getArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("-u", "--unarchive", action="store_true",
                         help="unarchive files in data dir")
-    parser.add_argument("-t", "--sampleLimit", type=int, default=50,
+    parser.add_argument("-t", "--limit", type=int, default=50,
                         help="limit on the number of light curves to process")
     parser.add_argument("-c", "--cv", type=int, default=5,
                         help="number of cross-validation folds")
@@ -61,7 +51,8 @@ def _getArgs():
                         "which to load random forest classifier")
     parser.add_argument("-s", "--saveModel", action="store_true",
                         help="Specify to save the model to the 'loadModelPath'")
-
+    parser.add_argument("-p", "--places", default=5, type=int,
+                        help="number digits after the decimal to display")
     return parser.parse_args()
 
 
@@ -106,21 +97,19 @@ def _parseOgle3Lc(filePath):
     return lc[:, 0], lc[:, 1], lc[:, 2]
 
 
-def reportClassHistogram(labels):
-    """Logs a histogram of the distribution of class labels"""
-    c = Counter([l for l in labels])
-    t = PrettyTable(["category", "count", "percentage"])
-    t.align = "l"
-    for k, v in sorted(c.items(), key=lambda x: x[1], reverse=True):
-        t.add_row([k, v, fmtPct(v, len(labels))])
+def feetsExtractFeatures(labels, times, mags, errors, exclude=None):
+    """Runs light curves through 'feets' library obtaining feature vectors.
+    Perfoms the extraction using multiprocessing. Output order will not
+    necessarily correspond to input order, therefore, class labels are returned
+    as well aligned with feature vectors to avoid confusion.
 
-    logger.info("Class histogram:\n" + str(t))
-
-
-def multiprocessExtract(errors, labels, mags, times, allFeatures):
-    # run data set through feets library obtaining feature vectors
-    exclude = [] if allFeatures else ["CAR_mean", "CAR_sigma", "CAR_tau"]
-    logger.info("Excluded features: %s", exclude)
+    :param labels: light curve class labels
+    :param times: light curve times
+    :param mags: light curve magnitudes
+    :param errors: light curve magnitude errors
+    :param exclude: features to exclude from computation
+    :returns feature vectors for each LC and list of corresponding class labels
+    """
     fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
     cleanLcDf = [(fs, labels[i], times[i], mags[i], errors[i])
                  for i in range(len(labels))]
@@ -146,90 +135,8 @@ def multiprocessExtract(errors, labels, mags, times, allFeatures):
     return validFeatures, validLabels
 
 
-def allFinite(X):
-    """Adapted from sklearn.utils.validation._assert_all_finite"""
-    X = np.asanyarray(X)
-    # First try an O(n) time, O(1) space solution for the common case that
-    # everything is finite; fall back to O(n) space np.isfinite to prevent
-    # false positives from overflow in sum method.
-    return (False
-            if X.dtype.char in np.typecodes['AllFloat'] and
-               not np.isfinite(X.sum()) and not np.isfinite(X).all()
-            else True)
-
-
-def trainRfClassifier(xTrain, yTrain, numTrees=10, maxFeatures="auto",
-                      numJobs=-1):
-    """Trains an sklearn.ensemble.RandomForestClassifier.
-
-    :param xTrain: ndarray of features
-    :param yTrain: ndarray of labels
-    :param numTrees: see n_estimators in
-        sklearn.ensemble.forest.RandomForestClassifier
-    :param maxFeatures: see max_features in
-        sklearn.ensemble.forest.RandomForestClassifier
-    :param numJobs: see n_jobs in sklearn.ensemble.forest.RandomForestClassifier
-    """
-    model = RandomForestClassifier(n_estimators=numTrees,
-                                   max_features=maxFeatures, n_jobs=numJobs)
-    s = time.time()
-    model.fit(xTrain, yTrain)
-    logger.info("Trained model in %.2fs", time.time() - s)
-    return model
-
-
-def saveModel(model, modelPath, hyperparams=None, metrics=None):
-    """If 'modelPath' is specified, the model and its metadata, including
-    'trainParams' and 'cvScore' are saved to disk.
-
-    :param model: a trained ML model, could be any Python object
-    :param modelPath: save path
-    :param hyperparams: all model hyperparameters
-    :param metrics: metric values obtained from running model on test data
-    """
-    joblib.dump(model, modelPath)
-    logger.info("Dumped model to: %s", modelPath)
-    metadataPath = _metadataPath(modelPath)
-    archBits = platform.architecture()[0]
-    metadata = {"archBits": archBits, "sklearnVersion": sklearn.__version__,
-                "pythonSource": __name__, "hyperparameters": hyperparams,
-                "metrics": metrics}
-    with open(metadataPath, "w") as f:
-        json.dump(metadata, f)
-
-
-def loadModel(modelPath):
-    try:
-        model = joblib.load(modelPath)
-    except IOError:
-        logger.warning("Failed to load model from: %s", modelPath)
-        return None
-
-    logger.info("Loaded model from: %s", modelPath)
-    metadataPath = _metadataPath(modelPath)
-    try:
-        with open(metadataPath) as mFile:
-            metadata = json.load(mFile)
-    except IOError:
-        logger.warning("Metadata file doesn't exist: %s", metadataPath)
-        return model
-
-    if metadata["archBits"] != platform.architecture()[0]:
-        logger.critical("Model created on arch: %s but current arch is %s",
-                        metadata["archBits"], platform.architecture()[0])
-        raise ValueError("Unusable model")
-
-    logger.info("Model metadata: %s", metadata)
-    return model
-
-
-def _metadataPath(modelPath):
-    finalDirLoc = modelPath.rfind(os.sep)
-    return os.path.join(modelPath[:finalDirLoc], "metadata.json")
-
-
 def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
-                    keyMetric="test_f1_micro"):
+                    places, keyMetric="test_f1_micro"):
     """Tries all specified models and select one with highest key metric score.
     Returns the best model, its hyperparameters, and its scoring metrics."""
     bestModel = None
@@ -239,6 +146,7 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
     maxMetricValue = 0
     fitTimes = []
     scoreTimes = []
+    roundFlt = truncatedFloat(places)
     for trees, maxFeats, model in models:
         logger.info("")
         logger.info("Evaluating: trees: %s max features: %s", trees, maxFeats)
@@ -258,12 +166,13 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
 
         origAccu = scores["test_accuracy_mean"]
         newAccu = accuracy_score(labels, predicted)
-        accuPercentDiff = fmtPct(abs(origAccu - newAccu), origAccu, places=5)
+        accuPercentDiff = fmtPct(abs(origAccu - newAccu), origAccu, places)
         logger.info("percent diff in accuracy: %s", accuPercentDiff)
 
         scores["test_f1_micro"] = f1_score(labels, predicted, average="micro")
-        scores["test_f1_class"] = f1_score(labels, predicted, average=None)
-        logger.info("micro F1: %.5f", scores["test_f1_micro"])
+        scores["test_f1_class"] = [round(x, places) for x in
+                                   f1_score(labels, predicted, average=None)]
+        logger.info("micro F1: " + roundFlt, scores["test_f1_micro"])
         logger.info("class F1: %s", attachLabels(scores["test_f1_class"],
                                                  classToLabel))
 
@@ -274,7 +183,7 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
             bestMaxFeats = maxFeats
             bestMetrics = scores
 
-        logger.info("- accuracy: %.5f ci: %.5f %.5f",
+        logger.info("accuracy: %s ci: %s %s" % (roundFlt,  roundFlt,  roundFlt),
                     scores["test_accuracy_mean"],
                     scores["test_accuracy_ci"][0],
                     scores["test_accuracy_ci"][1])
@@ -297,23 +206,6 @@ def searchBestModel(models, features, labels, scoring, classToLabel, cv, jobs,
             bestMetrics)
 
 
-def attachLabels(values, indexToLabel):
-    """Attaches readable labels to a list of values.
-
-    :param values: a list of object to be labeled
-    :param indexToLabel: a mapping from index (int) to label (string
-    :return list of two-tuples containing label and score
-    """
-    return [(indexToLabel[i], v) for i, v in enumerate(values)]
-
-
-def confidenceInterval(values, mean, confidence=0.99):
-    """Calculates confidence interval using Student's t-distribution and
-    standard error of mean"""
-    return stats.t.interval(confidence, len(values) - 1, loc=mean,
-                            scale=stats.sem(values))
-
-
 def main():
     """Runs feets on ogle and classifies resultant features with a RF."""
     startAll = time.time()
@@ -326,19 +218,20 @@ def main():
 
     logger.info("Loading dataset...")
     _labels, _times, _mags, _errors = loadOgle3Dataset(dataDir,
-                                                       limit=args.sampleLimit)
+                                                       limit=args.limit)
 
     logger.info("Cleaning dataset...")
-    labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors,
-                                               REMOVE_SET)
+    labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors)
     reportClassHistogram(labels)
     classToLabel = convertClassLabels(labels)
 
-    logger.info("Extracting features...")
     featuresStart = time.time()
-    featuresProcessed, labelsProcessed = multiprocessExtract(errors, labels,
-                                                             mags, times,
-                                                             args.allFeatures)
+    exclude = [] if args.allFeatures else ["CAR_mean", "CAR_sigma", "CAR_tau"]
+    logger.info("Excluded features: %s", exclude)
+    logger.info("Extracting features...")
+    featuresProcessed, labelsProcessed = feetsExtractFeatures(labels, times,
+                                                              mags, errors,
+                                                              exclude)
     logger.info("extracted in %.2fs", time.time() - featuresStart)
 
     models = None
@@ -348,14 +241,16 @@ def main():
         models = [(0, 0, loadModel(args.modelPath))]
 
     if not models:
+        # FIXME Abstract model selection including search params, search method
+        # into a fcn
         # default for num estimators is 10
-        estimatorsStart = 5
+        estimatorsStart = 6
         estimatorsStop = 16
 
         # default for max features is sqrt(len(features))
         # for feets len(features) ~= 64 => 8
-        rfFeaturesStart = 5
-        rfFeaturesStop = 11
+        rfFeaturesStart = 6
+        rfFeaturesStop = 10
         models = [(t, f, RandomForestClassifier(n_estimators=t, max_features=f,
                                                 n_jobs=args.jobs))
                   for f in range(rfFeaturesStart, rfFeaturesStop)
@@ -367,12 +262,15 @@ def main():
                                                          labelsProcessed,
                                                          scoring,
                                                          classToLabel,
-                                                         args.cv, args.jobs)
+                                                         args.cv, args.jobs,
+                                                         args.places)
     logger.info("")
     logger.info("__ Winning model __")
     logger.info("hyperparameters: %s", bestParams)
-    logger.info("mean accuracy: %.5f", bestMetrics["test_accuracy_mean"])
-    logger.info("micro F1: %.5f", bestMetrics["test_f1_micro"])
+    logger.info("mean accuracy: " + truncatedFloat(args.places),
+                bestMetrics["test_accuracy_mean"])
+    logger.info("micro F1: " + truncatedFloat(args.places),
+                bestMetrics["test_f1_micro"])
     logger.info("class F1: %s", attachLabels(bestMetrics["test_f1_class"],
                                              classToLabel))
 

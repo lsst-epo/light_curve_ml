@@ -33,16 +33,16 @@ def main():
     returnedLimit = 500000
     limit = int(10e7)
     # testQuery = "SELECT TOP 10 * FROM public.star_view"
-    joinQuery = ("SELECT TOP %s b.classification, a.fieldid, a.tileid, a.seqn, " 
+    joinQuery = ("SELECT TOP %s b.poc, a.fieldid, a.tileid, a.seqn, " 
                  "a.obsid, a.dateobs, a.rmag, a.rerr, a.bmag, a.berr "
                  "FROM public.photometry_view AS a "
                  "JOIN public.varstar_view AS b "
                  "ON (a.fieldid=b.field AND a.tileid=b.tile AND a.seqn=b.seqn) "
-                 "WHERE a.fieldid=%s AND b.classification='%s'")
+                 "WHERE a.fieldid=%s AND b.poc='%s'")
 
     # Due to a limitation of returning at most 500K records at a time, the data
     # is grabbed across a series of queries for each observation field and for
-    # each classification category
+    # each poc category
     # fields = [1, 2]
 
     # fields based on data shown at http://macho.nci.org.au/macho_photometry/

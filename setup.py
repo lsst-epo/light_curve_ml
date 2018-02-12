@@ -25,7 +25,7 @@ if __name__ == "__main__":
           version=getVersion(),
           install_requires=getRequirements(),
           packages=find_packages(),
-          description=" Light curve classification prototyping ",
+          description="Light curve classification prototyping",
           author="Ryan J. McCall",
           author_email="ryanjryan@protonmail.com",
-          url="https://github.com/ryanjmccall/light_curve_ml")
+          url="https://github.com/lsst-epo/light_curve_ml")

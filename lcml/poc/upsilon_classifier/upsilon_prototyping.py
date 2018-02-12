@@ -9,9 +9,7 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
-from lcml.utils.data_util import (lcFilterBogus,
-                                  SUFFICIENT_LC_DATA)
-
+from lcml.pipeline.preprocess import lcFilterBogus, SUFFICIENT_LC_DATA
 
 _GARBAGE_VALUES = {float("nan"), float("-inf"), float("inf")}
 _MACHO_REMOVE = _GARBAGE_VALUES.union({-99.0})
@@ -49,8 +47,8 @@ def removeOutliers(values, errors, numStds=3):
 def classifyLightCurve(mjds, magnitudes, errors, rfModel, nThreads=4):
     """Given a light curve time series of Modified Julian Date, magnitude, and
     magnitude error, extract the key features and classify returning a class
-    label, probability estimate of classification, and flag. If flag is 1, the
-    classification is "suspicious." (either 1) period is in period alias, or
+    label, probability estimate of poc, and flag. If flag is 1, the
+    poc is "suspicious." (either 1) period is in period alias, or
     2) period SNR is lower than 20)
 
     :param mjds: ndarray
@@ -154,7 +152,7 @@ def _getArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--threads", type=int,
                         help="number of threads dedicated to feature (period) "
-                             "processing")
+                             "data_acq")
     parser.add_argument("-r", "--rows", type=int,
                         help="limit on initial portion of timeseries processed")
     return parser.parse_args()
