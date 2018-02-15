@@ -11,13 +11,13 @@ from lcml.utils.basic_logging import getBasicLogger
 logger = getBasicLogger(__name__, __file__)
 
 
-def saveModel(model, modelPath, hyperparams=None, metrics=None):
+def saveModel(model, modelPath, params=None, metrics=None):
     """If 'modelPath' is specified, the model and its metadata, including
     'trainParams' and 'cvScore' are saved to disk.
 
     :param model: a trained ML model, could be any Python object
     :param modelPath: save path
-    :param hyperparams: all model hyperparameters
+    :param params: all experiment params including hyperparameters
     :param metrics: metric values obtained from running model on test data
     """
     joblib.dump(model, modelPath)
@@ -25,7 +25,7 @@ def saveModel(model, modelPath, hyperparams=None, metrics=None):
     metadataPath = _metadataPath(modelPath)
     archBits = platform.architecture()[0]
     metadata = {"archBits": archBits, "sklearnVersion": sklearn.__version__,
-                "pythonSource": __name__, "hyperparameters": hyperparams,
+                "pythonSource": __name__, "params": params,
                 "metrics": metrics}
     with open(metadataPath, "w") as f:
         json.dump(metadata, f)
@@ -36,7 +36,7 @@ def loadModel(modelPath):
         model = joblib.load(modelPath)
     except IOError:
         logger.warning("Failed to load model from: %s", modelPath)
-        return None
+        return None, None
 
     logger.info("Loaded model from: %s", modelPath)
     metadataPath = _metadataPath(modelPath)
@@ -45,15 +45,14 @@ def loadModel(modelPath):
             metadata = json.load(mFile)
     except IOError:
         logger.warning("Metadata file doesn't exist: %s", metadataPath)
-        return model
+        return None, None
 
     if metadata["archBits"] != platform.architecture()[0]:
         logger.critical("Model created on arch: %s but current arch is %s",
                         metadata["archBits"], platform.architecture()[0])
         raise ValueError("Unusable model")
 
-    logger.info("Model metadata: %s", metadata)
-    return model
+    return model, metadata
 
 
 def _metadataPath(modelPath):
