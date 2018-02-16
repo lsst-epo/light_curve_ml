@@ -2,7 +2,7 @@ from collections import namedtuple
 import time
 
 import numpy as np
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict
 
 from lcml.utils.basic_logging import getBasicLogger
@@ -16,7 +16,8 @@ ModelSelectionResult = namedtuple("ModelSelectionResult",
 
 
 ClassificationMetrics = namedtuple("ClassificationMetrics",
-                                   ["accuracy", "f1Overall", "f1Individual"])
+                                   ["accuracy", "f1Overall", "f1Individual",
+                                    "confusionMatrix"])
 
 
 def selectBestModel(models, features, labels, selectionParams):
@@ -51,9 +52,11 @@ def selectBestModel(models, features, labels, selectionParams):
         accuracy = accuracy_score(labels, predicted)
         f1Overall = f1_score(labels, predicted, average="micro")
         f1Individual = f1_score(labels, predicted, average=None)
+        confusionMatrix = confusion_matrix(labels, predicted)
         scoreTimes.append(time.time() - sStart)
 
-        metrics = ClassificationMetrics(accuracy, f1Overall, f1Individual)
+        metrics = ClassificationMetrics(accuracy, f1Overall, f1Individual,
+                                        confusionMatrix)
         result = ModelSelectionResult(model, hyperparams, metrics)
         allResults.append(result)
         if f1Overall > maxScore:

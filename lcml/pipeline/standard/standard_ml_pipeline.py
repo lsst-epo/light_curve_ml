@@ -5,6 +5,7 @@ from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModel, saveModel
 from lcml.pipeline.preprocess import cleanDataset
+from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import getBasicLogger
 from lcml.utils.context_util import joinRoot
 from lcml.utils.data_util import (attachLabels, convertClassLabels,
@@ -28,19 +29,13 @@ def reportResults(bestResult, allResults, classToLabel, places):
         _reportResult(result, classToLabel, roundFlt)
 
     logger.info("")
-    logger.info("__ Winning model __")
+    logger.info("___Winning model___")
     _reportResult(bestResult, classToLabel, roundFlt)
 
-    # TODO visualization, reporting
-    # decide on a function that supports labeling, normalizing, etc
-    # confusionMatrix = confusion_matrix(featuresProcessed, predicted)
-    # confusionMatrix = pd.crosstab(yTest, testPredictions, margins=True)
+    confusionMatrix = bestResult.metrics.confusionMatrix
+    classes = [classToLabel[i] for i in range(len(classToLabel))]
 
-    # nice to have - true-class-normalized confusion matrix where cells have
-    # float & grayscale intensity
-
-    # nice to have - using confusion matrix, compute, for each
-    # class, the precision, recall, f1 with weighted average overall measure
+    plotConfusionMatrix(confusionMatrix, classes, normalize=True)
 
 
 def _reportResult(result, classToLabel, roundFlt):
@@ -91,7 +86,8 @@ def main():
         # load model and its metadata from disk
         _model, _metadata = loadModel(pipe.serialParams["modelPath"])
         if _model and _metadata:
-            models = [(_model, _metadata["hyperparameters"])]
+            _hyperparams = _metadata.get("hyperparameters", None)
+            models = [(_model, _hyperparams)]
 
     if not models:
         models = pipe.modelSelection.fcn(pipe.modelSelection.params)
@@ -104,6 +100,8 @@ def main():
                  "loadParams": loadParams, "extractParams": extractParams,
                  "selectionParams": pipe.modelSelection.params}
     if pipe.serialParams["saveModel"]:
+        metrics = bestResult.metrics._asdict()
+        metrics["mapping"] = classToLabel
         saveModel(bestResult.model, pipe.serialParams["modelPath"], allParams,
                   bestResult.metrics)
 

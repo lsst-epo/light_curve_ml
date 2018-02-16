@@ -7,7 +7,7 @@
     "params": {
       "relativePath": "../data/ogle3",
       "unarchive": false,
-      "limit": 200
+      "limit": 500
     }
   },
   "extractFeatures": {
@@ -31,7 +31,7 @@
   "serialization": {
     "params": {
       "saveModel": false,
-      "modelPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3"
+      "modelPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl"
     }
   }
 }
