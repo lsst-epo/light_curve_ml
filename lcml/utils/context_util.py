@@ -1,3 +1,4 @@
+import json
 import os
 
 
@@ -21,6 +22,15 @@ def ensureRootPath(*paths):
         os.makedirs(fullPath)
 
     return fullPath
+
+
+def loadJson(path):
+    with open(path, "r") as f:
+        return json.load(f)
+
+
+def jsonConfig(fileName):
+    return loadJson(joinRoot(os.path.join("conf/common", fileName)))
 
 
 def absoluteFilePaths(directory, ext=None, limit=float("inf")):

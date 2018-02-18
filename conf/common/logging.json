@@ -1,0 +1,18 @@
+{
+  "active": true,
+  "tz": "US/Pacific",
+  "consoleLevel": "debug",
+  "basicParams": {
+    "level": "info",
+    "format": "default",
+    "datefmt": "%Y.%m.%d %H:%M:%S",
+    "filename": "standard.log",
+    "filemode": "a"
+  },
+  "modules": [
+    {
+      "module": "lcml.pipeline.standard.standard_ml_pipeline",
+      "level": "warning"
+    }
+  ]
+}

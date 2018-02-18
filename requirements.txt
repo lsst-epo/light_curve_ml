@@ -5,6 +5,7 @@ numpy
 nupic>=1.0
 pandas
 prettytable
+pytz
 scikit-learn
 scipy
 upsilon

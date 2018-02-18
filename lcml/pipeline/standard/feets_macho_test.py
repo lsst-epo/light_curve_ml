@@ -14,12 +14,12 @@ from prettytable import PrettyTable
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
 from lcml.pipeline.preprocess import preprocessLc
 from lcml.utils import context_util
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import absoluteFilePaths
 from lcml.utils.format_util import fmtPct
 
 
-logger = getBasicLogger(__name__, __file__)
+logger = BasicLogging.getLogger(__name__)
 
 
 #: all data types accepted by the library

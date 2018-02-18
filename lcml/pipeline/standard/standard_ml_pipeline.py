@@ -1,4 +1,5 @@
 import argparse
+import logging
 import time
 
 from lcml.pipeline.ml_pipeline import fromRelativePath
@@ -6,14 +7,15 @@ from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModel, saveModel
 from lcml.pipeline.preprocess import cleanDataset
 from lcml.pipeline.visualization import plotConfusionMatrix
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 from lcml.utils.data_util import (attachLabels, convertClassLabels,
                                   unarchiveAll, reportClassHistogram)
 from lcml.utils.format_util import truncatedFloat
 
 
-logger = getBasicLogger(__name__, __file__)
+BasicLogging.initLogging()
+logger = BasicLogging.getLogger(__name__)
 
 
 def _getArgs():

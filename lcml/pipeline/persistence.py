@@ -5,10 +5,10 @@ import platform
 import sklearn
 from sklearn.externals import joblib
 
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 
 
-logger = getBasicLogger(__name__, __file__)
+logger = BasicLogging.getLogger(__name__)
 
 
 def saveModel(model, modelPath, params=None, metrics=None):

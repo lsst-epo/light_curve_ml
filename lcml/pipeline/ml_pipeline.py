@@ -1,11 +1,10 @@
 from collections import namedtuple
-import json
 
 from sklearn.ensemble import RandomForestClassifier
 
 from lcml.data.loading import loadOgle3Dataset
 from lcml.pipeline.extract import feetsExtractFeatures
-from lcml.utils.context_util import joinRoot
+from lcml.utils.context_util import joinRoot, loadJson
 
 
 # TODO namedtuple?
@@ -22,11 +21,6 @@ class MlPipeline:
 def fromRelativePath(relPath):
     path = joinRoot(relPath)
     return loadPipeline(loadJson(path))
-
-
-def loadJson(path):
-    with open(path, "r") as f:
-        return json.load(f)
 
 
 FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])

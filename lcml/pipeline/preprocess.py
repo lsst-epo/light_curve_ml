@@ -1,11 +1,11 @@
 import numpy as np
 
 from feets import preprocess
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 
 
-logger = getBasicLogger(__name__, __file__)
+logger = BasicLogging.getLogger(__name__)
 
 
 #: Additional attribute for light curve Bunch data structure specifying the

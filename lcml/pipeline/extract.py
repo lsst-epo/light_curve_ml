@@ -4,13 +4,12 @@ import numpy as np
 
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
 from lcml.pipeline.preprocess import allFinite
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
 
 
-
-logger = getBasicLogger(__name__, __file__)
+logger = BasicLogging.getLogger(__name__)
 
 
 _EXPENSIVE_FEATS = ["CAR_mean", "CAR_sigma", "CAR_tau"]

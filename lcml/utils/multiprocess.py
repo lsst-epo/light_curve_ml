@@ -1,10 +1,10 @@
 from multiprocessing import cpu_count, Pool
 import time
 
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 
 
-logger = getBasicLogger(__name__, __file__)
+logger = BasicLogging.getLogger(__name__)
 
 
 def mapMultiprocess(func, args):

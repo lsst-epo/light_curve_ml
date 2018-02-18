@@ -5,12 +5,12 @@ from collections import Counter
 import numpy as np
 from prettytable import PrettyTable
 
-from lcml.utils.basic_logging import getBasicLogger
+from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
 from lcml.utils.format_util import fmtPct
 
 
-logger = getBasicLogger(__name__, __file__)
+logger = BasicLogging.getLogger(__name__)
 
 
 def unarchiveAll(directory, ext="tar", mode="r:", remove=False):
