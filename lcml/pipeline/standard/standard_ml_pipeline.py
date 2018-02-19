@@ -1,6 +1,8 @@
 import argparse
 import time
 
+from prettytable import PrettyTable
+
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModel, saveModel
@@ -26,27 +28,26 @@ def _getArgs():
 
 def reportResults(bestResult, allResults, classToLabel, places):
     roundFlt = truncatedFloat(places)
+    t = PrettyTable(["Hyperparams", "Micro F1", "Class F1", "Accuracy"])
     for result in allResults:
-        _reportResult(result, classToLabel, roundFlt)
+        t.add_row(_resultToRow(result, classToLabel, roundFlt))
 
-    logger.info("")
-    logger.info("___Winning model___")
-    _reportResult(bestResult, classToLabel, roundFlt)
+    t.add_row(["Winner"] * len(t.field_names))
+    t.add_row(_resultToRow(bestResult, classToLabel, roundFlt))
+    logger.info("Results...\n" + str(t))
 
     confusionMatrix = bestResult.metrics.confusionMatrix
     classes = [classToLabel[i] for i in range(len(classToLabel))]
-
     plotConfusionMatrix(confusionMatrix, classes, normalize=True)
 
 
-def _reportResult(result, classToLabel, roundFlt):
-    logger.info("hyperparams: %s", result.hyperparameters)
-    logger.info("micro F1: " + roundFlt, result.metrics.f1Overall)
+def _resultToRow(result, classToLabel, roundFlt):
+    microF1 = roundFlt % result.metrics.f1Overall
     labeledF1s = [(l, roundFlt % v)
                   for l, v
                   in attachLabels(result.metrics.f1Individual, classToLabel)]
-    logger.info("class F1: %s", labeledF1s)
-    logger.info("accuracy: " + roundFlt, result.metrics.accuracy)
+    accuracy = roundFlt % (100 * result.metrics.accuracy)
+    return [result.hyperparameters, microF1, labeledF1s, accuracy]
 
 
 def main():
@@ -94,10 +95,8 @@ def main():
     if not models:
         models = pipe.modelSelection.fcn(pipe.modelSelection.params)
 
-    searchStart = time.time()
     bestResult, allResults = selectBestModel(models, features, labelsProcessed,
                                              pipe.modelSelection.params)
-    logger.info("model selected in %.2fs", time.time() - searchStart)
 
     allParams = {"hyperparameters": bestResult.hyperparameters,
                  "loadParams": loadParams, "extractParams": extractParams,
@@ -112,7 +111,7 @@ def main():
                   pipe.globalParams.get("places", 3))
 
     elapsedMins = (time.time() - startAll) / 60
-    logger.info("Completed in: %.3f min", elapsedMins)
+    logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
 
 
 if __name__ == "__main__":

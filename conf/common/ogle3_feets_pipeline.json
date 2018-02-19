@@ -1,6 +1,6 @@
 {
   "globalParams": {
-    "places": 5
+    "places": 3
   },
   "loadData": {
     "function": "ogle3",

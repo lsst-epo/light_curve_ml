@@ -41,6 +41,7 @@ def selectBestModel(models, features, labels, selectionParams):
 
     # ancillary time costs
     fitTimes = []
+    startFit = time.time()
     for model, hyperparams in models:
         fStart = time.time()
         predicted = cross_val_predict(model, features, labels, cv=cv,
@@ -60,5 +61,6 @@ def selectBestModel(models, features, labels, selectionParams):
             maxScore = f1Overall
             bestResult = result
 
-    logger.info("average fit time: %.3fs", np.average(fitTimes))
+    logger.info("fit %s models in: %.2fs ave: %.3fs", len(models),
+                time.time() - startFit, np.average(fitTimes))
     return bestResult, allResults
