@@ -36,8 +36,8 @@ OUTLIERS_REASON = "insufficient due to statistical outliers"
 SUFFICIENT_LC_DATA = 80
 
 
-#: data value to scrub
-REMOVE_SET = {float("nan"), float("inf"), float("-inf")}
+#: data values to scrub
+NON_FINITE_VALUES = {np.nan, float("nan"), float("inf"), float("-inf")}
 
 
 def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
@@ -71,7 +71,7 @@ def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
     return (_tm, _mag, _err), None, removedCounts
 
 
-def cleanDataset(labels, times, mags, errors, remove=REMOVE_SET, stdLimit=5,
+def cleanDataset(labels, times, mags, errors, remove=NON_FINITE_VALUES, stdLimit=5,
                  errorLimit=3):
     """Clean a LC dataframe and report details on discards"""
     shortIssueCount = 0

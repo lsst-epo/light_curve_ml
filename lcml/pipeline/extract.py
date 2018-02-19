@@ -1,9 +1,7 @@
-
 from feets import FeatureSpace
-import numpy as np
 
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
-from lcml.pipeline.preprocess import allFinite
+from lcml.pipeline.preprocess import allFinite, NON_FINITE_VALUES
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
@@ -40,7 +38,6 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
     validLabels = []
     badCount = 0
 
-    # if True, set all extracted features having value 'nan' to 0.0
     impute = params.get("impute", True)
     for features, label in featureLabels:
         if allFinite(features):
@@ -49,15 +46,15 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
         else:
             if impute:
                 for i, f in enumerate(features):
-                    if np.isnan(f):
+                    if f in NON_FINITE_VALUES:
+                        # set non-finite feature values to 0.0
+                        logger.warning("imputing feature: %s value: %s", i, f)
                         features[i] = 0.0
 
-            logger.warning("bad feature set: %s", features)
             badCount += 1
 
     if badCount:
-        logger.warning("Skipped b/c nan rate: %s", fmtPct(badCount,
-                                                          len(featureLabels)))
+        logger.warning("Bad feature value rate: %s",
+                       fmtPct(badCount, len(featureLabels)))
 
     return validFeatures, validLabels
-

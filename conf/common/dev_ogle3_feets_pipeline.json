@@ -5,7 +5,7 @@
   "loadData": {
     "function": "ogle3",
     "params": {
-      "relativePath": "/data/ogle3",
+      "relativePath": "/data/ogle3/ogle3",
       "unarchive": true,
       "limit": 1000
     }
