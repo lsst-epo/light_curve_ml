@@ -5,7 +5,7 @@ from prettytable import PrettyTable
 
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
-from lcml.pipeline.persistence import loadModels, META_PARAMS_HYPER, saveModel
+from lcml.pipeline.persistence import loadModels, saveModel
 from lcml.pipeline.preprocess import cleanDataset
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
@@ -27,14 +27,16 @@ def _getArgs():
 
 
 def reportResults(bestResult, allResults, classToLabel, places):
+    columns = ["Hyperparams", "Micro F1", "Class F1", "Accuracy"]
     roundFlt = truncatedFloat(places)
-    t = PrettyTable(["Hyperparams", "Micro F1", "Class F1", "Accuracy"])
+    searchTable = PrettyTable(columns)
     for result in allResults:
-        t.add_row(_resultToRow(result, classToLabel, roundFlt))
+        searchTable.add_row(_resultToRow(result, classToLabel, roundFlt))
 
-    t.add_row(["Winner"] * len(t.field_names))
-    t.add_row(_resultToRow(bestResult, classToLabel, roundFlt))
-    logger.info("Results...\n" + str(t))
+    logger.info("Search results...\n" + str(searchTable))
+    winnerTable = PrettyTable(columns)
+    winnerTable.add_row(_resultToRow(bestResult, classToLabel, roundFlt))
+    logger.info("Winner...\n" + str(winnerTable))
 
     confusionMatrix = bestResult.metrics.confusionMatrix
     classes = [classToLabel[i] for i in range(len(classToLabel))]
