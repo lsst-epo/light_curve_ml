@@ -41,19 +41,16 @@ def selectBestModel(models, features, labels, selectionParams):
 
     # ancillary time costs
     fitTimes = []
-    scoreTimes = []
     for model, hyperparams in models:
         fStart = time.time()
         predicted = cross_val_predict(model, features, labels, cv=cv,
                                       n_jobs=jobs)
         fitTimes.append(time.time() - fStart)
 
-        sStart = time.time()
         accuracy = accuracy_score(labels, predicted)
         f1Overall = f1_score(labels, predicted, average="micro")
         f1Individual = f1_score(labels, predicted, average=None)
         confusionMatrix = confusion_matrix(labels, predicted)
-        scoreTimes.append(time.time() - sStart)
 
         metrics = ClassificationMetrics(accuracy, f1Overall, f1Individual,
                                         confusionMatrix)
@@ -63,6 +60,5 @@ def selectBestModel(models, features, labels, selectionParams):
             maxScore = f1Overall
             bestResult = result
 
-    logger.info("- average fit time: %.2fs", np.average(fitTimes))
-    logger.info("- average score time: %.2fs", np.average(scoreTimes))
+    logger.info("average fit time: %.3fs", np.average(fitTimes))
     return bestResult, allResults

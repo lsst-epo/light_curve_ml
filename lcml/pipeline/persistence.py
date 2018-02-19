@@ -1,7 +1,9 @@
 import json
 import os
 import platform
+import sys
 
+import numpy as np
 import sklearn
 from sklearn.externals import joblib
 
@@ -24,11 +26,15 @@ def saveModel(model, modelPath, params=None, metrics=None):
     logger.info("Dumped model to: %s", modelPath)
     metadataPath = _metadataPath(modelPath)
     archBits = platform.architecture()[0]
+    mainFile = sys.modules["__main__"].__file__
+    metricsJson = {k: v.tolist() if type(v) is np.ndarray else v
+                   for k, v in metrics.items()}
     metadata = {"archBits": archBits, "sklearnVersion": sklearn.__version__,
-                "pythonSource": __name__, "params": params,
-                "metrics": metrics}
+                "mainFile": mainFile, "params": params, "metrics": metricsJson}
     with open(metadataPath, "w") as f:
-        json.dump(metadata, f)
+        json.dump(metadata, f, indent=4, sort_keys=True)
+
+    logger.info("Wrote metadata to: %s", metadataPath)
 
 
 def loadModel(modelPath):

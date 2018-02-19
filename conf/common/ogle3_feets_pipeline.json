@@ -7,7 +7,7 @@
     "params": {
       "relativePath": "../data/ogle3",
       "unarchive": false,
-      "limit": 500
+      "limit": 50
     }
   },
   "extractFeatures": {
@@ -20,18 +20,18 @@
   "modelSelection": {
     "function": "grid",
     "params": {
-        "estimatorsStart": 6,
-        "estimatorsStop": 16,
-        "rfFeaturesStart": 6,
+        "estimatorsStart": 9,
+        "estimatorsStop": 10,
+        "rfFeaturesStart": 9,
         "rfFeaturesStop": 10,
-        "cv": 5,
+        "cv": 2,
         "jobs": -1
     }
   },
   "serialization": {
     "params": {
-      "saveModel": false,
-      "modelPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl"
+      "loadPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl",
+      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-new.pkl"
     }
   }
 }

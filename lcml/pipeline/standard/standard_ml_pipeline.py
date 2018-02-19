@@ -1,5 +1,4 @@
 import argparse
-import logging
 import time
 
 from lcml.pipeline.ml_pipeline import fromRelativePath
@@ -10,7 +9,7 @@ from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 from lcml.utils.data_util import (attachLabels, convertClassLabels,
-                                  unarchiveAll, reportClassHistogram)
+                                  reportClassHistogram, unarchiveAll)
 from lcml.utils.format_util import truncatedFloat
 
 
@@ -84,31 +83,33 @@ def main():
     logger.info("extracted in %.2fs", time.time() - featuresStart)
 
     models = None
-    if pipe.serialParams["modelPath"]:
+    loadPath = pipe.serialParams["loadPath"]
+    if loadPath:
         # load model and its metadata from disk
-        _model, _metadata = loadModel(pipe.serialParams["modelPath"])
-        if _model and _metadata:
-            _hyperparams = _metadata.get("hyperparameters", None)
+        _model, _metadata = loadModel(loadPath)
+        if _model is not None and _metadata is not None:
+            _hyperparams = _metadata["params"]["hyperparameters"]
             models = [(_model, _hyperparams)]
 
     if not models:
         models = pipe.modelSelection.fcn(pipe.modelSelection.params)
 
+    searchStart = time.time()
     bestResult, allResults = selectBestModel(models, features, labelsProcessed,
                                              pipe.modelSelection.params)
-    logger.info("Finished searching")
+    logger.info("model selected in %.2fs", time.time() - searchStart)
 
     allParams = {"hyperparameters": bestResult.hyperparameters,
                  "loadParams": loadParams, "extractParams": extractParams,
                  "selectionParams": pipe.modelSelection.params}
-    if pipe.serialParams["saveModel"]:
+    if pipe.serialParams["savePath"]:
         metrics = bestResult.metrics._asdict()
         metrics["mapping"] = classToLabel
-        saveModel(bestResult.model, pipe.serialParams["modelPath"], allParams,
-                  bestResult.metrics)
+        saveModel(bestResult.model, pipe.serialParams["savePath"], allParams,
+                  metrics)
 
     reportResults(bestResult, allResults, classToLabel,
-                  pipe.globalParams["places"])
+                  pipe.globalParams.get("places", 3))
 
     elapsedMins = (time.time() - startAll) / 60
     logger.info("Completed in: %.3f min", elapsedMins)

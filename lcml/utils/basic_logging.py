@@ -45,8 +45,8 @@ def levelToName(level):
 
 class BasicLogging:
     _config = None
-    _consoleLevel = None
-    _format = None
+    _consoleLevel = logging.NOTSET
+    _format = DEFAULT_FORMAT
 
     @classmethod
     def initLogging(cls, fmt=None):
