@@ -1,8 +1,7 @@
+/data
+/logs
+/models
+/results
+
 .idea
-results
-models
-
 *.pyc
-data
-logs
-
