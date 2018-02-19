@@ -7,7 +7,14 @@ from lcml.pipeline.extract import feetsExtractFeatures
 from lcml.utils.context_util import joinRoot, loadJson
 
 
-# TODO namedtuple?
+#: global parameters section of the pipeline conf file
+GLOBAL_PARAMS = "globalParams"
+LOAD_DATA = "loadData"
+EXTRACT_FEATURES = "extractFeatures"
+MODEL_SELECTION = "modelSelection"
+SERIALIZATION = "serialization"
+
+
 class MlPipeline:
     def __init__(self, globalParams, loadData, extractFeatures, modelSelection,
                  serialParams):
@@ -45,31 +52,31 @@ def gridSearchSelection(params):
 def loadPipeline(conf):
     """Constructs a pipeline from a json config"""
     # load data fcn
-    loadType = conf["loadData"]["function"]
+    loadType = conf[LOAD_DATA]["function"]
     if loadType == "ogle3":
         loadFcn = loadOgle3Dataset
     else:
         raise ValueError("unsupported load function: %s" % loadType)
 
-    loadParams = conf["loadData"]["params"]
+    loadParams = conf[LOAD_DATA]["params"]
 
-    extractType = conf["extractFeatures"]["function"]
+    extractType = conf[EXTRACT_FEATURES]["function"]
     if extractType == "feets":
         extractFcn = feetsExtractFeatures
     else:
         raise ValueError("unsupported extract function: %s" % extractType)
 
-    extParams = conf["extractFeatures"]["params"]
+    extParams = conf[EXTRACT_FEATURES]["params"]
 
-    selectionType = conf["modelSelection"]["function"]
+    selectionType = conf[MODEL_SELECTION]["function"]
     if selectionType == "grid":
         selectFcn = gridSearchSelection
     else:
         raise ValueError("unsupported selection function: %s" % selectionType)
 
-    selParams = conf["modelSelection"]["params"]
-    return MlPipeline(globalParams=conf["globalParams"],
+    selParams = conf[MODEL_SELECTION]["params"]
+    return MlPipeline(globalParams=conf[GLOBAL_PARAMS],
                       loadData=FunctionAndParams(loadFcn, loadParams),
                       extractFeatures=FunctionAndParams(extractFcn, extParams),
                       modelSelection=FunctionAndParams(selectFcn, selParams),
-                      serialParams=conf["serialization"]["params"])
+                      serialParams=conf[SERIALIZATION]["params"])

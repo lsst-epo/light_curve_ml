@@ -13,31 +13,48 @@ from lcml.utils.basic_logging import BasicLogging
 logger = BasicLogging.getLogger(__name__)
 
 
-def saveModel(model, modelPath, params=None, metrics=None):
+META_ARCH_BITS = "archBits"
+META_SKLEARN = "sklearnVersion"
+META_MAIN = "mainFile"
+META_PARAMS = "params"
+META_PARAMS_HYPER = "hyperparameters"
+META_METRICS = "metrics"
+_META_FILENAME = "metadata.json"
+
+
+def saveModel(result, modelPath, pipe, classToLabel):
     """If 'modelPath' is specified, the model and its metadata, including
     'trainParams' and 'cvScore' are saved to disk.
 
-    :param model: a trained ML model, could be any Python object
+    :param result: ModelSelectionResult to save
     :param modelPath: save path
-    :param params: all experiment params including hyperparameters
-    :param metrics: metric values obtained from running model on test data
+    :param pipe: ML pipeline
+    :param classToLabel: mapping from int to class label
     """
-    joblib.dump(model, modelPath)
+    params = {META_PARAMS_HYPER: result.hyperparameters,
+              "loadParams": pipe.loadData.params,
+              "extractParams": pipe.extractFeatures.params,
+              "selectionParams": pipe.modelSelection.params}
+    metrics = result.metrics._asdict()
+    metrics["mapping"] = classToLabel
+
+    joblib.dump(result.model, modelPath)
     logger.info("Dumped model to: %s", modelPath)
     metadataPath = _metadataPath(modelPath)
     archBits = platform.architecture()[0]
     mainFile = sys.modules["__main__"].__file__
     metricsJson = {k: v.tolist() if type(v) is np.ndarray else v
                    for k, v in metrics.items()}
-    metadata = {"archBits": archBits, "sklearnVersion": sklearn.__version__,
-                "mainFile": mainFile, "params": params, "metrics": metricsJson}
+    metadata = {META_ARCH_BITS: archBits, META_SKLEARN: sklearn.__version__,
+                META_MAIN: mainFile, META_PARAMS: params,
+                META_METRICS: metricsJson}
     with open(metadataPath, "w") as f:
         json.dump(metadata, f, indent=4, sort_keys=True)
 
     logger.info("Wrote metadata to: %s", metadataPath)
 
 
-def loadModel(modelPath):
+def loadModels(modelPath):
     try:
         model = joblib.load(modelPath)
     except IOError:
@@ -53,14 +70,19 @@ def loadModel(modelPath):
         logger.warning("Metadata file doesn't exist: %s", metadataPath)
         return None, None
 
-    if metadata["archBits"] != platform.architecture()[0]:
+    if metadata[META_ARCH_BITS] != platform.architecture()[0]:
         logger.critical("Model created on arch: %s but current arch is %s",
-                        metadata["archBits"], platform.architecture()[0])
+                        metadata[META_ARCH_BITS], platform.architecture()[0])
         raise ValueError("Unusable model")
 
-    return model, metadata
+    models = None
+    if model is not None and metadata is not None:
+        hyperparams = metadata[META_PARAMS][META_PARAMS_HYPER]
+        models = [(model, hyperparams)]
+
+    return models
 
 
 def _metadataPath(modelPath):
     finalDirLoc = modelPath.rfind(os.sep)
-    return os.path.join(modelPath[:finalDirLoc], "metadata.json")
+    return os.path.join(modelPath[:finalDirLoc], _META_FILENAME)

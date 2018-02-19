@@ -5,7 +5,7 @@ from prettytable import PrettyTable
 
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
-from lcml.pipeline.persistence import loadModel, saveModel
+from lcml.pipeline.persistence import loadModels, META_PARAMS_HYPER, saveModel
 from lcml.pipeline.preprocess import cleanDataset
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
@@ -86,11 +86,8 @@ def main():
     models = None
     loadPath = pipe.serialParams["loadPath"]
     if loadPath:
-        # load model and its metadata from disk
-        _model, _metadata = loadModel(loadPath)
-        if _model is not None and _metadata is not None:
-            _hyperparams = _metadata["params"]["hyperparameters"]
-            models = [(_model, _hyperparams)]
+        # load previous winning model and its metadata from disk
+        models = loadModels(loadPath)
 
     if not models:
         models = pipe.modelSelection.fcn(pipe.modelSelection.params)
@@ -98,14 +95,8 @@ def main():
     bestResult, allResults = selectBestModel(models, features, labelsProcessed,
                                              pipe.modelSelection.params)
 
-    allParams = {"hyperparameters": bestResult.hyperparameters,
-                 "loadParams": loadParams, "extractParams": extractParams,
-                 "selectionParams": pipe.modelSelection.params}
     if pipe.serialParams["savePath"]:
-        metrics = bestResult.metrics._asdict()
-        metrics["mapping"] = classToLabel
-        saveModel(bestResult.model, pipe.serialParams["savePath"], allParams,
-                  metrics)
+        saveModel(bestResult, pipe.serialParams["savePath"], pipe, classToLabel)
 
     reportResults(bestResult, allResults, classToLabel,
                   pipe.globalParams.get("places", 3))

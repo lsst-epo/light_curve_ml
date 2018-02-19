@@ -7,7 +7,7 @@
     "params": {
       "relativePath": "../data/ogle3",
       "unarchive": false,
-      "limit": 50
+      "limit": 500
     }
   },
   "extractFeatures": {
@@ -20,11 +20,11 @@
   "modelSelection": {
     "function": "grid",
     "params": {
-        "estimatorsStart": 9,
-        "estimatorsStop": 10,
-        "rfFeaturesStart": 9,
-        "rfFeaturesStop": 10,
-        "cv": 2,
+        "estimatorsStart": 6,
+        "estimatorsStop": 12,
+        "rfFeaturesStart": 6,
+        "rfFeaturesStop": 12,
+        "cv": 5,
         "jobs": -1
     }
   },
