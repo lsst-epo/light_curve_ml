@@ -1,0 +1,37 @@
+{
+  "globalParams": {
+    "places": 4
+  },
+  "loadData": {
+    "function": "ogle3",
+    "params": {
+      "relativePath": "/data/ogle3",
+      "unarchive": true,
+      "limit": 1000
+    }
+  },
+  "extractFeatures": {
+    "function": "feets",
+    "params": {
+      "allFeatures": false,
+      "impute": true
+    }
+  },
+  "modelSelection": {
+    "function": "grid",
+    "params": {
+        "estimatorsStart": 6,
+        "estimatorsStop": 12,
+        "rfFeaturesStart": 6,
+        "rfFeaturesStop": 12,
+        "cv": 5,
+        "jobs": -1
+    }
+  },
+  "serialization": {
+    "params": {
+      "loadPath": null,
+      "savePath": "/home/ubuntu/light_curve_ml/models/ogle3/rf-classifier-new.pkl"
+    }
+  }
+}
