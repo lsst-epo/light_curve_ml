@@ -23,8 +23,7 @@ def _feetsExtract(featureSpace, category, timeData, magnitudeData, errorData):
     try:
         _, values = featureSpace.extract(timeData, magnitudeData, errorData)
     except BaseException:
-        logger.exception("feets feature extract failed for data: time: %s"
-                         " mag: %s err: %s", timeData, magnitudeData, errorData)
+        logger.exception("feets feature extract failed")
         values = None
 
     return values, category
