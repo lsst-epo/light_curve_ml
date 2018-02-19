@@ -1,5 +1,3 @@
-import inspect
-
 from feets import FeatureSpace
 
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
@@ -33,10 +31,6 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
     logger.info("Extracting features...")
 
     fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
-
-    lines = inspect.getsourcelines(fs.extract)
-    logger.info("\n" + "".join(lines[0]))
-
     cleanLcDf = [(fs, labels[i], times[i], mags[i], errors[i])
                  for i in range(len(labels))]
     featureLabels, _ = mapMultiprocess(feetsExtract, cleanLcDf)

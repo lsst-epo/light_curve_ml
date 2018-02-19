@@ -6,8 +6,8 @@
     "function": "ogle3",
     "params": {
       "relativePath": "/data/ogle3/ogle3",
-      "unarchive": true,
-      "limit": 1000
+      "unarchive": false,
+      "limit": 100
     }
   },
   "extractFeatures": {
