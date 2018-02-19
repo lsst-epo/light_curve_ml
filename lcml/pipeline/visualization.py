@@ -1,5 +1,8 @@
 import itertools
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+except ImportError:
+    plt = None
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
