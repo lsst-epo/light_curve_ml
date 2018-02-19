@@ -1,6 +1,11 @@
 import itertools
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+
+from lcml.utils.basic_logging import BasicLogging
+
+
+logger = BasicLogging.getLogger(__name__)
 
 
 def normalizeConfusionMatrix(matrix):
@@ -8,7 +13,7 @@ def normalizeConfusionMatrix(matrix):
 
 
 def plotConfusionMatrix(mat, classes, normalize=False, title="Confusion matrix",
-                        cmap=plt.cm.Blues):
+                        cmap=None):
     """Plots a confusion matrix and its classes
 
     :param mat: ndarray confusion matrix
@@ -17,9 +22,14 @@ def plotConfusionMatrix(mat, classes, normalize=False, title="Confusion matrix",
     :param title: figure title
     :param cmap: color map for intensity scale
     """
+    if not plt:
+        logger.warning("Skipping plot since Matplotlib not available")
+        return
+
     if normalize:
         mat = normalizeConfusionMatrix(mat)
 
+    cmap = cmap if cmap else plt.cm.Blues
     plt.figure()
     plt.imshow(mat, interpolation="nearest", cmap=cmap)
     plt.title(title)
