@@ -79,11 +79,12 @@ def main():
     reportClassHistogram(labels)
     classToLabel = convertClassLabels(labels)
 
-    featuresStart = time.time()
+    extractStart = time.time()
     extractParams = pipe.extractFeatures.params
     features, labelsProcessed = pipe.extractFeatures.fcn(labels, times, mags,
                                                          errors, extractParams)
-    logger.info("extracted in %.2fs", time.time() - featuresStart)
+    extractMins = (time.time() - extractStart) / 60
+    logger.info("extracted in %.2fm", extractMins)
 
     models = None
     loadPath = pipe.serialParams["loadPath"]

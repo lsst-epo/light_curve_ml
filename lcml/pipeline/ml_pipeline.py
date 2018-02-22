@@ -50,7 +50,7 @@ def gridSearchSelection(params):
 
 
 def loadPipeline(conf):
-    """Constructs a pipeline from a json config"""
+    """Constructs a pipeline from a .json config."""
     # load data fcn
     loadType = conf[LOAD_DATA]["function"]
     if loadType == "ogle3":

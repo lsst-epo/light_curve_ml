@@ -19,9 +19,14 @@ def loadOgle3Dataset(dataDir, limit):
     times = list()
     magnitudes = list()
     errors = list()
-    paths = absoluteFilePaths(dataDir, ext="dat", limit=limit)
+
+    paths = absoluteFilePaths(dataDir, ext="dat")
     if not paths:
         raise ValueError("No data files found in %s with ext dat" % dataDir)
+
+    # Make a random choice of files up to limit
+    selectedIdxs = np.random.choice(len(paths), limit, replace=False)
+    paths = [paths[i] for i in selectedIdxs]
 
     for i, f in enumerate(paths):
         fileName = f.split("/")[-1]
@@ -62,7 +67,8 @@ def loadMachoDataset(dataPath, limit):
     # ?-class, 1-field_id, 2-tile_id, 3-star_sequence_id, 4-observation_date,
     # 5-observation_id, 9-red_magnitude, 10-red_error, 24-blue_magnitude,
     # 25-blue_error
-    data = np.genfromtxt(dataPath, delimiter=",", skip_header=1)[:limit]
+    data = np.genfromtxt(dataPath, delimiter=",", skip_header=1)
+    data = data[np.random.choice(len(data), limit, replace=False)]
 
     # double up these since we have two bands
     labels = np.tile(data[:, 0], 2)
@@ -106,7 +112,9 @@ def loadK2Dataset(dataPath, limit):
     flags = data[:, 9]
 
     # only select data where SAP quality flags are 0
-    goodRows = np.where(flags == 0)[0][:limit]
+    goodRows = np.where(flags == 0)[0]
+    goodRows = goodRows[np.random.choice(len(goodRows), limit, replace=False)]
+
     times = data[goodRows, 0]
     magnitudes = data[goodRows, 7]
     errors = data[goodRows, 8]

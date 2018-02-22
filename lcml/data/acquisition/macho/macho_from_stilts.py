@@ -18,17 +18,15 @@ def genList(start, end):
     return list(range(start, end + 1))
 
 
-def getTapCommandBase():
-    jreBinary = "/usr/bin/java"
+def tapCommandBase(jreBinaryPath="/usr/bin/java"):
     jarPath = os.path.join(os.environ["LSST"], "jars/stilts.jar")
-    commandBase = [jreBinary, "-jar", jarPath, "tapquery"]
-    commandBase += ["tapurl=http://machotap.asvo.nci.org.au/ncitap/tap"]
-    return commandBase
+    commandBase = [jreBinaryPath, "-jar", jarPath, "tapquery"]
+    return commandBase + ["tapurl=http://machotap.asvo.nci.org.au/ncitap/tap"]
 
 
 def main():
     outDir = os.path.join(os.environ["LSST"], "data/macho/raw")
-    commandBase = getTapCommandBase()
+    commandBase = tapCommandBase()
 
     returnedLimit = 500000
     limit = int(10e7)

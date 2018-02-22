@@ -26,7 +26,7 @@ def plotConfusionMatrix(mat, classes, normalize=False, title="Confusion matrix",
     :param cmap: color map for intensity scale
     """
     if not plt:
-        logger.warning("Skipping plot since Matplotlib not available")
+        logger.warning("Skipping plot since Matplotlib unavailable")
         return
 
     if normalize:
