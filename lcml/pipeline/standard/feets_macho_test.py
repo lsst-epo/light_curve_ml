@@ -22,7 +22,7 @@ from lcml.utils.format_util import fmtPct
 logger = BasicLogging.getLogger(__name__)
 
 
-#: all data types accepted by the library
+#: all data types accepted by the feets library
 ALL_DATA_TYPES = ["time", "magnitude", "error", "magnitude2", "aligned_time",
                   "aligned_magnitude", "aligned_error", "aligned_magnitude2",
                   "aligned_error2"]
@@ -182,6 +182,22 @@ def _getArgs():
     return parser.parse_args()
 
 
+
+def extractWork(args):
+    """Accepts a FeatureSpace, category, and LC band including time, magnitude,
+     and error. Returns the category, the feature values, LC length, and
+     feature extraction time."""
+    featureSpace = args[0]
+    category = args[1]
+    band = args[2]
+    startTime = time.time()
+    _, values = featureSpace.extract(time=band[0],
+                                     magnitude=band[1],
+                                     error=band[2])
+    elapsedTime = time.time() - startTime
+    return category, values, len(band[0]), elapsedTime
+
+
 def _reportFeatures(features, values):
     t = PrettyTable(["Feature", "Value"])
     t.align = "l"
@@ -246,21 +262,6 @@ def machoTest():
     logger.info("Feature extraction time: total: %.2fs mean: %.2fs min: %.2fs "
                 "max: %.2fs", totalExtractTime, np.average(extractTimes),
                 min(extractTimes), max(extractTimes))
-
-
-def extractWork(args):
-    """Accepts a FeatureSpace, category, and LC band including time, magnitude,
-     and error. Returns the category, the feature values, LC length, and
-     feature extraction time."""
-    featureSpace = args[0]
-    category = args[1]
-    band = args[2]
-    startTime = time.time()
-    _, values = featureSpace.extract(time=band[0],
-                                     magnitude=band[1],
-                                     error=band[2])
-    elapsedTime = time.time() - startTime
-    return category, values, len(band[0]), elapsedTime
 
 
 if __name__ == "__main__":
