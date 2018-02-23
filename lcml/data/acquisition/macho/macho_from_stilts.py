@@ -21,7 +21,8 @@ def genList(start, end):
 def tapCommandBase(jreBinaryPath="/usr/bin/java"):
     jarPath = os.path.join(os.environ["LSST"], "jars/stilts.jar")
     commandBase = [jreBinaryPath, "-jar", jarPath, "tapquery"]
-    return commandBase + ["tapurl=http://machotap.asvo.nci.org.au/ncitap/tap"]
+    return commandBase + ["tapurl=http://machotap.asvo.nci.org.au/ncitap/tap",
+                          "compress=true"]
 
 
 def main():
@@ -54,8 +55,7 @@ def main():
             logger.info("Field: %s Class: %s", field, cat)
             outPath = os.path.join(outDir, "c%s_f%s.csv" % (cat, field))
             fullQuery = joinQuery % (limit, field, cat)
-            cmd = commandBase + ["adql=" + fullQuery, "out=" + outPath,
-                                 "compress=true"]
+            cmd = commandBase + ["adql=" + fullQuery, "out=" + outPath]
             apiStart = time.time()
             try:
                 output = subprocess.check_output(cmd)
