@@ -11,12 +11,12 @@ logger = BasicLogging.getLogger(__name__)
 
 
 def main():
-    outDir = os.path.join(os.environ["LSST"], "data/macho/class")
+    inDir = os.path.join(os.environ["LSST"], "data/macho/class")
     allData = [",".join(["classification", "field_id", "tile_id", "sequence",
                          "date_observed", "red_magnitude", "red_error",
                          "blue_magnitude", "blue_error"]) + "\n"]
     pattern = r"""\d+"""
-    for f in absoluteFilePaths(outDir, ext="csv"):
+    for f in absoluteFilePaths(inDir, ext="csv"):
         try:
             data = np.loadtxt(f, skiprows=1, delimiter=",")
         except ValueError:
@@ -29,7 +29,7 @@ def main():
         for row in data:
             allData.append(",".join(prefix + [str(x) for x in row]) + "\n")
 
-
+    outDir = os.path.join(os.environ["LSST"], "data/macho")
     trainFile = os.path.join(outDir, "macho-train.csv")
     with open(trainFile, "w") as f:
         f.writelines(allData)
