@@ -20,10 +20,10 @@
   "modelSelection": {
     "function": "grid",
     "params": {
-        "estimatorsStart": 6,
-        "estimatorsStop": 12,
-        "rfFeaturesStart": 6,
-        "rfFeaturesStop": 12,
+        "estimatorsStart": 5,
+        "estimatorsStop": 15,
+        "rfFeaturesStart": 5,
+        "rfFeaturesStop": 15,
         "cv": 5,
         "jobs": -1
     }
@@ -31,7 +31,7 @@
   "serialization": {
     "params": {
       "loadPath": null,
-      "savePath": "/home/ubuntu/light_curve_ml/models/ogle3/rf-classifier-new.pkl"
+      "savePath": "/home/ubuntu/light_curve_ml/models/ogle3/rf-classifier.pkl"
     }
   }
 }

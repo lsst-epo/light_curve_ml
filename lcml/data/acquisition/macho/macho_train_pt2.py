@@ -18,6 +18,7 @@ def main():
                          "blue_magnitude", "blue_error"]) + "\n"]
     pattern = r"""\d+"""
     dataLengths = Counter()
+    missing = [",".join(("field", "tile", "seqn"))]
     for f in absoluteFilePaths(inDir, ext="csv"):
         try:
             data = np.loadtxt(f, skiprows=1, delimiter=",")
@@ -32,13 +33,20 @@ def main():
             allData.append(",".join(prefix + [str(x) for x in row]) + "\n")
 
         dataLengths[len(data)] += 1
+        if not len(data):
+            missing.append(",".join((field, tile, seqn)))
 
     outDir = os.path.join(os.environ["LSST"], "data/macho")
     trainFile = os.path.join(outDir, "macho-train.csv")
     with open(trainFile, "w") as f:
         f.writelines(allData)
 
-    logger.critical("LC length distribution: %s", sorted(list(dataLengths)))
+    missingFile = os.path.join(outDir, "train-fails.csv")
+    with open(missingFile, "w") as f:
+        f.writelines(missing)
+
+    logger.critical("LC length distribution: %s",
+                    sorted(list(dataLengths.values())))
 
 
 if __name__ == "__main__":

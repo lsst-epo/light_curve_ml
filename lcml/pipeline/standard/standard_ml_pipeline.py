@@ -21,7 +21,7 @@ logger = BasicLogging.getLogger(__name__)
 
 def _getArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pipelinePath", required=True,
+    parser.add_argument("--path", required=True,
                         help="relative path to pipeline conf")
     return parser.parse_args()
 
@@ -70,7 +70,7 @@ def main():
         logger.info("Unarchiving files in %s ...", dataDir)
         unarchiveAll(dataDir, remove=True)
 
-    logger.info("Loading dataset...")
+    logger.info("Loading dataset with limit: %s...", loadParams["limit"])
     _labels, _times, _mags, _errors = pipe.loadData.fcn(dataDir,
                                                         loadParams["limit"])
 

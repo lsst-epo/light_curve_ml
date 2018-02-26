@@ -33,14 +33,15 @@ def main():
     classData = np.loadtxt(fname=inPath, dtype=int, delimiter=",",
                            skiprows=1)
     logger.critical("processing %d requests", len(classData))
-    minRowsForRetry = 10
+    smallestLcNoRetry = 20
     for field, tile, seqn, classif in classData:
+        classCounts[classif] += 1
         fname = "field=%s_tile=%s_seqn=%s_class=%s" % (field, tile, seqn,
                                                        classif)
         outPath = os.path.join(outDir, fname + ".csv")
         if os.path.exists(outPath):
             _tempData = np.loadtxt(outPath, dtype=str, delimiter=",")
-            if len(_tempData) > minRowsForRetry:
+            if len(_tempData) > smallestLcNoRetry:
                 # skip downlaod if we already have a file with sufficient data
                 # logger.critical("skipping %s", fname)
                 continue
@@ -54,13 +55,26 @@ def main():
             logger.exception("JAR call failed")
             continue
 
-        classCounts[classif] += 1
-
+    # +----------+--------+------------+
+    # | Category | Counts | Percentage |
+    # +----------+--------+------------+
+    # | 1 | 7405 | 34.48 |
+    # | 2 | 1765 | 8.22 |
+    # | 3 | 315 | 1.47 |
+    # | 4 | 1185 | 5.52 |
+    # | 5 | 683 | 3.18 |
+    # | 6 | 315 | 1.47 |
+    # | 7 | 822 | 3.83 |
+    # | 8 | 1134 | 5.28 |
+    # | 9 | 778 | 3.62 |
+    # | 10 | 6835 | 31.83 |
+    # | 11 | 237 | 1.1 |
+    # +----------+--------+------------+
     t = PrettyTable(["Category", "Counts", "Percentage"])
     totalCounts = sum(classCounts.values())
     for cat, counts in sorted(classCounts.items()):
         t.add_row([cat, counts, round(100.0 * counts / totalCounts, 2)])
-    logger.critical(t)
+    logger.critical("\n" + str(t))
 
 
 if __name__ == "__main__":

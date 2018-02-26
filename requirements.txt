@@ -1,11 +1,12 @@
 astropy>=2
-# htmresearch
-feets
 numpy
-nupic>=1.0
 pandas
 prettytable
 pytz
 scikit-learn
 scipy
-upsilon
+
+# feets # currently installed from source
+# nupic>=1.0
+# htmresearch
+# upsilon
