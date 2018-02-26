@@ -33,7 +33,7 @@ def main():
     classData = np.loadtxt(fname=inPath, dtype=int, delimiter=",",
                            skiprows=1)
     logger.critical("processing %d requests", len(classData))
-    minRowsForRetry = 50
+    minRowsForRetry = 10
     for field, tile, seqn, classif in classData:
         fname = "field=%s_tile=%s_seqn=%s_class=%s" % (field, tile, seqn,
                                                        classif)
@@ -42,7 +42,7 @@ def main():
             _tempData = np.loadtxt(outPath, dtype=str, delimiter=",")
             if len(_tempData) > minRowsForRetry:
                 # skip downlaod if we already have a file with sufficient data
-                logger.critical("skipping %s", fname)
+                # logger.critical("skipping %s", fname)
                 continue
 
         logger.critical(outPath)
@@ -52,7 +52,7 @@ def main():
             subprocess.check_output(cmd)
         except CalledProcessError:
             logger.exception("JAR call failed")
-            return
+            continue
 
         classCounts[classif] += 1
 

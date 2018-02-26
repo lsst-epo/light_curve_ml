@@ -21,9 +21,9 @@
     "function": "grid",
     "params": {
         "estimatorsStart": 6,
-        "estimatorsStop": 12,
+        "estimatorsStop": 8,
         "rfFeaturesStart": 6,
-        "rfFeaturesStop": 12,
+        "rfFeaturesStop": 8,
         "cv": 5,
         "jobs": -1
     }

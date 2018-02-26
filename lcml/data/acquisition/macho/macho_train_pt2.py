@@ -1,3 +1,4 @@
+from collections import Counter
 import os
 import re
 
@@ -16,6 +17,7 @@ def main():
                          "date_observed", "red_magnitude", "red_error",
                          "blue_magnitude", "blue_error"]) + "\n"]
     pattern = r"""\d+"""
+    dataLengths = Counter()
     for f in absoluteFilePaths(inDir, ext="csv"):
         try:
             data = np.loadtxt(f, skiprows=1, delimiter=",")
@@ -29,10 +31,14 @@ def main():
         for row in data:
             allData.append(",".join(prefix + [str(x) for x in row]) + "\n")
 
+        dataLengths[len(data)] += 1
+
     outDir = os.path.join(os.environ["LSST"], "data/macho")
     trainFile = os.path.join(outDir, "macho-train.csv")
     with open(trainFile, "w") as f:
         f.writelines(allData)
+
+    logger.critical("LC length distribution: %s", sorted(list(dataLengths)))
 
 
 if __name__ == "__main__":

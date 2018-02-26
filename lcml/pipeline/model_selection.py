@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from sklearn.model_selection import cross_val_predict
+from sklearn.model_selection import cross_val_predict, cross_validate
 
 from lcml.utils.basic_logging import BasicLogging
 
@@ -22,8 +22,9 @@ ClassificationMetrics = namedtuple("ClassificationMetrics",
 
 def selectBestModel(models, features, labels, selectionParams):
     """Peforms k-fold cross validation on all specified models and selects model
-    with highest key metric score. Returns the best model, its hyperparameters,
-    and its scoring metrics.
+    with highest f1_micro score. Returns the best model, its hyperparameters,
+    and its scoring metrics including accuracy, f1_micro, individual class f1,
+    and confusion matrix
 
     :param models: models with differing hyperparaters to try
     :param features: input features
@@ -31,25 +32,25 @@ def selectBestModel(models, features, labels, selectionParams):
     :param selectionParams: custom params
     :returns Best ModelSelectionResult and list of all ModelSelectionResults
     """
+    start = time.time()
     cv = selectionParams["cv"]
     jobs = selectionParams["jobs"]
+    # N.B. micro averaged preferable for imbalanced classes
+    scoring = ["accuracy", "f1_micro"]
 
     # main output of this function
     bestResult = None
     allResults = []
     maxScore = 0
-
-    # ancillary time costs
-    fitTimes = []
-    startFit = time.time()
     for model, hyperparams in models:
-        fStart = time.time()
+        scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
+                                n_jobs=jobs)
+        accuracy = np.average(scores["test_accuracy"])
+        f1Overall = np.average(scores["test_f1_micro"])
+
+        # cannot compute these two from 'cross_validate' results
         predicted = cross_val_predict(model, features, labels, cv=cv,
                                       n_jobs=jobs)
-        fitTimes.append(time.time() - fStart)
-
-        accuracy = accuracy_score(labels, predicted)
-        f1Overall = f1_score(labels, predicted, average="micro")
         f1Individual = f1_score(labels, predicted, average=None)
         confusionMatrix = confusion_matrix(labels, predicted)
 
@@ -61,6 +62,7 @@ def selectBestModel(models, features, labels, selectionParams):
             maxScore = f1Overall
             bestResult = result
 
+    elapsed = time.time() - start
     logger.info("fit %s models in: %.2fs ave: %.3fs", len(models),
-                time.time() - startFit, np.average(fitTimes))
+                elapsed, elapsed / len(models))
     return bestResult, allResults
