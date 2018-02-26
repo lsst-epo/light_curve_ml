@@ -2,7 +2,7 @@ from collections import namedtuple
 import time
 
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
+from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
 from lcml.utils.basic_logging import BasicLogging
