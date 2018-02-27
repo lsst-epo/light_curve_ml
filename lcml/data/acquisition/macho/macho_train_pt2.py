@@ -18,7 +18,7 @@ def main():
                          "blue_magnitude", "blue_error"]) + "\n"]
     pattern = r"""\d+"""
     dataLengths = Counter()
-    missing = [",".join(("field", "tile", "seqn"))]
+    missing = [",".join(("field", "tile", "seqn")) + "\n"]
     for f in absoluteFilePaths(inDir, ext="csv"):
         try:
             data = np.loadtxt(f, skiprows=1, delimiter=",")
@@ -32,9 +32,9 @@ def main():
         for row in data:
             allData.append(",".join(prefix + [str(x) for x in row]) + "\n")
 
-        dataLengths[len(data)] += 1
+        dataLengths[len(data) // 10] += 1
         if not len(data):
-            missing.append(",".join((field, tile, seqn)))
+            missing.append(",".join((field, tile, seqn)) + "\n")
 
     outDir = os.path.join(os.environ["LSST"], "data/macho")
     trainFile = os.path.join(outDir, "macho-train.csv")
@@ -46,8 +46,10 @@ def main():
         f.writelines(missing)
 
     logger.critical("LC length distribution: %s",
-                    sorted(list(dataLengths.values())))
+                    sorted(list(dataLengths.items())))
 
 
 if __name__ == "__main__":
-    main()
+    with np.warnings.catch_warnings():
+        np.warnings.filterwarnings('ignore', r'Empty input file')
+        main()
