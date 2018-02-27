@@ -2,7 +2,7 @@ from collections import namedtuple
 
 from sklearn.ensemble import RandomForestClassifier
 
-from lcml.data.loading import loadOgle3Dataset
+from lcml.data import loading
 from lcml.pipeline.extract import feetsExtractFeatures
 from lcml.utils.context_util import joinRoot, loadJson
 
@@ -52,14 +52,17 @@ def gridSearchSelection(params):
 def loadPipeline(conf):
     """Constructs a pipeline from a .json config."""
     # load data fcn
-    loadType = conf[LOAD_DATA]["function"]
+    loadType = conf[LOAD_DATA]["function"].lower()
     if loadType == "ogle3":
-        loadFcn = loadOgle3Dataset
+        loadFcn = loading.loadOgle3Dataset
+    elif loadType == "macho":
+        loadFcn = loading.loadMachoDataset
+    elif loadType == "k2":
+        loadFcn = loading.loadK2Dataset
     else:
         raise ValueError("unsupported load function: %s" % loadType)
 
     loadParams = conf[LOAD_DATA]["params"]
-
     extractType = conf[EXTRACT_FEATURES]["function"]
     if extractType == "feets":
         extractFcn = feetsExtractFeatures

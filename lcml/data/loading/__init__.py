@@ -1,6 +1,8 @@
 """These functions are duck-typed for input: dataDir: str, limit: int and
 outputs: labels: List[str], times: List[ndarray], magnitudes: List[ndarray],
 errors: List[ndarray]"""
+import csv
+
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
@@ -46,7 +48,18 @@ def loadOgle3Dataset(dataDir, limit):
         magnitudes.append(lc[:, 1])
         errors.append(lc[:, 2])
 
+    assertArrayLengths(labels, times)
+    assertArrayLengths(labels, magnitudes)
+    assertArrayLengths(labels, errors)
     return labels, times, magnitudes, errors
+
+
+def file_len(fname):
+    i = -1
+    with open(fname) as f:
+        for i, l in enumerate(f):
+            pass
+    return i + 1
 
 
 def loadMachoDataset(dataPath, limit):
@@ -54,28 +67,77 @@ def loadMachoDataset(dataPath, limit):
     bands are simply treated as different light curves. The returned arrays
     have the red band in the first half and the blue band in the second.
 
-    Source data header:
-    blank_ignore,field_id,tile_id,star_sequence_id,observation_date,
-    observation_id,side_of_pier,exposure_time,airmass,red_magnitude,red_error,
-    red_normsky,red_type,red_crowd,red_chi2,red_mpix,red_cosmicrf,red_amp,
-    red_xpix,red_ypix,red_avesky,red_fwhm,red_tobs,red_cut,blue_magnitude,
-    blue_error,blue_normsky,blue_type,blue_crowd,blue_chi2,blue_mpix,
-    blue_cosmicrf,blue_amp,blue_xpix,blue_ypix,blue_avesky,blue_fwhm,
-    blue_tobs,blue_cut
+    CSV file columns:
+    0 - classification
+    1 - field_id
+    2 - tile_id
+    3 - sequence
+    4 - date_observed
+    5 - red_magnitude
+    6 - red_error
+    7 - blue_magnitude
+    8 - blue_error
     """
-    # Desired data columns:
-    # ?-class, 1-field_id, 2-tile_id, 3-star_sequence_id, 4-observation_date,
-    # 5-observation_id, 9-red_magnitude, 10-red_error, 24-blue_magnitude,
-    # 25-blue_error
-    data = np.genfromtxt(dataPath, delimiter=",", skip_header=1)
-    data = data[np.random.choice(len(data), limit, replace=False)]
+    # FIXME file contains multiple light curves together, so have a
+    # while loop tracking current lc and detecting when it changes and producing
+    # two light curve objects for the two bands each loop
+    # can still have 'choice' just skip over entire lc if current number is
+    # not in choice -- requires knowing number of light curves a priori, or
+    # computing them in an initial pass
+    choice = set(np.random.choice(file_len(dataPath), limit, replace=False))
+    data = list()
+    columns = {0,4,5,6,7,8}
+    skiprows = 1
+    with open(dataPath, "r") as f:
+        reader = csv.reader(f, delimiter=",")
+        for _ in range(skiprows):
+            next(f)
 
-    # double up these since we have two bands
-    labels = np.tile(data[:, 0], 2)
-    times = np.tile(data[:, 4], 2)
-    magnitudes = data[:, 9] + data[:, 24]
-    errors = data[:, 10] + data[:, 25]
+        for i, row in enumerate(reader):
+            if i in choice:
+                data.append([np.float32(x)
+                             for i, x in enumerate(row)
+                             if i in columns])
+
+    # data = np.loadtxt(dataPath, delimiter=",", skiprows=1,
+    #                   usecols=(0,4,5,6,7,8), dtype=np.float32)
+    # data = data[choice]
+
+    # double labels and times since we have two bands
+    labels = np.tile([r[0] for r in data], 2)
+    times = np.tile([r[1] for r in data], 2)
+    assertArrayLengths(labels, times)
+
+    magnitudes = [r[2] for r in data] + [r[3] for r in data]
+    assertArrayLengths(times, magnitudes)
+
+    errors = [r[4] for r in data] + [r[5] for r in data]
+    assertArrayLengths(times, errors)
     return labels, times, magnitudes, errors
+
+
+# TODO try more memory efficient impl
+# stackoverflow.com/questions/8956832/python-out-of-memory-on-large-csv-file-numpy
+def iterLoadTxt(filename, delimiter=',', skiprows=0, dtype=float):
+    def iter_func():
+        with open(filename, 'r') as f:
+            for _ in range(skiprows):
+                next(f)
+
+            line = None
+            for line in f:
+                line = line.rstrip().split(delimiter)
+                for item in line:
+                    yield dtype(item)
+        iterLoadTxt.rowlength = len(line) if line else -1
+
+    data = np.fromiter(iter_func(), dtype=dtype)
+    data = data.reshape((-1, iterLoadTxt.rowlength))
+    return data
+
+
+def assertArrayLengths(a, b):
+    assert len(a) == len(b), "unequal lengths: %s & %s" % (len(a), len(b))
 
 
 def loadK2Dataset(dataPath, limit):

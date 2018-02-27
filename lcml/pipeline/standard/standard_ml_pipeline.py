@@ -6,7 +6,7 @@ from prettytable import PrettyTable
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModels, saveModel
-from lcml.pipeline.preprocess import cleanDataset
+from lcml.pipeline.preprocess import cleanDataset, NON_FINITE_VALUES
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
@@ -63,10 +63,10 @@ def main():
     """
     startAll = time.time()
     args = _getArgs()
-    pipe = fromRelativePath(args.pipelinePath)
+    pipe = fromRelativePath(args.path)
     loadParams = pipe.loadData.params
     dataDir = joinRoot(loadParams["relativePath"])
-    if loadParams["unarchive"]:
+    if loadParams.get("unarchive", False):
         logger.info("Unarchiving files in %s ...", dataDir)
         unarchiveAll(dataDir, remove=True)
 
@@ -75,7 +75,10 @@ def main():
                                                         loadParams["limit"])
 
     logger.info("Cleaning dataset...")
-    labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors)
+    removes = set(loadParams["filter"]) if "filter" in loadParams else set()
+    removes = removes.union(NON_FINITE_VALUES)
+    labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors,
+                                               removes)
     reportClassHistogram(labels)
     classToLabel = convertClassLabels(labels)
 
