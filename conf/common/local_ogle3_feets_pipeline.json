@@ -7,7 +7,7 @@
     "params": {
       "relativePath": "../data/ogle3",
       "unarchive": false,
-      "limit": 100
+      "limit": 200
     }
   },
   "extractFeatures": {

@@ -1,5 +1,5 @@
+from __future__ import division
 from multiprocessing import cpu_count, Pool
-import time
 
 from lcml.utils.basic_logging import BasicLogging
 
@@ -7,12 +7,16 @@ from lcml.utils.basic_logging import BasicLogging
 logger = BasicLogging.getLogger(__name__)
 
 
-def mapMultiprocess(func, args):
+def mapMultiprocess(func, jobArgs, reportFrequency=100):
+    results = []
     pool = Pool(processes=cpu_count())
-    start = time.time()
-    results = pool.map(func, args)
-    minElapsed = (time.time() - start) / 60
-    return results, minElapsed
+    jobs = len(jobArgs)
+    for i, result in enumerate(pool.imap_unordered(func, jobArgs), 1):
+        results.append(result)
+        if not i % reportFrequency:
+            logger.info("progress: {0:.3%} count: {1:,d}".format(i / jobs, i))
+
+    return results
 
 
 def feetsExtract(args):

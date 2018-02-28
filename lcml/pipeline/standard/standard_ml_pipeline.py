@@ -70,7 +70,8 @@ def main():
         logger.info("Unarchiving files in %s ...", dataDir)
         unarchiveAll(dataDir, remove=True)
 
-    logger.info("Loading dataset with limit: %s...", loadParams["limit"])
+    logger.info("Loading dataset with limit: {:,d}...".format(
+        loadParams["limit"]))
     _labels, _times, _mags, _errors = pipe.loadData.fcn(dataDir,
                                                         loadParams["limit"])
 

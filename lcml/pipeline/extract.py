@@ -28,18 +28,18 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
     """
     exclude = (list if params.get("allFeatures", False) else _EXPENSIVE_FEATS)
     logger.info("Excluded features: %s", exclude)
-    logger.info("Extracting features...")
+    logger.info("Extracting features for {:,d} LCs...".format(len(labels)))
 
     fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
-    cleanLcDf = [(fs, labels[i], times[i], mags[i], errors[i])
-                 for i in range(len(labels))]
-    featureLabels, _ = mapMultiprocess(feetsExtract, cleanLcDf)
+    jobs = [(fs, labels[i], times[i], mags[i], errors[i])
+            for i in range(len(labels))]
+    featuresAndLabels = mapMultiprocess(feetsExtract, jobs)
     validFeatures = []
     validLabels = []
     badCount = 0
 
     impute = params.get("impute", True)
-    for features, label in featureLabels:
+    for features, label in featuresAndLabels:
         if allFinite(features):
             validFeatures.append(features)
             validLabels.append(label)
@@ -55,6 +55,6 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
 
     if badCount:
         logger.warning("Bad feature value rate: %s",
-                       fmtPct(badCount, len(featureLabels)))
+                       fmtPct(badCount, len(featuresAndLabels)))
 
     return validFeatures, validLabels
