@@ -32,7 +32,7 @@ OUTLIERS_REASON = "insufficient due to statistical outliers"
 
 
 #: Research by Kim suggests it best that light curves have at least 80 data
-#: points for accurate poc
+#: points for accurate classification
 SUFFICIENT_LC_DATA = 80
 
 

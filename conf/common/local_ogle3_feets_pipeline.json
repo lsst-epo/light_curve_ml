@@ -5,9 +5,9 @@
   "loadData": {
     "function": "ogle3",
     "params": {
-      "relativePath": "../data/ogle3",
+      "relativePath": "data/ogle3/ogle3-sample.csv",
       "unarchive": false,
-      "limit": 200
+      "limit": 1000
     }
   },
   "extractFeatures": {

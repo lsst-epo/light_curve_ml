@@ -6,13 +6,102 @@ import csv
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import absoluteFilePaths
+from lcml.utils.context_util import absoluteFilePaths, joinRoot
 
 
 logger = BasicLogging.getLogger(__name__)
 
 
+# TODO move to another module
+def fileLength(fname):
+    i = -1
+    with open(fname) as f:
+        for i, l in enumerate(f):
+            pass
+    return i + 1
+
+
+def assertArrayLengths(a, b):
+    assert len(a) == len(b), "unequal lengths: %s & %s" % (len(a), len(b))
+
+
+# TODO try more memory efficient impl
+# stackoverflow.com/questions/8956832/python-out-of-memory-on-large-csv-file-numpy
+def iterLoadTxt(filename, delimiter=',', skiprows=0, dtype=float):
+    def iter_func():
+        with open(filename, 'r') as f:
+            for _ in range(skiprows):
+                next(f)
+
+            line = None
+            for line in f:
+                line = line.rstrip().split(delimiter)
+                for item in line:
+                    yield dtype(item)
+        iterLoadTxt.rowlength = len(line) if line else -1
+
+    data = np.fromiter(iter_func(), dtype=dtype)
+    data = data.reshape((-1, iterLoadTxt.rowlength))
+    return data
+
+
+def _ogle3Uid(r):
+    # each ogle3 LC is uniquely defined by the combo of 'field', 'category',
+    # 'id', & 'band'
+    return "%s_%s_%s_%s" % (r[3].lower(), r[4].lower(), int(r[5]), r[6].lower())
+
+
 def loadOgle3Dataset(dataDir, limit):
+    """Loads OGLE3 data from specified file as light curves
+    represented as lists of the following values: labels, times,
+    magnitudes, and magnitude errors."""
+    # end results
+    labels = list()
+    times = list()
+    magnitudes = list()
+    errors = list()
+    fullPath = joinRoot(dataDir)
+
+    # 0=HJD, 1=MAGNITUDE, 2=ERROR, 3=FIELD, 4=LABEL, 5=ID, 6=MAGNITUDE_BAND
+    data = np.loadtxt(fullPath, skiprows=1, dtype=str, delimiter=",")
+
+    # Light curves uniquely ID'd by field, label, id, band
+    uidCol = [_ogle3Uid(r) for r in data]
+    uids = np.unique(uidCol)
+    selectedUids = set(np.random.choice(uids, limit, replace=False))
+    curLabel = data[0, 4].lower()
+    curUid = uidCol[0]
+    curTimes = []
+    curMags = []
+    curErrors = []
+    for i, row in enumerate(data):
+        if uidCol[i] == curUid:
+            # continue building current LC
+            if curUid in selectedUids:
+                curTimes.append(float(row[0]))
+                curMags.append(float(row[1]))
+                curErrors.append(float(row[2]))
+        else:
+            # finish current LC
+            if curUid in selectedUids:
+                labels.append(curLabel)
+                times.append(curTimes)
+                magnitudes.append(curMags)
+                errors.append(curErrors)
+
+            # now start new LC from 'row'
+            curUid = uidCol[i]
+            if curUid in selectedUids:
+                # don't have to recreate these until lc is selected
+                curLabel = row[4].lower()
+                curTimes = [float(row[0])]
+                curMags = [float(row[1])]
+                curErrors = [float(row[2])]
+
+    return labels, times, magnitudes, errors
+
+
+def legacyLoadOgle3Dataset(dataDir, limit):
     """Loads all OGLE3 data files from specified directory as light curves
     represented as lists of the following values: classLabels, times,
     magnitudes, and magnitude errors. Class labels are parsed from originating
@@ -54,14 +143,6 @@ def loadOgle3Dataset(dataDir, limit):
     return labels, times, magnitudes, errors
 
 
-def file_len(fname):
-    i = -1
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-    return i + 1
-
-
 def loadMachoDataset(dataPath, limit):
     """Loads MACHO data having red and blue light curve bands. The different
     bands are simply treated as different light curves. The returned arrays
@@ -84,7 +165,7 @@ def loadMachoDataset(dataPath, limit):
     # can still have 'choice' just skip over entire lc if current number is
     # not in choice -- requires knowing number of light curves a priori, or
     # computing them in an initial pass
-    choice = set(np.random.choice(file_len(dataPath), limit, replace=False))
+    choice = set(np.random.choice(fileLength(dataPath), limit, replace=False))
     data = list()
     columns = {0,4,5,6,7,8}
     skiprows = 1
@@ -114,30 +195,6 @@ def loadMachoDataset(dataPath, limit):
     errors = [r[4] for r in data] + [r[5] for r in data]
     assertArrayLengths(times, errors)
     return labels, times, magnitudes, errors
-
-
-# TODO try more memory efficient impl
-# stackoverflow.com/questions/8956832/python-out-of-memory-on-large-csv-file-numpy
-def iterLoadTxt(filename, delimiter=',', skiprows=0, dtype=float):
-    def iter_func():
-        with open(filename, 'r') as f:
-            for _ in range(skiprows):
-                next(f)
-
-            line = None
-            for line in f:
-                line = line.rstrip().split(delimiter)
-                for item in line:
-                    yield dtype(item)
-        iterLoadTxt.rowlength = len(line) if line else -1
-
-    data = np.fromiter(iter_func(), dtype=dtype)
-    data = data.reshape((-1, iterLoadTxt.rowlength))
-    return data
-
-
-def assertArrayLengths(a, b):
-    assert len(a) == len(b), "unequal lengths: %s & %s" % (len(a), len(b))
 
 
 def loadK2Dataset(dataPath, limit):

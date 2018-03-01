@@ -87,6 +87,7 @@ def main():
     extractParams = pipe.extractFeatures.params
     features, labelsProcessed = pipe.extractFeatures.fcn(labels, times, mags,
                                                          errors, extractParams)
+    logger.info("Feets float type: %s", type(features[0][0]).__name__)
     extractMins = (time.time() - extractStart) / 60
     logger.info("extracted in %.2fm", extractMins)
 

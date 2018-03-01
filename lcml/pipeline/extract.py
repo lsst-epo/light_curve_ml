@@ -40,6 +40,7 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
 
     impute = params.get("impute", True)
     for features, label in featuresAndLabels:
+        # TODO consider verifying float dtype all same
         if allFinite(features):
             validFeatures.append(features)
             validLabels.append(label)
@@ -50,8 +51,8 @@ def feetsExtractFeatures(labels, times, mags, errors, params):
                         # set non-finite feature values to 0.0
                         logger.warning("imputing feature: %s value: %s", i, f)
                         features[i] = 0.0
-
-            badCount += 1
+            else:
+                badCount += 1
 
     if badCount:
         logger.warning("Bad feature value rate: %s",
