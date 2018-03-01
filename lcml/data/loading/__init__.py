@@ -159,6 +159,14 @@ def loadMachoDataset(dataPath, limit):
     7 - blue_magnitude
     8 - blue_error
     """
+    # TODO follwo ogle3 route
+    # data = np.loadtxt(fullPath, skiprows=1, dtype=str, delimiter=",")
+    #
+    # # Light curves uniquely ID'd by field, label, id, band
+    # uidCol = [_ogle3Uid(r) for r in data]
+    # uids = np.unique(uidCol)
+    # selectedUids = set(np.random.choice(uids, limit, replace=False))
+
     # FIXME file contains multiple light curves together, so have a
     # while loop tracking current lc and detecting when it changes and producing
     # two light curve objects for the two bands each loop
