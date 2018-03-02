@@ -47,6 +47,8 @@ class BasicLogging:
     _config = None
     _consoleLevel = logging.NOTSET
     _format = DEFAULT_FORMAT
+    def __init__(self):
+        pass
 
     @classmethod
     def initLogging(cls, fmt=None):

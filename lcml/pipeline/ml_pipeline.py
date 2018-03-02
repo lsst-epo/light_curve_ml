@@ -1,9 +1,8 @@
 from collections import namedtuple
 
-from sklearn.ensemble import RandomForestClassifier
-
 from lcml.data import loading
 from lcml.pipeline.extract import feetsExtractFeatures
+from lcml.pipeline.model_selection import gridSearchSelection
 from lcml.utils.context_util import joinRoot, loadJson
 
 
@@ -16,6 +15,8 @@ SERIALIZATION = "serialization"
 
 
 class MlPipeline:
+    """Container for functions and parameter of the major components of a ML
+     pipeline"""
     def __init__(self, globalParams, loadData, extractFeatures, modelSelection,
                  serialParams):
         self.globalParams = globalParams
@@ -25,28 +26,12 @@ class MlPipeline:
         self.serialParams = serialParams
 
 
-def fromRelativePath(relPath):
-    path = joinRoot(relPath)
-    return loadPipeline(loadJson(path))
-
-
 FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])
 
 
-def gridSearchSelection(params):
-    # default for num estimators is 10
-    estimatorsStart = params["estimatorsStart"]
-    estimatorsStop = params["estimatorsStop"]
-
-    # default for max features is sqrt(len(features))
-    # for feets len(features) ~= 64 => 8
-    rfFeaturesStart = params["rfFeaturesStart"]
-    rfFeaturesStop = params["rfFeaturesStop"]
-    return [(RandomForestClassifier(n_estimators=t, max_features=f,
-                                    n_jobs=params["jobs"]),
-             {"trees": t, "maxFeatures": f})
-            for f in range(rfFeaturesStart, rfFeaturesStop)
-            for t in range(estimatorsStart, estimatorsStop)]
+def fromRelativePath(relPath):
+    path = joinRoot(relPath)
+    return loadPipeline(loadJson(path))
 
 
 def loadPipeline(conf):

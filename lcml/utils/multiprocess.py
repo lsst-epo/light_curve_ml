@@ -8,6 +8,15 @@ logger = BasicLogging.getLogger(__name__)
 
 
 def mapMultiprocess(func, jobArgs, reportFrequency=100):
+    """Executes a function on a batch of inputs using multiprocessing in an
+    unordered fashion (`multiprocessing.Pool.imap_unordered`). Reports progress
+    periodically as jobs complete
+
+    :param func: function to execute
+    :param jobArgs: list of tuples where each tuple is the arguments to `func`
+    for a single job
+    :param reportFrequency: After a batch of jobs having this size completes,
+    log simple status report"""
     results = []
     pool = Pool(processes=cpu_count())
     jobs = len(jobArgs)
@@ -20,6 +29,8 @@ def mapMultiprocess(func, jobArgs, reportFrequency=100):
 
 
 def feetsExtract(args):
+    """Function to execute the feets library's feature extraction using
+    multiprocesing"""
     return _feetsExtract(*args)
 
 

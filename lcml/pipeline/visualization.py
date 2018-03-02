@@ -17,7 +17,7 @@ def normalizeConfusionMatrix(matrix):
 
 def plotConfusionMatrix(mat, classes, normalize=False, title="Confusion matrix",
                         cmap=None):
-    """Plots a confusion matrix and its classes
+    """Plots a confusion matrix and its classes.
 
     :param mat: ndarray confusion matrix
     :param classes: list of class names

@@ -62,6 +62,15 @@ def loadOgle3Dataset(dataDir, limit):
     errors = list()
     fullPath = joinRoot(dataDir)
 
+    # TODO iterate and use csv
+    # with open(dataPath, "r") as f:
+    #     reader = csv.reader(f, delimiter=",")
+    #     for _ in range(skiprows):
+    #         next(f)
+    #
+    #     for i, row in enumerate(reader):
+    #         if i in choice:
+
     # 0=HJD, 1=MAGNITUDE, 2=ERROR, 3=FIELD, 4=LABEL, 5=ID, 6=MAGNITUDE_BAND
     data = np.loadtxt(fullPath, skiprows=1, dtype=str, delimiter=",")
 

@@ -1,13 +1,18 @@
 from astropy.time import Time
 
+from lcml.utils.basic_logging import BasicLogging
 
-def toDatetime(time, format="mjd", scale="tt"):
+
+logger = BasicLogging.getLogger(__name__)
+
+
+def toDatetime(time, fmt="mjd", scale="tt"):
     """Converts time in specified format and scale (e.g, Modified Julian Date
     (MJD) and Terrestrial Time) to datetime."""
     try:
-        t = Time(float(time), format=format, scale=scale)
+        t = Time(float(time), format=fmt, scale=scale)
     except ValueError:
-        print("Could not create time from: %s" % time)
+        logger.exception("Could not create time from: %s", time)
         return None
 
     return t.datetime
@@ -26,4 +31,4 @@ def truncatedFloat(places):
 
 
 if __name__ == "__main__":
-    print(toDatetime(2015, format="jyear", scale="tcb"))
+    print(toDatetime(2015, fmt="jyear", scale="tcb"))

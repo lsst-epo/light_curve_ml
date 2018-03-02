@@ -2,6 +2,7 @@ from collections import namedtuple
 import time
 
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
@@ -18,6 +19,22 @@ ModelSelectionResult = namedtuple("ModelSelectionResult",
 ClassificationMetrics = namedtuple("ClassificationMetrics",
                                    ["accuracy", "f1Overall", "f1Individual",
                                     "confusionMatrix"])
+
+
+def gridSearchSelection(params):
+    # default for num estimators is 10
+    estimatorsStart = params["estimatorsStart"]
+    estimatorsStop = params["estimatorsStop"]
+
+    # default for max features is sqrt(len(features))
+    # for feets len(features) ~= 64 => 8
+    rfFeaturesStart = params["rfFeaturesStart"]
+    rfFeaturesStop = params["rfFeaturesStop"]
+    return [(RandomForestClassifier(n_estimators=t, max_features=f,
+                                    n_jobs=params["jobs"]),
+             {"trees": t, "maxFeatures": f})
+            for f in range(rfFeaturesStart, rfFeaturesStop)
+            for t in range(estimatorsStart, estimatorsStop)]
 
 
 def selectBestModel(models, features, labels, selectionParams):
@@ -38,7 +55,6 @@ def selectBestModel(models, features, labels, selectionParams):
     # N.B. micro averaged preferable for imbalanced classes
     scoring = ["accuracy", "f1_micro"]
 
-    # main output of this function
     bestResult = None
     allResults = []
     maxScore = 0
@@ -63,6 +79,6 @@ def selectBestModel(models, features, labels, selectionParams):
             bestResult = result
 
     elapsed = time.time() - start
-    logger.info("fit %s models in: %.2fs ave: %.3fs", len(models),
-                elapsed, elapsed / len(models))
+    logger.info("fit %s models in: %.2fs ave: %.3fs", len(models), elapsed,
+                elapsed / len(models))
     return bestResult, allResults
