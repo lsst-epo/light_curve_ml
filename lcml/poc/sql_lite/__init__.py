@@ -9,7 +9,7 @@ def setupTable():
     c = conn.cursor()
 
     # Create table
-    c.execute('''CREATE TABLE stocks
+    c.execute('''CREATE TABLE IF NOT EXISTS stocks
                  (date text, trans text, symbol text, qty real, price real)''')
 
     # Insert a row of data

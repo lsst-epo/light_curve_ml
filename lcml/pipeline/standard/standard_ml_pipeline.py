@@ -1,4 +1,5 @@
 import argparse
+import sqlite3
 import time
 
 from prettytable import PrettyTable
@@ -6,14 +7,13 @@ from prettytable import PrettyTable
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModels, saveModel
-from lcml.pipeline.preprocess import cleanDataset, NON_FINITE_VALUES
+from lcml.pipeline.preprocess import cleanLightCurves, NON_FINITE_VALUES
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 from lcml.utils.data_util import (attachLabels, convertClassLabels,
                                   reportClassHistogram, unarchiveAll)
 from lcml.utils.format_util import truncatedFloat
-
 
 BasicLogging.initLogging()
 logger = BasicLogging.getLogger(__name__)
@@ -70,47 +70,62 @@ def main():
         logger.info("Unarchiving files in %s ...", dataDir)
         unarchiveAll(dataDir, remove=True)
 
-    logger.info("Loading dataset with limit: {:,d}...".format(
-        loadParams["limit"]))
-    _labels, _times, _mags, _errors = pipe.loadData.fcn(dataDir,
-                                                        loadParams["limit"])
+    logger.info("Loading dataset with params: {}...".format(loadParams))
+    # TODO use schema
+    pipe.loadData.fcn(loadParams)
 
     logger.info("Cleaning dataset...")
-    removes = set(loadParams["filter"]) if "filter" in loadParams else set()
-    removes = removes.union(NON_FINITE_VALUES)
-    labels, times, mags, errors = cleanDataset(_labels, _times, _mags, _errors,
-                                               removes)
-    reportClassHistogram(labels)
-    classToLabel = convertClassLabels(labels)
+    cleanLightCurves(loadParams)
+
+    histogram = classLabelHistogram(loadParams["dbPath"],
+                                    loadParams["clean_lc_table"])
+    reportClassHistogram(histogram)
+    classToLabel = convertClassLabels(list(histogram))
+    logger.info(classToLabel)
 
     extractStart = time.time()
     extractParams = pipe.extractFeatures.params
-    features, labelsProcessed = pipe.extractFeatures.fcn(labels, times, mags,
-                                                         errors, extractParams)
-    logger.info("Feets float type: %s", type(features[0][0]).__name__)
-    extractMins = (time.time() - extractStart) / 60
-    logger.info("extracted in %.2fm", extractMins)
 
-    models = None
-    loadPath = pipe.serialParams["loadPath"]
-    if loadPath:
-        # load previous winning model and its metadata from disk
-        models = loadModels(loadPath)
+    # TODO update to use sqlite db!
+    labels, times, mags, errors = [None] * 4
+    if False:
+        features, labels = pipe.extractFeatures.fcn(labels, times, mags,
+                                                    errors, extractParams)
+        logger.info("Feets float type: %s", type(features[0][0]).__name__)
+        extractMins = (time.time() - extractStart) / 60
+        logger.info("extracted in %.2fm", extractMins)
 
-    if not models:
-        models = pipe.modelSelection.fcn(pipe.modelSelection.params)
+        models = None
+        loadPath = pipe.serialParams["loadPath"]
+        if loadPath:
+            # load previous winning model and its metadata from disk
+            models = loadModels(loadPath)
 
-    bestResult, allResults = selectBestModel(models, features, labelsProcessed,
-                                             pipe.modelSelection.params)
+        if not models:
+            models = pipe.modelSelection.fcn(pipe.modelSelection.params)
 
-    if pipe.serialParams["savePath"]:
-        saveModel(bestResult, pipe.serialParams["savePath"], pipe, classToLabel)
+        bestResult, allResults = selectBestModel(models, features, labels,
+                                                 pipe.modelSelection.params)
 
-    reportResults(bestResult, allResults, classToLabel,
-                  pipe.globalParams.get("places", 3))
+        if pipe.serialParams["savePath"]:
+            saveModel(bestResult, pipe.serialParams["savePath"], pipe,
+                      classToLabel)
 
-    elapsedMins = (time.time() - startAll) / 60
-    logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
+        reportResults(bestResult, allResults, classToLabel,
+                      pipe.globalParams.get("places", 3))
+
+        elapsedMins = (time.time() - startAll) / 60
+        logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
+
+
+def classLabelHistogram(dbPath, table):
+    conn = sqlite3.connect(joinRoot(dbPath))
+    cursor = conn.cursor()
+    res = cursor.execute("SELECT label, count(*) FROM %s GROUP BY label" %
+                         table)
+    stuff = [_ for _ in res]
+    conn.close()
+    return dict(stuff)
 
 
 if __name__ == "__main__":

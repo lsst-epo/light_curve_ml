@@ -2,6 +2,8 @@
 outputs: labels: List[str], times: List[ndarray], magnitudes: List[ndarray],
 errors: List[ndarray]"""
 import csv
+import cPickle
+import sqlite3
 
 import numpy as np
 
@@ -45,69 +47,69 @@ def iterLoadTxt(filename, delimiter=',', skiprows=0, dtype=float):
     return data
 
 
-def _ogle3Uid(r):
-    # each ogle3 LC is uniquely defined by the combo of 'field', 'category',
-    # 'id', & 'band'
-    return "%s_%s_%s_%s" % (r[3].lower(), r[4].lower(), int(r[5]), r[6].lower())
+def loadOgle3Dataset(params):
+    """Loads and aggregate light curves from flat OGLE3 csv file and store in
+    sqlite."""
+    dataPath = joinRoot(params["relativePath"])
+    rawTable = params["raw_lc_table"]
+    dbPath = joinRoot(params["dbPath"])
+    skiprows = params["skiprows"]
+    batchSize = params["batchSize"]
+
+    conn = sqlite3.connect(dbPath)
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS %s (id text primary key, "
+                   "label text, times text, magnitudes text, errors text)" %
+                   rawTable)
+    _reportTableCount(cursor, rawTable)
+    insOrRepl = "INSERT OR REPLACE INTO {} VALUES (?, ?, ?, ?, ?)".format(
+        rawTable)
+    with open(dataPath, "r") as f:
+        reader = csv.reader(f, delimiter=",")
+        for _ in range(skiprows):
+            next(f)
+
+        # 0=HJD, 1=MAG, 2=ERR, 3=FIELD, 4=LABEL, 5=NUM, 6=BAND, 7=ID
+        row = next(reader)
+        currentUid = row[-1]
+        currentLabel = row[4]
+        currentTimes = [row[0]]
+        currentMags = [row[1]]
+        currentErrors = [row[2]]
+        lcCount = 1
+        for row in reader:
+            if row[-1] == currentUid:
+                # continue building current LC
+                currentTimes.append(row[0])
+                currentMags.append(row[1])
+                currentErrors.append(row[2])
+            else:
+                # finish current LC
+                args = (currentUid, currentLabel,
+                        cPickle.dumps(currentTimes),
+                        cPickle.dumps(currentMags),
+                        cPickle.dumps(currentErrors))
+
+                cursor.execute(insOrRepl, args)
+                if not lcCount % batchSize:
+                    logger.info("progress: %s", lcCount)
+                    conn.commit()
+
+                # now start new LC from 'row'
+                currentUid = row[-1]
+                currentLabel = row[4]
+                currentTimes = [row[0]]
+                currentMags = [row[1]]
+                currentErrors = [row[2]]
+
+    conn.commit()
+    _reportTableCount(cursor, rawTable)
+    conn.close()
 
 
-def loadOgle3Dataset(dataDir, limit):
-    """Loads OGLE3 data from specified file as light curves
-    represented as lists of the following values: labels, times,
-    magnitudes, and magnitude errors."""
-    # end results
-    labels = list()
-    times = list()
-    magnitudes = list()
-    errors = list()
-    fullPath = joinRoot(dataDir)
-
-    # TODO iterate and use csv
-    # with open(dataPath, "r") as f:
-    #     reader = csv.reader(f, delimiter=",")
-    #     for _ in range(skiprows):
-    #         next(f)
-    #
-    #     for i, row in enumerate(reader):
-    #         if i in choice:
-
-    # 0=HJD, 1=MAGNITUDE, 2=ERROR, 3=FIELD, 4=LABEL, 5=ID, 6=MAGNITUDE_BAND
-    data = np.loadtxt(fullPath, skiprows=1, dtype=str, delimiter=",")
-
-    # Light curves uniquely ID'd by field, label, id, band
-    uidCol = [_ogle3Uid(r) for r in data]
-    uids = np.unique(uidCol)
-    selectedUids = set(np.random.choice(uids, limit, replace=False))
-    curLabel = data[0, 4].lower()
-    curUid = uidCol[0]
-    curTimes = []
-    curMags = []
-    curErrors = []
-    for i, row in enumerate(data):
-        if uidCol[i] == curUid:
-            # continue building current LC
-            if curUid in selectedUids:
-                curTimes.append(float(row[0]))
-                curMags.append(float(row[1]))
-                curErrors.append(float(row[2]))
-        else:
-            # finish current LC
-            if curUid in selectedUids:
-                labels.append(curLabel)
-                times.append(curTimes)
-                magnitudes.append(curMags)
-                errors.append(curErrors)
-
-            # now start new LC from 'row'
-            curUid = uidCol[i]
-            if curUid in selectedUids:
-                # don't have to recreate these until lc is selected
-                curLabel = row[4].lower()
-                curTimes = [float(row[0])]
-                curMags = [float(row[1])]
-                curErrors = [float(row[2])]
-
-    return labels, times, magnitudes, errors
+def _reportTableCount(cursor, table):
+    count = cursor.execute("SELECT COUNT(*) FROM %s" % table)
+    logger.info("LC rows: %s", [_ for _ in count][0])
 
 
 def legacyLoadOgle3Dataset(dataDir, limit):

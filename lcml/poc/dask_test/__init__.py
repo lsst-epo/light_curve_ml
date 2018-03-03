@@ -1,5 +1,3 @@
-import sys
-
 import dask.dataframe as dd
 import pandas as pd
 import numpy as np
@@ -10,13 +8,17 @@ from lcml.utils.context_util import joinRoot
 path = joinRoot("data/ogle3/ogle3.csv")
 
 
+desiredColumns = ['OGLE3_HJD', 'OGLE3_MAGNITUDE', 'OGLE3_ERROR',
+                  'OGLE3_CATEGORY',
+                  'OGLE3_ID']
 df = dd.read_csv(path)
 # df = pd.read_csv(path)
-df = df[['OGLE3_HJD','OGLE3_MAGNITUDE','OGLE3_ERROR', 'OGLE3_CATEGORY',
-         'OGLE3_ID']]
-print("df head: %s\n" % df.head())
-print(df.npartitions)
+
+df = df[desiredColumns]
+print("partitions: %s" % df.npartitions)
+
 df = df.head(1000000)
+
 
 # https://pandas.pydata.org/pandas-docs/stable/api.html#groupby
 group = df.groupby(by="OGLE3_ID")

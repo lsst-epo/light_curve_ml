@@ -1,7 +1,10 @@
+import cPickle
 import numpy as np
+import sqlite3
 
 from feets import preprocess
 from lcml.utils.basic_logging import BasicLogging
+from lcml.utils.context_util import joinRoot
 from lcml.utils.format_util import fmtPct
 
 
@@ -40,7 +43,7 @@ SUFFICIENT_LC_DATA = 80
 NON_FINITE_VALUES = {np.nan, float("nan"), float("inf"), float("-inf")}
 
 
-def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
+def preprocessLc(timeData, magData, errorData, removes, stdLimit, errorLimit):
     """Returns a cleaned version of an LC. LC may be deemed unfit for use, in
     which case the reason for rejection is specified.
 
@@ -52,7 +55,7 @@ def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
         return None, INSUFFICIENT_DATA_REASON, removedCounts
 
     # remove bogus data
-    tm, mag, err = lcFilterBogus(timeData, magData, errorData, remove=remove)
+    tm, mag, err = lcFilterBogus(timeData, magData, errorData, removes=removes)
     removedCounts[DATA_BOGUS_REMOVED] = len(timeData) - len(tm)
     if len(tm) < SUFFICIENT_LC_DATA:
         logger.debug("insufficient: %s after removing bogus values", len(tm))
@@ -71,25 +74,45 @@ def preprocessLc(timeData, magData, errorData, remove, stdLimit, errorLimit):
     return (_tm, _mag, _err), None, removedCounts
 
 
-def cleanDataset(labels, times, mags, errors, remove=NON_FINITE_VALUES,
-                 stdLimit=5, errorLimit=3):
-    """Clean a LC dataframe and report details on discards"""
+def cleanLightCurves(params, stdLimit=5, errorLimit=3):
+    """Clean lightcurves and report details on discards"""
+    removes = set(params["filter"]) if "filter" in params else set()
+    removes = removes.union(NON_FINITE_VALUES)
+    batchSize = params["batchSize"]
+
+    rawTable = params["raw_lc_table"]
+    cleanTable = params["clean_lc_table"]
+    conn = sqlite3.connect(joinRoot(params["dbPath"]))
+    cursor = conn.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS %s (id text primary key, "
+                   "label text, times text, magnitudes text, errors text)" %
+                   cleanTable)
+    insertOrReplace = "INSERT OR REPLACE INTO {} VALUES (?, ?, ?, ?, ?)".format(
+        cleanTable)
+
     shortIssueCount = 0
     bogusIssueCount = 0
     outlierIssueCount = 0
-    _classLabel = list()
-    _times = list()
-    _magnitudes = list()
-    _errors = list()
-    rm = remove if remove else set()
-    for i in range(len(labels)):
-        lc, issue, _ = preprocessLc(times[i], mags[i], errors[i], remove=rm,
+
+    totalLcs = cursor.execute("SELECT COUNT(*) from %s" % rawTable).next()[0]
+    results = [_ for _ in cursor.execute("SELECT * FROM %s" % rawTable)]
+    insertCount = 0
+    for row in results:
+        times = np.array(cPickle.loads(str(row[2])), dtype=np.float32)
+        mags = np.array(cPickle.loads(str(row[3])), dtype=np.float32)
+        errors = np.array(cPickle.loads(str(row[4])), dtype=np.float32)
+        lc, issue, _ = preprocessLc(times, mags, errors, removes=removes,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
         if lc:
-            _classLabel.append(labels[i])
-            _times.append(lc[0])
-            _magnitudes.append(lc[1])
-            _errors.append(lc[2])
+            args = (row[0], row[1], cPickle.dumps(lc[0]), cPickle.dumps(lc[1]),
+                    cPickle.dumps(lc[2]))
+            cursor.execute(insertOrReplace, args)
+            insertCount += 1
+            if not insertCount % batchSize:
+                # fix logging config
+                logger.critical("progress: %s", insertCount)
+                conn.commit()
+
         else:
             if issue == INSUFFICIENT_DATA_REASON:
                 shortIssueCount += 1
@@ -100,22 +123,24 @@ def cleanDataset(labels, times, mags, errors, remove=NON_FINITE_VALUES,
             else:
                 raise ValueError("Bad reason: %s" % issue)
 
-    passRate = fmtPct(len(_classLabel), len(labels))
-    shortRate = fmtPct(shortIssueCount, len(labels))
-    bogusRate = fmtPct(bogusIssueCount, len(labels))
-    outlierRate = fmtPct(outlierIssueCount, len(labels))
-    logger.info("Dataset size: %d Pass rate: %s", len(labels), passRate)
+    conn.commit()
+    conn.close()
+
+    passRate = fmtPct(insertCount, totalLcs)
+    shortRate = fmtPct(shortIssueCount, totalLcs)
+    bogusRate = fmtPct(bogusIssueCount, totalLcs)
+    outlierRate = fmtPct(outlierIssueCount, totalLcs)
+    logger.info("Dataset size: %d Pass rate: %s", totalLcs, passRate)
     logger.info("Discard rates: short: %s bogus: %s outlier: %s", shortRate,
                 bogusRate, outlierRate)
-    return _classLabel, _times, _magnitudes, _errors
 
 
-def lcFilterBogus(mjds, values, errors, remove):
+def lcFilterBogus(mjds, values, errors, removes):
     """Simple light curve filter that removes bogus magnitude and error
     values."""
     return zip(*[(mjds[i], v, errors[i])
                  for i, v in enumerate(values)
-                 if v not in remove and errors[i] not in remove])
+                 if v not in removes and errors[i] not in removes])
 
 
 def allFinite(X):

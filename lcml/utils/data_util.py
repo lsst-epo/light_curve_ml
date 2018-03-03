@@ -39,10 +39,10 @@ def getDatasetFilePaths(datasetName, ext):
 def convertClassLabels(classLabels):
     """Converts all class labels to integer values unique to individual
     classes. Labels are modified in-place.
-    :param classLabels: Class labels for a dataset as array or list
+    :param classLabels: Unique class labels
     :return The mapping from integer to original class label for decoding
     """
-    labelToInt = {v: i for i, v in enumerate(np.unique(classLabels))}
+    labelToInt = {v: i for i, v in enumerate(classLabels)}
     for i in range(len(classLabels)):
         classLabels[i] = labelToInt[classLabels[i]]
 
@@ -75,11 +75,13 @@ def attachLabels(values, indexToLabel):
 
 
 def reportClassHistogram(labels):
-    """Logs a histogram of the distribution of class labels"""
-    c = Counter([l for l in labels])
+    """Logs a histogram of the distribution of class labels
+    :param labels: dict from label to frequency
+    """
     t = PrettyTable(["category", "count", "percentage"])
     t.align = "l"
-    for k, v in sorted(c.items(), key=lambda x: x[1], reverse=True):
-        t.add_row([k, v, fmtPct(v, len(labels))])
+    total = sum(labels.values())
+    for k, v in sorted(labels.items(), key=lambda x: x[1], reverse=True):
+        t.add_row([k, v, fmtPct(v, total)])
 
     logger.info("Class histogram:\n" + str(t))
