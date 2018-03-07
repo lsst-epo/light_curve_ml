@@ -2,18 +2,27 @@
   "globalParams": {
     "places": 3
   },
+  "database": {
+    "dbPath": "data/ogle3/ogle3_processed.db",
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "clean_lcs",
+    "feature_table": "lc_features",
+    "commitFrequency": 500
+  },
   "loadData": {
     "function": "macho",
     "params": {
       "relativePath": "data/macho/macho-train.csv",
-      "limit": 1000,
+      "skiprows": 1,
+      "stdLimit": 5,
+      "errorLimit": 3,
       "filter": [-99.0]
     }
   },
   "extractFeatures": {
     "function": "feets",
     "params": {
-      "allFeatures": false,
+      "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true
     }
   },
@@ -21,9 +30,9 @@
     "function": "grid",
     "params": {
         "estimatorsStart": 6,
-        "estimatorsStop": 12,
+        "estimatorsStop": 8,
         "rfFeaturesStart": 6,
-        "rfFeaturesStop": 12,
+        "rfFeaturesStop": 8,
         "cv": 5,
         "jobs": -1
     }
@@ -32,7 +41,7 @@
     "params": {
       "xloadPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl",
       "loadPath": null,
-      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl"
+      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-macho.pkl"
     }
   }
 }

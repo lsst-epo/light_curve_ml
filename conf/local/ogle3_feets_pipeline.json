@@ -2,24 +2,26 @@
   "globalParams": {
     "places": 3
   },
+  "database": {
+    "dbPath": "data/ogle3/ogle3_processed.db",
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "clean_lcs",
+    "feature_table": "lc_features",
+    "commitFrequency": 500
+  },
   "loadData": {
     "function": "ogle3",
     "params": {
-      "skiprows": 1,
-      "batchSize": 10000,
       "relativePath": "data/ogle3/ogle3-sample.csv",
-      "dbPath": "data/ogle3/ogle3_processed.db",
-      "raw_lc_table": "raw_lcs",
-      "clean_lc_table": "clean_lcs",
-      "feature_table": "lc_features",
-      "columns": ["id", "label", "times", "magnitudes", "errors"]
+      "skiprows": 1,
+      "stdLimit": 5,
+      "errorLimit": 3
     }
   },
   "extractFeatures": {
     "function": "feets",
     "params": {
-      "feature_table": "lc_features",
-      "allFeatures": false,
+      "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true
     }
   },
@@ -38,7 +40,7 @@
     "params": {
       "xloadPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl",
       "loadPath": null,
-      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-new.pkl"
+      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-ogle3.pkl"
     }
   }
 }

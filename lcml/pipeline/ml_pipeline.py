@@ -8,25 +8,28 @@ from lcml.utils.context_util import joinRoot, loadJson
 
 #: global parameters section of the pipeline conf file
 GLOBAL_PARAMS = "globalParams"
+DB_PARAMS = "database"
 LOAD_DATA = "loadData"
 EXTRACT_FEATURES = "extractFeatures"
 MODEL_SELECTION = "modelSelection"
 SERIALIZATION = "serialization"
 
 
+#: Some pipeline components consist of a function and parameters
+FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])
+
+
 class MlPipeline:
     """Container for functions and parameter of the major components of a ML
      pipeline"""
-    def __init__(self, globalParams, loadData, extractFeatures, modelSelection,
-                 serialParams):
+    def __init__(self, globalParams, dbParams, loadData, extractFeatures,
+                 modelSelection, serialParams):
         self.globalParams = globalParams
+        self.dbParams = dbParams
         self.loadData = loadData
         self.extractFeatures = extractFeatures
         self.modelSelection = modelSelection
         self.serialParams = serialParams
-
-
-FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])
 
 
 def fromRelativePath(relPath):
@@ -64,6 +67,7 @@ def loadPipeline(conf):
 
     selParams = conf[MODEL_SELECTION]["params"]
     return MlPipeline(globalParams=conf[GLOBAL_PARAMS],
+                      dbParams=conf[DB_PARAMS],
                       loadData=FunctionAndParams(loadFcn, loadParams),
                       extractFeatures=FunctionAndParams(extractFcn, extParams),
                       modelSelection=FunctionAndParams(selectFcn, selParams),

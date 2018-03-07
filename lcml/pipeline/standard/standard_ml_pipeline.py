@@ -7,13 +7,14 @@ from prettytable import PrettyTable
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModels, saveModel
-from lcml.pipeline.preprocess import cleanLightCurves, NON_FINITE_VALUES
+from lcml.pipeline.preprocess import cleanLightCurves
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 from lcml.utils.data_util import (attachLabels, convertClassLabels,
                                   reportClassHistogram, unarchiveAll)
 from lcml.utils.format_util import truncatedFloat
+
 
 BasicLogging.initLogging()
 logger = BasicLogging.getLogger(__name__)
@@ -26,30 +27,31 @@ def _getArgs():
     return parser.parse_args()
 
 
-def reportResults(bestResult, allResults, classToLabel, places):
-    columns = ["Hyperparams", "Micro F1", "Class F1", "Accuracy"]
+def reportModelSelection(bestResult, allResults, classToLabel, places):
+    """Reports the hyperparameters and associated metrics obtain from model
+    selection."""
+    reportColumns = ["Hyperparameters", "F1 (micro)", "F1 (class)", "Accuracy"]
     roundFlt = truncatedFloat(places)
-    searchTable = PrettyTable(columns)
+    searchTable = PrettyTable(reportColumns)
     for result in allResults:
         searchTable.add_row(_resultToRow(result, classToLabel, roundFlt))
 
-    logger.info("Search results...\n" + str(searchTable))
-    winnerTable = PrettyTable(columns)
+    winnerTable = PrettyTable(reportColumns)
     winnerTable.add_row(_resultToRow(bestResult, classToLabel, roundFlt))
-    logger.info("Winner...\n" + str(winnerTable))
 
-    confusionMatrix = bestResult.metrics.confusionMatrix
-    classes = [classToLabel[i] for i in range(len(classToLabel))]
-    plotConfusionMatrix(confusionMatrix, classes, normalize=True)
+    logger.info("Model search results...\n" + str(searchTable))
+    logger.info("Winning model...\n" + str(winnerTable))
 
 
 def _resultToRow(result, classToLabel, roundFlt):
+    """Converts a ModelSelectionResult to a list of formatted values to be used
+    as a row in a table"""
     microF1 = roundFlt % result.metrics.f1Overall
-    labeledF1s = [(l, roundFlt % v)
-                  for l, v
-                  in attachLabels(result.metrics.f1Individual, classToLabel)]
+    classF1s = [(l, roundFlt % v)
+                for l, v
+                in attachLabels(result.metrics.f1Individual, classToLabel)]
     accuracy = roundFlt % (100 * result.metrics.accuracy)
-    return [result.hyperparameters, microF1, labeledF1s, accuracy]
+    return [result.hyperparameters, microF1, classF1s, accuracy]
 
 
 def main():
@@ -70,31 +72,25 @@ def main():
         logger.info("Unarchiving files in %s ...", dataDir)
         unarchiveAll(dataDir, remove=True)
 
-    logger.info("Loading dataset with params: {}...".format(loadParams))
-    # TODO use schema
-    pipe.loadData.fcn(loadParams)
+    pipe.loadData.fcn(loadParams, pipe.dbParams)
 
     logger.info("Cleaning dataset...")
-    cleanLightCurves(loadParams)
+    cleanLightCurves(loadParams, pipe.dbParams)
 
-    histogram = classLabelHistogram(loadParams["dbPath"],
-                                    loadParams["clean_lc_table"])
+    histogram = classLabelHistogram(pipe.dbParams)
     reportClassHistogram(histogram)
     classToLabel = convertClassLabels(list(histogram))
     logger.info(classToLabel)
 
     extractStart = time.time()
     extractParams = pipe.extractFeatures.params
+    features, labels = pipe.extractFeatures.fcn(extractParams, pipe.dbParams)
+    logger.info("Feets float type: %s", type(features[0][0]).__name__)
+    extractMins = (time.time() - extractStart) / 60
+    logger.info("extracted in %.2fm", extractMins)
 
     # TODO update to use sqlite db!
-    labels, times, mags, errors = [None] * 4
     if False:
-        features, labels = pipe.extractFeatures.fcn(labels, times, mags,
-                                                    errors, extractParams)
-        logger.info("Feets float type: %s", type(features[0][0]).__name__)
-        extractMins = (time.time() - extractStart) / 60
-        logger.info("extracted in %.2fm", extractMins)
-
         models = None
         loadPath = pipe.serialParams["loadPath"]
         if loadPath:
@@ -111,21 +107,26 @@ def main():
             saveModel(bestResult, pipe.serialParams["savePath"], pipe,
                       classToLabel)
 
-        reportResults(bestResult, allResults, classToLabel,
-                      pipe.globalParams.get("places", 3))
-
         elapsedMins = (time.time() - startAll) / 60
         logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
 
+        reportModelSelection(bestResult, allResults, classToLabel,
+                             pipe.globalParams.get("places", 3))
 
-def classLabelHistogram(dbPath, table):
-    conn = sqlite3.connect(joinRoot(dbPath))
+        # TODO review this comprehension
+        classes = [classToLabel[i] for i in range(len(classToLabel))]
+        plotConfusionMatrix(bestResult.metrics.confusionMatrix, classes,
+                            normalize=True)
+
+
+def classLabelHistogram(dbParams):
+    conn = sqlite3.connect(joinRoot(dbParams["dbPath"]))
     cursor = conn.cursor()
-    res = cursor.execute("SELECT label, count(*) FROM %s GROUP BY label" %
-                         table)
-    stuff = [_ for _ in res]
+    histogramQry = "SELECT label, COUNT(*) FROM %s GROUP BY label"
+    cursor = cursor.execute(histogramQry % dbParams["clean_lc_table"])
+    histogram = dict([_ for _ in cursor])
     conn.close()
-    return dict(stuff)
+    return histogram
 
 
 if __name__ == "__main__":

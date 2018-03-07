@@ -1,19 +1,27 @@
 {
   "globalParams": {
-    "places": 4
+    "places": 3
+  },
+  "database": {
+    "dbPath": "data/ogle3/ogle3_processed.db",
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "clean_lcs",
+    "feature_table": "lc_features",
+    "commitFrequency": 500
   },
   "loadData": {
     "function": "ogle3",
     "params": {
       "relativePath": "/data/ogle3/ogle3.csv",
-      "unarchive": false,
-      "limit": 100000
+      "skiprows": 1,
+      "stdLimit": 5,
+      "errorLimit": 3
     }
   },
   "extractFeatures": {
     "function": "feets",
     "params": {
-      "allFeatures": false,
+      "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true
     }
   },

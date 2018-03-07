@@ -13,24 +13,22 @@ def mapMultiprocess(func, jobArgs, reportFrequency=100):
     periodically as jobs complete
 
     :param func: function to execute
-    :param jobArgs: list of tuples where each tuple is the arguments to `func`
-    for a single job
+    :param jobArgs: iterable of tuples where each tuple is the arguments to
+    `func` for a single job
     :param reportFrequency: After a batch of jobs having this size completes,
-    log simple status report"""
-    results = []
+    log simple status report
+    :return list of job results
+    """
     pool = Pool(processes=cpu_count())
-    jobs = len(jobArgs)
     for i, result in enumerate(pool.imap_unordered(func, jobArgs), 1):
-        results.append(result)
-        if not i % reportFrequency:
-            logger.info("progress: {0:.3%} count: {1:,d}".format(i / jobs, i))
-
-    return results
+        yield result
+        if i % reportFrequency == 0:
+            logger.info("progress: {0:,d}".format(i))
 
 
 def feetsExtract(args):
     """Function to execute the feets library's feature extraction using
-    multiprocesing"""
+    multiprocessing"""
     return _feetsExtract(*args)
 
 

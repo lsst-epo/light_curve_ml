@@ -2,11 +2,13 @@
 outputs: labels: List[str], times: List[ndarray], magnitudes: List[ndarray],
 errors: List[ndarray]"""
 import csv
-import cPickle
 import sqlite3
 
 import numpy as np
 
+from lcml.pipeline.data_format.db_schema import (LC_TABLE_CREATE_QRY,
+                                                 LC_TABLE_INSERT_QRY,
+                                                 reportTableCount, serLc)
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
 
@@ -47,23 +49,21 @@ def iterLoadTxt(filename, delimiter=',', skiprows=0, dtype=float):
     return data
 
 
-def loadOgle3Dataset(params):
-    """Loads and aggregate light curves from flat OGLE3 csv file and store in
-    sqlite."""
+def loadOgle3Dataset(params, dbParams):
+    """Loads and aggregates light curves from single csv file of individual data
+    points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])
-    rawTable = params["raw_lc_table"]
-    dbPath = joinRoot(params["dbPath"])
     skiprows = params["skiprows"]
-    batchSize = params["batchSize"]
+    dbPath = joinRoot(dbParams["dbPath"])
+    table = dbParams["raw_lc_table"]
+    commitFrequency = dbParams["commitFrequency"]
 
     conn = sqlite3.connect(dbPath)
     cursor = conn.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS %s (id text primary key, "
-                   "label text, times text, magnitudes text, errors text)" %
-                   rawTable)
-    _reportTableCount(cursor, rawTable)
-    insOrRepl = "INSERT OR REPLACE INTO {} VALUES (?, ?, ?, ?, ?)".format(
-        rawTable)
+    cursor.execute(LC_TABLE_CREATE_QRY % table)
+    reportTableCount(cursor, table, msg="before loading")
+    insOrRepl = LC_TABLE_INSERT_QRY.format(table)
+
     with open(dataPath, "r") as f:
         reader = csv.reader(f, delimiter=",")
         for _ in range(skiprows):
@@ -71,45 +71,36 @@ def loadOgle3Dataset(params):
 
         # 0=HJD, 1=MAG, 2=ERR, 3=FIELD, 4=LABEL, 5=NUM, 6=BAND, 7=ID
         row = next(reader)
-        currentUid = row[-1]
-        currentLabel = row[4]
-        currentTimes = [row[0]]
-        currentMags = [row[1]]
-        currentErrors = [row[2]]
+        uid = row[-1]
+        classLabel = row[4]
+        times = [row[0]]
+        mags = [row[1]]
+        errors = [row[2]]
         lcCount = 1
         for row in reader:
-            if row[-1] == currentUid:
+            if row[-1] == uid:
                 # continue building current LC
-                currentTimes.append(row[0])
-                currentMags.append(row[1])
-                currentErrors.append(row[2])
+                times.append(row[0])
+                mags.append(row[1])
+                errors.append(row[2])
             else:
                 # finish current LC
-                args = (currentUid, currentLabel,
-                        cPickle.dumps(currentTimes),
-                        cPickle.dumps(currentMags),
-                        cPickle.dumps(currentErrors))
-
+                args = (uid, classLabel) + serLc(times, mags, errors)
                 cursor.execute(insOrRepl, args)
-                if not lcCount % batchSize:
+                if not lcCount % commitFrequency:
                     logger.info("progress: %s", lcCount)
                     conn.commit()
 
-                # now start new LC from 'row'
-                currentUid = row[-1]
-                currentLabel = row[4]
-                currentTimes = [row[0]]
-                currentMags = [row[1]]
-                currentErrors = [row[2]]
+                # now start new LC from `row`
+                uid = row[-1]
+                classLabel = row[4]
+                times = [row[0]]
+                mags = [row[1]]
+                errors = [row[2]]
 
+    reportTableCount(cursor, table, msg="after loading")
     conn.commit()
-    _reportTableCount(cursor, rawTable)
     conn.close()
-
-
-def _reportTableCount(cursor, table):
-    count = cursor.execute("SELECT COUNT(*) FROM %s" % table)
-    logger.info("LC rows: %s", [_ for _ in count][0])
 
 
 def legacyLoadOgle3Dataset(dataDir, limit):
@@ -154,7 +145,7 @@ def legacyLoadOgle3Dataset(dataDir, limit):
     return labels, times, magnitudes, errors
 
 
-def loadMachoDataset(dataPath, limit):
+def loadMachoDataset(params, dbParams):
     """Loads MACHO data having red and blue light curve bands. The different
     bands are simply treated as different light curves. The returned arrays
     have the red band in the first half and the blue band in the second.
@@ -170,7 +161,7 @@ def loadMachoDataset(dataPath, limit):
     7 - blue_magnitude
     8 - blue_error
     """
-    # TODO follwo ogle3 route
+    # TODO follow ogle3 route
     # data = np.loadtxt(fullPath, skiprows=1, dtype=str, delimiter=",")
     #
     # # Light curves uniquely ID'd by field, label, id, band
@@ -184,6 +175,8 @@ def loadMachoDataset(dataPath, limit):
     # can still have 'choice' just skip over entire lc if current number is
     # not in choice -- requires knowing number of light curves a priori, or
     # computing them in an initial pass
+    limit = None
+    dataPath = joinRoot(params["relativePath"])
     choice = set(np.random.choice(fileLength(dataPath), limit, replace=False))
     data = list()
     columns = {0,4,5,6,7,8}
