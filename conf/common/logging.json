@@ -3,7 +3,7 @@
   "tz": "US/Pacific",
   "consoleLevel": "debug",
   "basicParams": {
-    "level": "info",
+    "level": "debug",
     "format": "default",
     "datefmt": "%Y.%m.%d %H:%M:%S",
     "filename": "standard.log",
@@ -12,10 +12,6 @@
   "modules": [
     {
       "module": "lcml.pipeline.standard.standard_ml_pipeline",
-      "level": "info"
-    },
-    {
-      "module": "lcml.pipeline.preprocess",
       "level": "info"
     }
   ]

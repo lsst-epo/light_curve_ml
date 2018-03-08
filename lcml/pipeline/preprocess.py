@@ -46,14 +46,12 @@ def preprocessLc(timeData, magData, errorData, removes, stdLimit, errorLimit):
     """
     removedCounts = {DATA_BOGUS_REMOVED: 0, DATA_OUTLIER_REMOVED: 0}
     if len(timeData) < SUFFICIENT_LC_DATA:
-        logger.debug("insufficient: %s to start", len(timeData))
         return None, INSUFFICIENT_DATA_REASON, removedCounts
 
     # remove bogus data
     tm, mag, err = lcFilterBogus(timeData, magData, errorData, removes=removes)
     removedCounts[DATA_BOGUS_REMOVED] = len(timeData) - len(tm)
     if len(tm) < SUFFICIENT_LC_DATA:
-        logger.debug("insufficient: %s after removing bogus values", len(tm))
         return None, BOGUS_DATA_REASON, removedCounts
 
     # removes statistical outliers
@@ -62,8 +60,6 @@ def preprocessLc(timeData, magData, errorData, removes, stdLimit, errorLimit):
                                               std_limit=stdLimit)
     removedCounts[DATA_OUTLIER_REMOVED] = len(tm) - len(_tm)
     if len(_tm) < SUFFICIENT_LC_DATA:
-        logger.debug("insufficient: %s after statistical outliers removed",
-                     len(_tm))
         return None, OUTLIERS_REASON, removedCounts
 
     return (_tm, _mag, _err), None, removedCounts
@@ -108,7 +104,7 @@ def cleanLightCurves(params, dbParams):
             cursor.execute(insertOrReplace, args)
             insertCount += 1
             if insertCount % commitFrequency == 0:
-                logger.critical("progress: %s", insertCount)
+                logger.info("progress: %s", insertCount)
                 conn.commit()
 
         elif issue == INSUFFICIENT_DATA_REASON:

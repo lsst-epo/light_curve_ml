@@ -11,6 +11,7 @@ from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 from lcml.utils.multiprocess import feetsExtract, multiprocessMapGenerator
 
+
 logger = BasicLogging.getLogger(__name__)
 
 

@@ -103,12 +103,11 @@ def main():
                   classToLabel)
 
     elapsedMins = (time.time() - startAll) / 60
-    logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
-
+    logger.info("Pipeline completed in: %.3f min", elapsedMins)
     reportModelSelection(bestResult, allResults, classToLabel,
                          pipe.globalParams.get("places", 3))
 
-    logger.info(classToLabel)
+    logger.info("Integer class label mapping %s", classToLabel)
     classLabels = [classToLabel[i] for i in sorted(classToLabel)]
     plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
                         normalize=True)
