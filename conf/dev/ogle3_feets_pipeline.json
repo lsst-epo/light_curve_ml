@@ -7,7 +7,8 @@
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
-    "commitFrequency": 500
+    "commitFrequency": 500,
+    "pageSize": 1000
   },
   "loadData": {
     "function": "ogle3",
@@ -22,7 +23,8 @@
     "function": "feets",
     "params": {
       "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
-      "impute": true
+      "impute": true,
+      "skip": false
     }
   },
   "modelSelection": {
@@ -39,7 +41,7 @@
   "serialization": {
     "params": {
       "loadPath": null,
-      "savePath": "/home/ubuntu/light_curve_ml/models/ogle3/rf-classifier.pkl"
+      "savePath": "/home/ubuntu/light_curve_ml/models/ogle3/rf-classifier-ogle3-full.pkl"
     }
   }
 }
