@@ -6,7 +6,8 @@ pytz
 scikit-learn
 scipy
 
-# feets # currently installed from source
+# install from source at commit 8df90f7eed63885d2e5885f4944e74121f49e5bd
+# feets
 # nupic>=1.0
 # htmresearch
 # upsilon
