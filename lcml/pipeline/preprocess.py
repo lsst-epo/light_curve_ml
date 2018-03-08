@@ -1,47 +1,38 @@
 import numpy as np
-import sqlite3
 
 from feets import preprocess
 
-from lcml.pipeline.data_format.db_schema import (LC_TABLE_CREATE_QRY,
-                                                 LC_TABLE_INSERT_QRY,
+from lcml.pipeline.data_format.db_format import (CREATE_TABLE_LCS,
+                                                 INSERT_REPLACE_INTO_LCS,
+                                                 connFromParams,
                                                  reportTableCount, deserLc,
-                                                 serLc)
+                                                 serLc, singleColPagingItr)
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import joinRoot
 from lcml.utils.format_util import fmtPct
 
-
 logger = BasicLogging.getLogger(__name__)
-
 
 #: Additional attribute for light curve Bunch data structure specifying the
 #: number of bogus values removed from original data
 DATA_BOGUS_REMOVED = "bogusRemoved"
 
-
 #: Additional attribute for light curve Bunch data structure specifying the
 #: number of statistical outliers removed from original data
 DATA_OUTLIER_REMOVED = "outlierRemoved"
 
-
 #: cannot use LC because there is simply not enough data to go on
 INSUFFICIENT_DATA_REASON = "insufficient at start"
 
-
 #: cannot use LC because there is insufficient data after removing bogus values
 BOGUS_DATA_REASON = "insufficient due to bogus data"
-
 
 #: cannot use LC because there is insufficient data after removing statistical
 #: outliers
 OUTLIERS_REASON = "insufficient due to statistical outliers"
 
-
 #: Research by Kim suggests it best that light curves have at least 80 data
 #: points for accurate classification
 SUFFICIENT_LC_DATA = 80
-
 
 #: data values to scrub; nb np.nan != float("nan") but np.inf == float("inf")
 NON_FINITE_VALUES = {np.nan, float("nan"), float("inf"), float("-inf")}
@@ -81,7 +72,6 @@ def preprocessLc(timeData, magData, errorData, removes, stdLimit, errorLimit):
 #: Default value for preprocessing param `std threshold`
 DEFAULT_STD_LIMIT = 5
 
-
 #: Default value for preprocessing param `error limit`
 DEFAULT_ERROR_LIMIT = 3
 
@@ -96,22 +86,20 @@ def cleanLightCurves(params, dbParams):
     rawTable = dbParams["raw_lc_table"]
     cleanTable = dbParams["clean_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
-    conn = sqlite3.connect(joinRoot(dbParams["dbPath"]))
+    conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    cursor.execute(LC_TABLE_CREATE_QRY % cleanTable)
+    cursor.execute(CREATE_TABLE_LCS % cleanTable)
+
     reportTableCount(cursor, cleanTable, msg="before cleaning")
-    insertOrReplace = LC_TABLE_INSERT_QRY.format(cleanTable)
+    insertOrReplace = INSERT_REPLACE_INTO_LCS % cleanTable
 
     shortIssueCount = 0
     bogusIssueCount = 0
     outlierIssueCount = 0
-
     totalLcs = cursor.execute("SELECT COUNT(*) from %s" % rawTable).next()[0]
-
-    # results = [_ for _ in cursor.execute("SELECT * FROM %s" % rawTable)]
-    results = cursor.execute("SELECT * FROM %s" % rawTable)
+    cursor.execute("SELECT * FROM %s" % rawTable)
     insertCount = 0
-    for r in results:
+    for r in singleColPagingItr(cursor, rawTable, "id"):
         times, mags, errors = deserLc(*r[2:])
         lc, issue, _ = preprocessLc(times, mags, errors, removes=removes,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
@@ -159,8 +147,6 @@ def allFinite(X):
     # First try an O(n) time, O(1) space solution for the common case that
     # everything is finite; fall back to O(n) space np.isfinite to prevent
     # false positives from overflow in sum method.
-
-    # TODO consider verifying float dtype all same??
     return (False
             if X.dtype.char in np.typecodes['AllFloat'] and
                not np.isfinite(X.sum()) and not np.isfinite(X).all()

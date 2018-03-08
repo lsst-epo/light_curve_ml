@@ -2,12 +2,12 @@
 outputs: labels: List[str], times: List[ndarray], magnitudes: List[ndarray],
 errors: List[ndarray]"""
 import csv
-import sqlite3
 
 import numpy as np
 
-from lcml.pipeline.data_format.db_schema import (LC_TABLE_CREATE_QRY,
-                                                 LC_TABLE_INSERT_QRY,
+from lcml.pipeline.data_format.db_format import (CREATE_TABLE_LCS,
+                                                 INSERT_REPLACE_INTO_LCS,
+                                                 connFromParams,
                                                  reportTableCount, serLc)
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
@@ -54,15 +54,14 @@ def loadOgle3Dataset(params, dbParams):
     points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])
     skiprows = params["skiprows"]
-    dbPath = joinRoot(dbParams["dbPath"])
     table = dbParams["raw_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
 
-    conn = sqlite3.connect(dbPath)
+    conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    cursor.execute(LC_TABLE_CREATE_QRY % table)
+    cursor.execute(CREATE_TABLE_LCS % table)
     reportTableCount(cursor, table, msg="before loading")
-    insOrRepl = LC_TABLE_INSERT_QRY.format(table)
+    insOrRepl = INSERT_REPLACE_INTO_LCS % table
 
     with open(dataPath, "r") as f:
         reader = csv.reader(f, delimiter=",")
@@ -179,7 +178,7 @@ def loadMachoDataset(params, dbParams):
     dataPath = joinRoot(params["relativePath"])
     choice = set(np.random.choice(fileLength(dataPath), limit, replace=False))
     data = list()
-    columns = {0,4,5,6,7,8}
+    columns = {0, 4, 5, 6, 7, 8}
     skiprows = 1
     with open(dataPath, "r") as f:
         reader = csv.reader(f, delimiter=",")

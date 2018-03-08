@@ -1,9 +1,9 @@
 import argparse
-import sqlite3
 import time
 
 from prettytable import PrettyTable
 
+from lcml.pipeline.data_format.db_format import connFromParams
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import selectBestModel
 from lcml.pipeline.persistence import loadModels, saveModel
@@ -79,48 +79,43 @@ def main():
 
     histogram = classLabelHistogram(pipe.dbParams)
     reportClassHistogram(histogram)
-    classToLabel = convertClassLabels(list(histogram))
-    logger.info(classToLabel)
 
-    extractStart = time.time()
     extractParams = pipe.extractFeatures.params
-    features, labels = pipe.extractFeatures.fcn(extractParams, pipe.dbParams)
-    logger.info("Feets float type: %s", type(features[0][0]).__name__)
-    extractMins = (time.time() - extractStart) / 60
-    logger.info("extracted in %.2fm", extractMins)
+    if not extractParams.get("skip", False):
+        extractStart = time.time()
+        pipe.extractFeatures.fcn(extractParams, pipe.dbParams)
+        extractMins = (time.time() - extractStart) / 60
+        logger.info("extracted in %.2fm", extractMins)
 
-    # TODO update to use sqlite db!
-    if False:
-        models = None
-        loadPath = pipe.serialParams["loadPath"]
-        if loadPath:
-            # load previous winning model and its metadata from disk
-            models = loadModels(loadPath)
+    models = None
+    loadPath = pipe.serialParams["loadPath"]
+    if loadPath:
+        # load previous winning model and its metadata from disk
+        models = loadModels(loadPath)
 
-        if not models:
-            models = pipe.modelSelection.fcn(pipe.modelSelection.params)
+    if not models:
+        models = pipe.modelSelection.fcn(pipe.modelSelection.params)
 
-        bestResult, allResults = selectBestModel(models, features, labels,
-                                                 pipe.modelSelection.params)
+    bestResult, allResults, classToLabel = selectBestModel(models,
+        pipe.modelSelection.params, pipe.dbParams)
+    if pipe.serialParams["savePath"]:
+        saveModel(bestResult, pipe.serialParams["savePath"], pipe,
+                  classToLabel)
 
-        if pipe.serialParams["savePath"]:
-            saveModel(bestResult, pipe.serialParams["savePath"], pipe,
-                      classToLabel)
+    elapsedMins = (time.time() - startAll) / 60
+    logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
 
-        elapsedMins = (time.time() - startAll) / 60
-        logger.info("Pipeline completed in: %.3f min\n\n", elapsedMins)
+    reportModelSelection(bestResult, allResults, classToLabel,
+                         pipe.globalParams.get("places", 3))
 
-        reportModelSelection(bestResult, allResults, classToLabel,
-                             pipe.globalParams.get("places", 3))
-
-        # TODO review this comprehension
-        classes = [classToLabel[i] for i in range(len(classToLabel))]
-        plotConfusionMatrix(bestResult.metrics.confusionMatrix, classes,
-                            normalize=True)
+    logger.info(classToLabel)
+    classLabels = [classToLabel[i] for i in sorted(classToLabel)]
+    plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
+                        normalize=True)
 
 
 def classLabelHistogram(dbParams):
-    conn = sqlite3.connect(joinRoot(dbParams["dbPath"]))
+    conn = connFromParams(dbParams)
     cursor = conn.cursor()
     histogramQry = "SELECT label, COUNT(*) FROM %s GROUP BY label"
     cursor = cursor.execute(histogramQry % dbParams["clean_lc_table"])

@@ -1,4 +1,3 @@
-from __future__ import division
 from multiprocessing import cpu_count, Pool
 
 from lcml.utils.basic_logging import BasicLogging
@@ -7,7 +6,7 @@ from lcml.utils.basic_logging import BasicLogging
 logger = BasicLogging.getLogger(__name__)
 
 
-def mapMultiprocess(func, jobArgs, reportFrequency=100):
+def multiprocessMapGenerator(func, jobArgs, reportFrequency=100):
     """Executes a function on a batch of inputs using multiprocessing in an
     unordered fashion (`multiprocessing.Pool.imap_unordered`). Reports progress
     periodically as jobs complete
@@ -19,19 +18,31 @@ def mapMultiprocess(func, jobArgs, reportFrequency=100):
     log simple status report
     :return list of job results
     """
-    pool = Pool(processes=cpu_count())
-    for i, result in enumerate(pool.imap_unordered(func, jobArgs), 1):
+    p = Pool(processes=cpu_count())
+    i = -1
+    for i, result in enumerate(p.imap_unordered(func, jobArgs), 1):
         yield result
         if i % reportFrequency == 0:
-            logger.info("progress: {0:,d}".format(i))
+            logger.info("multiprocessing completed: %s", i)
+
+    logger.info("multiprocessing: total completed: %s", i)
 
 
 def feetsExtract(args):
-    """Function to execute the feets library's feature extraction using
-    multiprocessing"""
+    """Wrapper function conforming to Python multiprocessing API performing the
+    `feets` library's feature extraction.
+    """
     return _feetsExtract(*args)
 
 
-def _feetsExtract(featureSpace, category, timeData, magnitudeData, errorData):
-    _, values = featureSpace.extract(timeData, magnitudeData, errorData)
-    return values, category
+def _feetsExtract(featureSpace, uid, label, times, mags, errors):
+    """
+    :param featureSpace: feets.FeatureSpace object
+    :param uid: light curve uid
+    :param label: class label
+    :param times: lc times
+    :param mags: lc mags
+    :param errors: lc errors
+    :return: lc uid, lc class label, feature names, feature values
+    """
+    return (uid, label) + featureSpace.extract(times, mags, errors)

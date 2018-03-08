@@ -40,13 +40,17 @@ def convertClassLabels(classLabels):
     """Converts all class labels to integer values unique to individual
     classes. Labels are modified in-place.
     :param classLabels: Unique class labels
-    :return The mapping from integer to original class label for decoding
+    :return Mapping version of original input and a dict containing the mapping
+    from integer to original class label
     """
-    labelToInt = {v: i for i, v in enumerate(classLabels)}
+    # 'LPV'-> 1
+    labelToInt = {v: i for i, v in enumerate(np.unique(classLabels))}
     for i in range(len(classLabels)):
         classLabels[i] = labelToInt[classLabels[i]]
 
-    return {i: v for v, i in labelToInt.items()}
+    # 1 -> 'LPV'
+    intToLable = {i: v for v, i in labelToInt.items()}
+    return classLabels, intToLable
 
 
 def reportDataset(dataset, labels=None):

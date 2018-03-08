@@ -1,49 +1,57 @@
-import sqlite3
-
 from feets import FeatureSpace
 
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
-from lcml.pipeline.data_format.db_schema import serArray, deserLc
+from lcml.pipeline.data_format.db_format import (CREATE_TABLE_FEATURES,
+                                                 INSERT_REPLACE_INTO_FEATURES,
+                                                 SINGLE_COL_PAGED_SELECT_QRY,
+                                                 connFromParams, deserLc,
+                                                 reportTableCount, serArray)
 from lcml.pipeline.preprocess import allFinite, NON_FINITE_VALUES
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import joinRoot
 from lcml.utils.format_util import fmtPct
-from lcml.utils.multiprocess import feetsExtract, mapMultiprocess
-
+from lcml.utils.multiprocess import feetsExtract, multiprocessMapGenerator
 
 logger = BasicLogging.getLogger(__name__)
 
 
-def _workGenerator(cursor, fs, dbParams):
+def feetsJobGenerator(fs, dbParams):
+    """Returns a generator of tuples of the form:
+    (featureSpace (feets.FeatureSpace),  id (str), label (str), times (ndarray),
+     mags (ndarray), errors(ndarray))
+    Each tuple is used to perform a 'feets' feature extraction job.
+
+    :param fs: feets.FeatureSpace object required to perform extraction
+    :param dbParams: additional params
+    """
     table = dbParams["clean_lc_table"]
-    column = "id"
-    lastValue = ""
-    pageSize = 1000
+    pageSize = dbParams["pageSize"]
+    conn = connFromParams(dbParams)
+    cursor = conn.cursor()
 
-    qBase = ("SELECT * FROM {0} "
-             "WHERE {1} > \"{2}\" "
-             "ORDER BY {1} "
-             "LIMIT {3}")
-
+    column = "id"  # PK
+    previousId = ""  # low precedence text value
     rows = True
     while rows:
-        q = qBase.format(table, column, lastValue, pageSize)
+        q = SINGLE_COL_PAGED_SELECT_QRY.format(table, column, previousId,
+                                               pageSize)
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
             times, mags, errors = deserLc(*r[2:])
-            # TODO may be useful to include the OGLE3_ID so that it may included in the feature table
-            yield (fs, r[1], times, mags, errors)
+            # intended args for lcml.utils.multiprocess._feetsExtract
+            yield (fs, r[0], r[1], times, mags, errors)
 
         if rows:
-            lastValue = rows[-1][0]
+            previousId = rows[-1][0]
+
+    conn.close()
 
 
 def feetsExtractFeatures(params, dbParams):
     """Runs light curves through 'feets' library obtaining feature vectors.
-    Perfoms the extraction using multiprocessing. Output order will not
+    Perfoms the extraction using multiprocessing. Output order of jobs will not
     necessarily correspond to input order, therefore, class labels are returned
-    as well aligned with feature vectors to avoid confusion.
+    with corresponding feature vectors to avoid confusion.
 
     :param params: extract parameters
     :param dbParams: db parameters
@@ -51,50 +59,49 @@ def feetsExtractFeatures(params, dbParams):
     """
     # recommended excludes (slow): "CAR_mean", "CAR_sigma", "CAR_tau"
     # also produces nan's: "ls_fap"
-    exclude = params["excludedFeatures"]
-    logger.info("Excluded features: %s", exclude)
-    fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
-
     impute = params.get("impute", True)
-    badCount = 0
-    totalCount = 0
-    table = dbParams["feature_table"]
+    exclude = params["excludedFeatures"]
+    fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
+    logger.info("Excluded features: %s", exclude)
 
-    conn = sqlite3.connect(joinRoot(dbParams["dbPath"]))
+    featuresTable = dbParams["feature_table"]
+    ciFreq = dbParams["commitFrequency"]
+    conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    extractJobs = _workGenerator(cursor, fs, dbParams)
+    cursor.execute(CREATE_TABLE_FEATURES % featuresTable)
+    insertOrReplQry = INSERT_REPLACE_INTO_FEATURES % featuresTable
+    reportTableCount(cursor, featuresTable, msg="before extracting")
 
-    # TODO create features table if not exists command
-    # UID, CLASS_LABEL, FEATURES
+    jobs = feetsJobGenerator(fs, dbParams)
+    skippedLcCount = 0
+    totalLcCount = 0
+    for uid, label, ftNames, features in multiprocessMapGenerator(feetsExtract,
+                                                                  jobs):
+        # loop variables come from lcml.utils.multiprocess._feetsExtract
+        totalLcCount += 1
+        if impute:
+            _imputeFeatures(ftNames, features)
+        elif not allFinite(features):
+            skippedLcCount += 1
+            continue
 
-    # TODO insert or replace query
-    FEATURES_TABLE_INSERT_QRY = "INSERT OR REPLACE INTO {} VALUES (?, ?)"
-    insertOrReplace = FEATURES_TABLE_INSERT_QRY.format(table)
-    for features, label in mapMultiprocess(feetsExtract, extractJobs):
-        if allFinite(features):
-            _writeFeatures(cursor, insertOrReplace, label, features)
-        elif impute:
-            for i, f in enumerate(features):
-                if f in NON_FINITE_VALUES:
-                    # set non-finite feature values to 0.0
-                    logger.warning("imputing feature: %s value: %s", i, f)
-                    features[i] = 0.0
+        args = (uid, label, serArray(features))
+        cursor.execute(insertOrReplQry, args)
+        if totalLcCount % ciFreq == 0:
+            conn.commit()
 
-            _writeFeatures(cursor, insertOrReplace, label, features)
-            # TODO work out the 2x2 possiblity matrix and make a single writeFeatures call
-        else:
-            badCount += 1
-
-        totalCount += 1
-
-        # TODO commit at some frequency
-
-    if badCount:
-        logger.warning("Bad feature value rate: %s", fmtPct(badCount,
-                                                            totalCount))
+    reportTableCount(cursor, featuresTable, msg="after extracting")
+    conn.commit()
+    conn.close()
+    if skippedLcCount:
+        logger.warning("Skipped due to bad feature value rate: %s",
+                       fmtPct(skippedLcCount, totalLcCount))
 
 
-def _writeFeatures(cursor, query, label, features):
-    pass
-    # args = (label, serArray(features))
-    # cursor.execute(query, args)
+def _imputeFeatures(featureNames, featureValues):
+    """Sets non-finite feature values to 0.0"""
+    for i, v in enumerate(featureValues):
+        if v in NON_FINITE_VALUES:
+            logger.warning("imputing: %s %s => 0.0", featureNames[i],
+                           featureValues[i])
+            featureValues[i] = 0.0

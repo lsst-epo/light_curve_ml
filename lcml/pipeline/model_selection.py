@@ -6,7 +6,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
+from lcml.pipeline.data_format.db_format import connFromParams, deserArray
 from lcml.utils.basic_logging import BasicLogging
+from lcml.utils.data_util import convertClassLabels
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -22,31 +24,31 @@ ClassificationMetrics = namedtuple("ClassificationMetrics",
 
 
 def gridSearchSelection(params):
+    jobs = params["jobs"]
     # default for num estimators is 10
     estimatorsStart = params["estimatorsStart"]
     estimatorsStop = params["estimatorsStop"]
 
     # default for max features is sqrt(len(features))
     # for feets len(features) ~= 64 => 8
-    rfFeaturesStart = params["rfFeaturesStart"]
-    rfFeaturesStop = params["rfFeaturesStop"]
-    return [(RandomForestClassifier(n_estimators=t, max_features=f,
-                                    n_jobs=params["jobs"]),
+    featuresStart = params["rfFeaturesStart"]
+    featuresStop = params["rfFeaturesStop"]
+    return ((RandomForestClassifier(n_estimators=t, max_features=f,
+                                    n_jobs=jobs),
              {"trees": t, "maxFeatures": f})
-            for f in range(rfFeaturesStart, rfFeaturesStop)
-            for t in range(estimatorsStart, estimatorsStop)]
+            for f in range(featuresStart, featuresStop)
+            for t in range(estimatorsStart, estimatorsStop))
 
 
-def selectBestModel(models, features, labels, selectionParams):
+def selectBestModel(models, selectionParams, dbParams):
     """Peforms k-fold cross validation on all specified models and selects model
     with highest f1_micro score. Returns the best model, its hyperparameters,
     and its scoring metrics including accuracy, f1_micro, individual class f1,
     and confusion matrix
 
-    :param models: models with differing hyperparaters to try
-    :param features: input features
-    :param labels: ground truth for each feature set
-    :param selectionParams: custom params
+    :param models: models having a range of hyperparaters to be tried
+    :param selectionParams: params governing model selection
+    :param dbParams: params specifying database
     :returns Best ModelSelectionResult and list of all ModelSelectionResults
     """
     start = time.time()
@@ -55,10 +57,27 @@ def selectBestModel(models, features, labels, selectionParams):
     # N.B. micro averaged preferable for imbalanced classes
     scoring = ["accuracy", "f1_micro"]
 
+    conn = connFromParams(dbParams)
+    cursor = conn.cursor()
+    query = "SELECT label from %s" % dbParams["feature_table"]
+    cursor.execute(query)
+
+    labels = [r[0] for r in cursor.fetchall()]
+    labels, classToLabel = convertClassLabels(labels)
+
+    query = "SELECT features from %s" % dbParams["feature_table"]
+    features = [deserArray(r[0]) for r in cursor.execute(query)]
+    # each feature array will be around 576 bytes
+    # => can fit 17,361,111 feature vectors in 10GB RAM
+    # if this soaks up all the RAM try memory-mapped numpy array
+    # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
+
     bestResult = None
     allResults = []
     maxScore = 0
+    modelCount = 0
     for model, hyperparams in models:
+        modelCount += 1
         scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
                                 n_jobs=jobs)
         accuracy = np.average(scores["test_accuracy"])
@@ -78,7 +97,8 @@ def selectBestModel(models, features, labels, selectionParams):
             maxScore = f1Overall
             bestResult = result
 
+    conn.close()
     elapsed = time.time() - start
-    logger.info("fit %s models in: %.2fs ave: %.3fs", len(models), elapsed,
-                elapsed / len(models))
-    return bestResult, allResults
+    logger.info("fit %s models in: %.2fs ave: %.3fs", modelCount, elapsed,
+                elapsed / modelCount)
+    return bestResult, allResults, classToLabel
