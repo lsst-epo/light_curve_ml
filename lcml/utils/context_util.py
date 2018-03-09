@@ -33,16 +33,17 @@ def jsonConfig(fileName):
     return loadJson(joinRoot(os.path.join("conf/common", fileName)))
 
 
-def absoluteFilePaths(directory, ext=None, limit=float("inf")):
-    """Returns all absolute files paths found in a directory (non-recursive).
-    Can optionally filter for files with specified ext, e.g. 'csv' assuming a
-    '.' delimits the extension, 'foobar.csv'"""
+def absoluteFilePaths(dirPath, ext=None, limit=float("inf")):
+    """Returns a generator for absolute file paths found in a directory
+    (non-recursive). Optionally filters for files with specified extension,
+    e.g., 'csv' assuming a '.' delimits the extension, e.g., 'foobar.csv'"""
+    c = 0
+    ext = ext.lower() if ext else ext
+    for root, _, files in os.walk(dirPath):
+        for fname in files:
+            if not ext or fname.split(".")[-1].lower() == ext:
+                c += 1
+                yield os.path.join(root, fname)
 
-    paths = []
-    for filename in os.listdir(directory):
-        if not ext or filename.split(".")[-1].lower() == ext:
-            paths.append(os.path.abspath(os.path.join(directory, filename)))
-            if len(paths) >= limit:
+            if c == limit:
                 break
-
-    return paths
