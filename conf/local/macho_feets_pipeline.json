@@ -3,15 +3,17 @@
     "places": 3
   },
   "database": {
-    "dbPath": "data/ogle3/ogle3_processed.db",
+    "dbPath": "data/macho/macho_processed.db",
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
-    "commitFrequency": 500
+    "commitFrequency": 500,
+    "pageSize": 1000
   },
   "loadData": {
     "function": "macho",
     "params": {
+      "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
       "skiprows": 1,
       "stdLimit": 5,

@@ -67,10 +67,15 @@ def selectBestModel(models, selectionParams, dbParams):
 
     query = "SELECT features from %s" % dbParams["feature_table"]
     features = [deserArray(r[0]) for r in cursor.execute(query)]
+    # TODO potential memory issue
     # each feature array will be around 576 bytes
     # => can fit 17,361,111 feature vectors in 10GB RAM
+    #
     # if this soaks up all the RAM try memory-mapped numpy array
     # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
+    #
+    # - alternatively, we can randomly select a subset:
+    # choice = set(np.random.choice(setSize, subsetSize, replace=False))
 
     bestResult = None
     allResults = []

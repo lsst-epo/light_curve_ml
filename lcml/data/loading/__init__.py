@@ -1,6 +1,7 @@
 """These functions are duck-typed for input: dataDir: str, limit: int and
 outputs: labels: List[str], times: List[ndarray], magnitudes: List[ndarray],
 errors: List[ndarray]"""
+from abc import abstractmethod
 import csv
 
 import numpy as np
@@ -10,46 +11,17 @@ from lcml.pipeline.data_format.db_format import (CREATE_TABLE_LCS,
                                                  connFromParams,
                                                  reportTableCount, serLc)
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import absoluteFilePaths, joinRoot
+from lcml.utils.context_util import joinRoot
 
 
 logger = BasicLogging.getLogger(__name__)
-
-
-# TODO move to another module
-def fileLength(fname):
-    i = -1
-    with open(fname) as f:
-        for i, l in enumerate(f):
-            pass
-    return i + 1
 
 
 def assertArrayLengths(a, b):
     assert len(a) == len(b), "unequal lengths: %s & %s" % (len(a), len(b))
 
 
-# TODO try more memory efficient impl
-# stackoverflow.com/questions/8956832/python-out-of-memory-on-large-csv-file-numpy
-def iterLoadTxt(filename, delimiter=',', skiprows=0, dtype=float):
-    def iter_func():
-        with open(filename, 'r') as f:
-            for _ in range(skiprows):
-                next(f)
-
-            line = None
-            for line in f:
-                line = line.rstrip().split(delimiter)
-                for item in line:
-                    yield dtype(item)
-        iterLoadTxt.rowlength = len(line) if line else -1
-
-    data = np.fromiter(iter_func(), dtype=dtype)
-    data = data.reshape((-1, iterLoadTxt.rowlength))
-    return data
-
-
-def loadOgle3Dataset(params, dbParams):
+def loadFlatLcDataset(params, dbParams):
     """Loads and aggregates light curves from single csv file of individual data
     points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])
@@ -57,155 +29,132 @@ def loadOgle3Dataset(params, dbParams):
     table = dbParams["raw_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
 
+    dataName = params["dataName"]
+    if dataName == "ogle3":
+        rowEquals = Ogle3Adapter.rowEquals
+        initLcFrom = Ogle3Adapter.initLcFrom
+        appendRow = Ogle3Adapter.appendRow
+    elif dataName == "macho":
+        rowEquals = MachoAdapter.rowEquals
+        initLcFrom = MachoAdapter.initLcFrom
+        appendRow = MachoAdapter.appendRow
+    else:
+        raise ValueError("Unsupported dataName: %s" % dataName)
+
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
     cursor.execute(CREATE_TABLE_LCS % table)
     reportTableCount(cursor, table, msg="before loading")
-    insOrRepl = INSERT_REPLACE_INTO_LCS % table
-
+    insertOrReplaceQuery = INSERT_REPLACE_INTO_LCS % table
     with open(dataPath, "r") as f:
         reader = csv.reader(f, delimiter=",")
         for _ in range(skiprows):
             next(f)
 
-        # 0=HJD, 1=MAG, 2=ERR, 3=FIELD, 4=LABEL, 5=NUM, 6=BAND, 7=ID
-        row = next(reader)
-        uid = row[-1]
-        classLabel = row[4]
-        times = [row[0]]
-        mags = [row[1]]
-        errors = [row[2]]
-        lcCount = 1
-        for row in reader:
-            if row[-1] == uid:
+        uid = label = times = mags = errors = None
+        for i, row in enumerate(reader, 1):
+            if rowEquals(row, uid):
                 # continue building current LC
-                times.append(row[0])
-                mags.append(row[1])
-                errors.append(row[2])
+                appendRow(times, mags, errors, row)
             else:
-                # finish current LC
-                args = (uid, classLabel) + serLc(times, mags, errors)
-                cursor.execute(insOrRepl, args)
-                if not lcCount % commitFrequency:
-                    logger.info("progress: %s", lcCount)
-                    conn.commit()
+                if uid is not None:
+                    # finish current LC, except for first time
+                    args = (uid, label) + serLc(times, mags, errors)
+                    cursor.execute(insertOrReplaceQuery, args)
+                    if not i % commitFrequency:
+                        logger.info("progress: %s", i)
+                        conn.commit()
 
-                # now start new LC from `row`
-                uid = row[-1]
-                classLabel = row[4]
-                times = [row[0]]
-                mags = [row[1]]
-                errors = [row[2]]
+                # start new LC
+                uid, label, times, mags, errors = initLcFrom(row)
 
     reportTableCount(cursor, table, msg="after loading")
     conn.commit()
     conn.close()
 
 
-def legacyLoadOgle3Dataset(dataDir, limit):
-    """Loads all OGLE3 data files from specified directory as light curves
-    represented as lists of the following values: classLabels, times,
-    magnitudes, and magnitude errors. Class labels are parsed from originating
-    data file name."""
-    labels = list()
-    times = list()
-    magnitudes = list()
-    errors = list()
+class LcDataAdapter:
+    def __init__(self):
+        pass
 
-    paths = absoluteFilePaths(dataDir, ext="dat")
-    if not paths:
-        raise ValueError("No data files found in %s with ext dat" % dataDir)
+    @staticmethod
+    @abstractmethod
+    def rowEquals(row, uid):
+        pass
 
-    # Make a random choice of files up to limit
-    selectedIdxs = np.random.choice(len(paths), limit, replace=False)
-    paths = [paths[i] for i in selectedIdxs]
+    @staticmethod
+    @abstractmethod
+    def initLcFrom(row):
+        pass
 
-    for i, f in enumerate(paths):
-        fileName = f.split("/")[-1]
-        fnSplits = fileName.split("-")
-        if len(fnSplits) > 2:
-            category = fnSplits[2].lower()
-        else:
-            logger.warning("file name lacks category! %s", fileName)
-            continue
-
-        lc = np.loadtxt(f)
-        if lc.ndim == 1:
-            lc.shape = 1, 3
-
-        labels.append(category)
-        times.append(lc[:, 0])
-        magnitudes.append(lc[:, 1])
-        errors.append(lc[:, 2])
-
-    assertArrayLengths(labels, times)
-    assertArrayLengths(labels, magnitudes)
-    assertArrayLengths(labels, errors)
-    return labels, times, magnitudes, errors
+    @staticmethod
+    @abstractmethod
+    def appendRow(times, mags, errors, row):
+        pass
 
 
-def loadMachoDataset(params, dbParams):
-    """Loads MACHO data having red and blue light curve bands. The different
-    bands are simply treated as different light curves. The returned arrays
-    have the red band in the first half and the blue band in the second.
+class Ogle3Adapter(LcDataAdapter):
+    @staticmethod
+    def rowEquals(row, uid):
+        return row[-1] == uid
 
-    CSV file columns:
-    0 - classification
-    1 - field_id
-    2 - tile_id
-    3 - sequence
-    4 - date_observed
-    5 - red_magnitude
-    6 - red_error
-    7 - blue_magnitude
-    8 - blue_error
+    @staticmethod
+    def initLcFrom(row):
+        """Expects OGLE3 source data file to have the following columns:
+         0=HJD, 1=MAG, 2=ERR, 3=FIELD, 4=LABEL, 5=NUM, 6=BAND, 7=ID"""
+        return row[-1], row[4], [row[0]], [row[1]], [row[2]]
+
+    @staticmethod
+    def appendRow(times, mags, errors, row):
+        """Expects OGLE3 source data file to have the following columns:
+         0=HJD, 1=MAG, 2=ERR"""
+        times.append(row[0])
+        mags.append(row[1])
+        errors.append(row[2])
+
+
+class MachoAdapter(LcDataAdapter):
+    """Macho column format:
+    0 - macho_uid
+    1 - classification
+    2 - date_observed
+    3 - magnitude
+    4 - error
     """
-    # TODO follow ogle3 route
-    # data = np.loadtxt(fullPath, skiprows=1, dtype=str, delimiter=",")
-    #
-    # # Light curves uniquely ID'd by field, label, id, band
-    # uidCol = [_ogle3Uid(r) for r in data]
-    # uids = np.unique(uidCol)
-    # selectedUids = set(np.random.choice(uids, limit, replace=False))
+    @staticmethod
+    def rowEquals(row, uid):
+        return row[0] == uid
 
-    # FIXME file contains multiple light curves together, so have a
-    # while loop tracking current lc and detecting when it changes and producing
-    # two light curve objects for the two bands each loop
-    # can still have 'choice' just skip over entire lc if current number is
-    # not in choice -- requires knowing number of light curves a priori, or
-    # computing them in an initial pass
-    limit = None
-    dataPath = joinRoot(params["relativePath"])
-    choice = set(np.random.choice(fileLength(dataPath), limit, replace=False))
-    data = list()
-    columns = {0, 4, 5, 6, 7, 8}
-    skiprows = 1
-    with open(dataPath, "r") as f:
-        reader = csv.reader(f, delimiter=",")
-        for _ in range(skiprows):
-            next(f)
+    @staticmethod
+    def initLcFrom(row):
+        return row[0], row[1], [row[2]], [row[3]], [row[4]]
 
-        for i, row in enumerate(reader):
-            if i in choice:
-                data.append([np.float32(x)
-                             for i, x in enumerate(row)
-                             if i in columns])
+    @staticmethod
+    def appendRow(times, mags, errors, row):
+        times.append(row[2])
+        mags.append(row[3])
+        errors.append(row[4])
 
-    # data = np.loadtxt(dataPath, delimiter=",", skiprows=1,
-    #                   usecols=(0,4,5,6,7,8), dtype=np.float32)
-    # data = data[choice]
 
-    # double labels and times since we have two bands
-    labels = np.tile([r[0] for r in data], 2)
-    times = np.tile([r[1] for r in data], 2)
-    assertArrayLengths(labels, times)
-
-    magnitudes = [r[2] for r in data] + [r[3] for r in data]
-    assertArrayLengths(times, magnitudes)
-
-    errors = [r[4] for r in data] + [r[5] for r in data]
-    assertArrayLengths(times, errors)
-    return labels, times, magnitudes, errors
+if __name__ == "__main__":
+    __params = {
+        "function": "macho",
+        "params": {
+            "relativePath": "data/macho/macho-train.csv",
+            "skiprows": 1,
+            "stdLimit": 5,
+            "errorLimit": 3
+        }
+    }
+    __dbParams = {
+        "dbPath": "data/macho/macho_processed.db",
+        "raw_lc_table": "raw_lcs",
+        "clean_lc_table": "clean_lcs",
+        "feature_table": "lc_features",
+        "commitFrequency": 500,
+        "pageSize": 1000
+    }
+    loadFlatLcDataset(__params, __dbParams)
 
 
 def loadK2Dataset(dataPath, limit):
@@ -250,10 +199,3 @@ def loadK2Dataset(dataPath, limit):
     errors = data[goodRows, 8]
 
     return labels, times, magnitudes, errors
-
-
-if __name__ == "__main__":
-    _path = "/Users/ryanjmccall/code/light_curve_ml/data/k2/k2-sample.csv"
-    _limit = 10
-    _data = loadK2Dataset(_path, _limit)
-    print(len(_data[1]))

@@ -12,6 +12,15 @@ logger = BasicLogging.getLogger(__name__)
 
 
 def main():
+    # FIXME Create this format instead:
+    """Macho column format:
+    0 - macho_uid
+    1 - classification
+    2 - date_observed
+    3 - magnitude
+    4 - error
+    """
+
     inDir = os.path.join(os.environ["LSST"], "data/macho/class")
     allData = [",".join(["classification", "field_id", "tile_id", "sequence",
                          "date_observed", "red_magnitude", "red_error",

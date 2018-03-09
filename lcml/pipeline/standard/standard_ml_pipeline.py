@@ -11,8 +11,8 @@ from lcml.pipeline.preprocess import cleanLightCurves
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
-from lcml.utils.data_util import (attachLabels, convertClassLabels,
-                                  reportClassHistogram, unarchiveAll)
+from lcml.utils.data_util import (attachLabels,  reportClassHistogram,
+                                  unarchiveAll)
 from lcml.utils.format_util import truncatedFloat
 
 

@@ -13,6 +13,7 @@
   "loadData": {
     "function": "ogle3",
     "params": {
+      "dataName": "ogle3",
       "relativePath": "/data/ogle3/ogle3.csv",
       "skiprows": 1,
       "stdLimit": 5,

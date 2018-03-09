@@ -42,9 +42,9 @@ def loadPipeline(conf):
     # load data fcn
     loadType = conf[LOAD_DATA]["function"].lower()
     if loadType == "ogle3":
-        loadFcn = loading.loadOgle3Dataset
+        loadFcn = loading.loadFlatLcDataset
     elif loadType == "macho":
-        loadFcn = loading.loadMachoDataset
+        loadFcn = loading.loadFlatLcDataset
     elif loadType == "k2":
         loadFcn = loading.loadK2Dataset
     else:

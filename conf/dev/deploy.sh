@@ -4,6 +4,11 @@ sudo apt install python-pip
 pip install --upgrade pip
 sudo apt install p7zip-full
 
+git config --global alias.co checkout
+git config --global alias.br branch
+git config --global alias.ci commit
+git config --global alias.st status
+
 cd $HOME
 git clone https://github.com/carpyncho/feets.git
 git clone https://github.com/lsst-epo/light_curve_ml.git
