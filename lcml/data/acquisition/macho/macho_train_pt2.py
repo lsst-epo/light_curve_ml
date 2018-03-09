@@ -12,21 +12,28 @@ logger = BasicLogging.getLogger(__name__)
 
 
 def main():
-    # FIXME Create this format instead:
-    """Macho column format:
+    """Generates a .csv file containing the labeled MACHO training set.
+    Columns of macho-train.csv output:
     0 - macho_uid
     1 - classification
     2 - date_observed
     3 - magnitude
     4 - error
-    """
 
+    Additionally generates a second csv file containing the UIDs of missing data
+    files.
+    """
     inDir = os.path.join(os.environ["LSST"], "data/macho/class")
-    allData = [",".join(["classification", "field_id", "tile_id", "sequence",
-                         "date_observed", "red_magnitude", "red_error",
-                         "blue_magnitude", "blue_error"]) + "\n"]
+    redBands = [",".join(["field-tile-seqn-band", "classLabel", "date_observed",
+                          "magnitude", "error"]) + "\n"]
+    blueBands = []
+
+    # N.B. pt1 generated file names of the form:
+    # 'field=1_tile=33_seqn=10_class=6.csv'
     pattern = r"""\d+"""
     dataLengths = Counter()
+
+    # Heading for missing UID file
     missing = [",".join(("field", "tile", "seqn")) + "\n"]
     for f in absoluteFilePaths(inDir, ext="csv"):
         try:
@@ -36,19 +43,30 @@ def main():
             continue
 
         fileName = f.split("/")[-1].split(".")[0]
-        field, tile, seqn, classif = re.findall(pattern, fileName)
-        prefix = [classif, field, tile, seqn]
-        for row in data:
-            allData.append(",".join(prefix + [str(x) for x in row]) + "\n")
+        field, tile, seqn, label = re.findall(pattern, fileName)
+        prefix = [field, tile, seqn]
+        for r in data:
+            # column format for source file
+            # 0=dateobs, 1=rmag, 2=rerr, 3=bmag, 4=berr
 
-        dataLengths[len(data) // 10] += 1
+            # uid, class label, dateobs, rmag, rerr
+            _rVals = [machoUid(prefix + ["R"]), label] + [str(_) for _ in r[:3]]
+
+            # uid, class label, dateobs, bmag, berr
+            _bVals = ([machoUid(prefix + ["B"]), label] + [str(r[0])] +
+                      [str(_) for _ in r[3:]])
+            redBands.append(",".join(_rVals) + "\n")
+            blueBands.append(",".join(_bVals) + "\n")
+
+        dataLengths[len(data) // 10] += 1  # data length histogram in 10s
         if not len(data):
             missing.append(",".join((field, tile, seqn)) + "\n")
 
     outDir = os.path.join(os.environ["LSST"], "data/macho")
     trainFile = os.path.join(outDir, "macho-train.csv")
     with open(trainFile, "w") as f:
-        f.writelines(allData)
+        f.writelines(redBands)
+        f.writelines(blueBands)
 
     missingFile = os.path.join(outDir, "train-fails.csv")
     with open(missingFile, "w") as f:
@@ -56,6 +74,10 @@ def main():
 
     logger.critical("LC length distribution: %s",
                     sorted(list(dataLengths.items())))
+
+
+def machoUid(*args):
+    return "-".join(*args)
 
 
 if __name__ == "__main__":
