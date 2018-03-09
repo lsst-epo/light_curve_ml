@@ -1,9 +1,9 @@
 {
   "active": true,
   "tz": "US/Pacific",
-  "consoleLevel": "debug",
+  "consoleLevel": "info",
   "basicParams": {
-    "level": "debug",
+    "level": "info",
     "format": "default",
     "datefmt": "%Y.%m.%d %H:%M:%S",
     "filename": "standard.log",

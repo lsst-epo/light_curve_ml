@@ -7,14 +7,14 @@
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
-    "commitFrequency": 500,
+    "commitFrequency": 2000,
     "pageSize": 1000
   },
   "loadData": {
     "function": "ogle3",
     "params": {
       "dataName": "ogle3",
-      "relativePath": "data/ogle3/ogle3-sample.csv",
+      "relativePath": "data/ogle3/ogle3.csv",
       "skiprows": 1,
       "stdLimit": 5,
       "errorLimit": 3

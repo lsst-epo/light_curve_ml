@@ -2,13 +2,15 @@ from collections import namedtuple
 import time
 
 import numpy as np
+from prettytable import PrettyTable
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
 from lcml.pipeline.data_format.db_format import connFromParams, deserArray
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.data_util import convertClassLabels
+from lcml.utils.data_util import attachLabels, convertClassLabels
+from lcml.utils.format_util import truncatedFloat
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -81,7 +83,9 @@ def selectBestModel(models, selectionParams, dbParams):
     allResults = []
     maxScore = 0
     modelCount = 0
+    logger.info("cross validating models...")
     for model, hyperparams in models:
+        logger.info("%s", hyperparams)
         modelCount += 1
         scores = cross_validate(model, features, labels, scoring=scoring, cv=cv,
                                 n_jobs=jobs)
@@ -107,3 +111,30 @@ def selectBestModel(models, selectionParams, dbParams):
     logger.info("fit %s models in: %.2fs ave: %.3fs", modelCount, elapsed,
                 elapsed / modelCount)
     return bestResult, allResults, classToLabel
+
+
+def reportModelSelection(bestResult, allResults, classToLabel, places):
+    """Reports the hyperparameters and associated metrics obtain from model
+    selection."""
+    reportColumns = ["Hyperparameters", "F1 (micro)", "F1 (class)", "Accuracy"]
+    roundFlt = truncatedFloat(places)
+    searchTable = PrettyTable(reportColumns)
+    for result in allResults:
+        searchTable.add_row(_resultToRow(result, classToLabel, roundFlt))
+
+    winnerTable = PrettyTable(reportColumns)
+    winnerTable.add_row(_resultToRow(bestResult, classToLabel, roundFlt))
+
+    logger.info("Model search results...\n" + str(searchTable))
+    logger.info("Winning model...\n" + str(winnerTable))
+
+
+def _resultToRow(result, classToLabel, roundFlt):
+    """Converts a ModelSelectionResult to a list of formatted values to be used
+    as a row in a table"""
+    microF1 = roundFlt % result.metrics.f1Overall
+    classF1s = [(l, roundFlt % v)
+                for l, v
+                in attachLabels(result.metrics.f1Individual, classToLabel)]
+    accuracy = roundFlt % (100 * result.metrics.accuracy)
+    return [result.hyperparameters, microF1, classF1s, accuracy]

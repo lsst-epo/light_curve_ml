@@ -55,6 +55,7 @@ def saveModel(result, modelPath, pipe, classToLabel):
 
 
 def loadModels(modelPath):
+    """Load previous winning model and its metadata from disk"""
     try:
         model = joblib.load(modelPath)
     except IOError:
