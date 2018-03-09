@@ -39,7 +39,14 @@ SINGLE_COL_PAGED_SELECT_QRY = ("SELECT * FROM {0} "
 
 
 def connFromParams(dbParams):
-    return sqlite3.connect(joinRoot(dbParams["dbPath"]))
+    p = joinRoot(dbParams["dbPath"])
+    conn = None
+    try:
+        conn = sqlite3.connect(p)
+    except sqlite3.OperationalError:
+        logger.exception("Cannot resolve path: %s", p)
+
+    return conn
 
 
 def serLc(times, mags, errors):
