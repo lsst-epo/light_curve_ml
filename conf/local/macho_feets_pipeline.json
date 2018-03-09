@@ -7,7 +7,7 @@
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
-    "commitFrequency": 500,
+    "commitFrequency": 2000,
     "pageSize": 1000
   },
   "loadData": {
@@ -25,7 +25,8 @@
     "function": "feets",
     "params": {
       "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
-      "impute": true
+      "impute": true,
+      "skip": false
     }
   },
   "modelSelection": {

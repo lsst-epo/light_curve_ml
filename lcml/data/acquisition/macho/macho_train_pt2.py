@@ -11,6 +11,15 @@ from lcml.utils.context_util import absoluteFilePaths
 logger = BasicLogging.getLogger(__name__)
 
 
+#: Source: MACHO Tap server (http://machotap.asvo.nci.org.au/ncitap/tap),
+#: table 'public.varstar_view', see column 'classification' description
+MACHO_NUM_TO_LABEL = {'1': "rrlyrae-ab", '2': "rrlyrae-c", '3': "rrlyrae-e",
+                      '4': "ceph-fundamental", '5': "ceph-first-overtone",
+                      '6': "lpv-wood-a", '7': "lpv-wood-b", '8': "lpv-wood-c",
+                      '9': "lpv-wood-d", '10': "eclipsing-binary-default",
+                      '11': "rrlyrae-plus-gb"}
+
+
 def main():
     """Generates a .csv file containing the labeled MACHO training set.
     Columns of macho-train.csv output:
@@ -43,7 +52,8 @@ def main():
             continue
 
         fileName = f.split("/")[-1].split(".")[0]
-        field, tile, seqn, label = re.findall(pattern, fileName)
+        field, tile, seqn, classNum = re.findall(pattern, fileName)
+        label = MACHO_NUM_TO_LABEL[classNum]
         prefix = [field, tile, seqn]
         for r in data:
             # column format for source file
@@ -68,7 +78,7 @@ def main():
         f.writelines(redBands)
         f.writelines(blueBands)
 
-    missingFile = os.path.join(outDir, "train-fails.csv")
+    missingFile = os.path.join(outDir, "macho-train-fails.csv")
     with open(missingFile, "w") as f:
         f.writelines(missing)
 
@@ -81,6 +91,4 @@ def machoUid(*args):
 
 
 if __name__ == "__main__":
-    with np.warnings.catch_warnings():
-        np.warnings.filterwarnings('ignore', r'Empty input file')
-        main()
+    main()

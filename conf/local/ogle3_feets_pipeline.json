@@ -17,7 +17,8 @@
       "relativePath": "data/ogle3/ogle3.csv",
       "skiprows": 1,
       "stdLimit": 5,
-      "errorLimit": 3
+      "errorLimit": 3,
+      "skip": true
     }
   },
   "extractFeatures": {

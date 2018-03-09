@@ -52,11 +52,12 @@ def main():
         logger.info("Unarchiving files in %s ...", dataDir)
         unarchiveAll(dataDir, remove=True)
 
-    logger.info("Loading dataset...")
-    pipe.loadData.fcn(loadParams, pipe.dbParams)
+    if not loadParams.get("skip", False):
+        logger.info("Loading dataset...")
+        pipe.loadData.fcn(loadParams, pipe.dbParams)
 
-    logger.info("Cleaning dataset...")
-    cleanLightCurves(loadParams, pipe.dbParams)
+        logger.info("Cleaning dataset...")
+        cleanLightCurves(loadParams, pipe.dbParams)
 
     logger.info("Cleaned dataset class histogram...")
     histogram = classLabelHistogram(pipe.dbParams)
