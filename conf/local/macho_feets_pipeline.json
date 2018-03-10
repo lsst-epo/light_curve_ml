@@ -4,6 +4,7 @@
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db",
+    "timeout": 60,
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",

@@ -40,9 +40,10 @@ SINGLE_COL_PAGED_SELECT_QRY = ("SELECT * FROM {0} "
 
 def connFromParams(dbParams):
     p = joinRoot(dbParams["dbPath"])
+    timeout = dbParams["timeout"]
     conn = None
     try:
-        conn = sqlite3.connect(p)
+        conn = sqlite3.connect(p, timeout=timeout)
     except sqlite3.OperationalError:
         logger.exception("Cannot resolve path: %s", p)
 
