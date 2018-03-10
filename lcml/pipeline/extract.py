@@ -1,3 +1,5 @@
+from sqlite3 import OperationalError
+
 from feets import FeatureSpace
 
 from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
@@ -75,6 +77,7 @@ def feetsExtractFeatures(params, dbParams):
 
     jobs = feetsJobGenerator(fs, dbParams)
     skippedLcCount = 0
+    dbExceptions = 0
     totalLcCount = 0
     for uid, label, ftNames, features in multiprocessMapGenerator(feetsExtract,
                                                                   jobs):
@@ -87,9 +90,14 @@ def feetsExtractFeatures(params, dbParams):
             continue
 
         args = (uid, label, serArray(features))
-        cursor.execute(insertOrReplQry, args)
-        if totalLcCount % ciFreq == 0:
-            conn.commit()
+
+        try:
+            cursor.execute(insertOrReplQry, args)
+            if totalLcCount % ciFreq == 0:
+                conn.commit()
+        except OperationalError:
+            logger.exception("Failed to insert %s", args)
+            dbExceptions += 1
 
     reportTableCount(cursor, featuresTable, msg="after extracting")
     conn.commit()
@@ -97,6 +105,9 @@ def feetsExtractFeatures(params, dbParams):
     if skippedLcCount:
         logger.warning("Skipped due to bad feature value rate: %s",
                        fmtPct(skippedLcCount, totalLcCount))
+
+    if dbExceptions:
+        logger.warning("Db exception count: %s", dbExceptions)
 
 
 def _imputeFeatures(featureNames, featureValues):
