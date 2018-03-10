@@ -7,7 +7,7 @@
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
-    "commitFrequency": 500,
+    "commitFrequency": 2000,
     "pageSize": 1000
   },
   "loadData": {
@@ -18,7 +18,8 @@
       "skiprows": 1,
       "dataLimit": 1000000,
       "stdLimit": 5,
-      "errorLimit": 3
+      "errorLimit": 3,
+      "skip": false
     }
   },
   "extractFeatures": {

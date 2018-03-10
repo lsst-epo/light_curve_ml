@@ -27,6 +27,8 @@ vim ~/.bashrc
 export LSST=/home/ubuntu/light_curve_ml
 export PYTHONPATH=/home/ubuntu/light_curve_ml:$PYTHONPATH
 
+alias python=/usr/bin/python2
+
 cd $LSST
 mkdir logs
 pip install -r requirements.txt

@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from lcml.data import loading
+from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.extract import feetsExtractFeatures
 from lcml.pipeline.model_selection import gridSearchSelection
 from lcml.utils.context_util import joinRoot, loadJson
@@ -40,15 +40,8 @@ def fromRelativePath(relPath):
 def loadPipeline(conf):
     """Constructs a pipeline from a .json config."""
     # load data fcn
-    loadType = conf[LOAD_DATA]["function"].lower()
-    if loadType == "ogle3":
-        loadFcn = loading.loadFlatLcDataset
-    elif loadType == "macho":
-        loadFcn = loading.loadFlatLcDataset
-    elif loadType == "k2":
-        loadFcn = loading.loadK2Dataset
-    else:
-        raise ValueError("unsupported load function: %s" % loadType)
+    # loadType = conf[LOAD_DATA]["function"].lower()
+    loadFcn = loadFlatLcDataset
 
     loadParams = conf[LOAD_DATA]["params"]
     extractType = conf[EXTRACT_FEATURES]["function"]
