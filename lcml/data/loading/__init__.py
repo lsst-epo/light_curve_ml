@@ -127,6 +127,7 @@ def loadFlatLcDataset(params, dbParams):
     points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])
     skiprows = params["skiprows"]
+    dataLimit = params.get("dataLimit", float("inf"))
     table = dbParams["raw_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
 
@@ -153,7 +154,7 @@ def loadFlatLcDataset(params, dbParams):
 
         completedLcs = 0
         uid = label = times = mags = errors = None
-        for row in reader:
+        for i, row in enumerate(reader):
             if adapter.rowEquals(row, uid):
                 # continue building current LC
                 adapter.appendRow(times, mags, errors, row)
@@ -172,6 +173,9 @@ def loadFlatLcDataset(params, dbParams):
 
                 # initialize new LC
                 uid, label, times, mags, errors = adapter.initLcFrom(row)
+
+            if i >= dataLimit:
+                break
 
     reportTableCount(cursor, table, msg="after loading")
     conn.commit()

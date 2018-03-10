@@ -16,6 +16,7 @@
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
       "skiprows": 1,
+      "dataLimit": 100000,
       "stdLimit": 5,
       "errorLimit": 3,
       "filter": [-99.0]
@@ -26,7 +27,7 @@
     "params": {
       "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true,
-      "skip": false
+      "skip": true
     }
   },
   "modelSelection": {
@@ -42,9 +43,8 @@
   },
   "serialization": {
     "params": {
-      "xloadPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl",
       "loadPath": null,
-      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-macho.pkl"
+      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/rf-classifier-macho.pkl"
     }
   }
 }

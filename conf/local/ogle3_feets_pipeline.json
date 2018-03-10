@@ -16,9 +16,10 @@
       "dataName": "ogle3",
       "relativePath": "data/ogle3/ogle3.csv",
       "skiprows": 1,
+      "dataLimit": 100000,
       "stdLimit": 5,
       "errorLimit": 3,
-      "skip": true
+      "skip": false
     }
   },
   "extractFeatures": {
