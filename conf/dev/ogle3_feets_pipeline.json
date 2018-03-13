@@ -3,7 +3,7 @@
     "places": 3
   },
   "database": {
-    "dbPath": "data/ogle3/ogle3_processed.db",
+    "dbPath": "/data/db/ogle3/ogle3_processed.db",
     "timeout": 60,
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
@@ -15,7 +15,7 @@
     "function": "ogle3",
     "params": {
       "dataName": "ogle3",
-      "relativePath": "/data/ogle3/ogle3.csv",
+      "relativePath": "/data/datasets/ogle3/ogle3.csv",
       "skiprows": 1,
       "stdLimit": 5,
       "errorLimit": 3,
