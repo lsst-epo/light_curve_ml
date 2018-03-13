@@ -44,7 +44,7 @@
   "serialization": {
     "params": {
       "loadPath": null,
-      "savePath": "/home/ubuntu/light_curve_ml/models/ogle3/rf-classifier-ogle3-full.pkl"
+      "savePath": "/data/models/ogle3/rf-classifier-ogle3-full.pkl"
     }
   }
 }

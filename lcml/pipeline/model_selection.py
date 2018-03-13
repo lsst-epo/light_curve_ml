@@ -9,7 +9,7 @@ from sklearn.model_selection import cross_val_predict, cross_validate
 
 from lcml.pipeline.data_format.db_format import connFromParams, deserArray
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.data_util import attachLabels, convertClassLabels
+from lcml.utils.dataset_util import attachLabels, convertClassLabels
 from lcml.utils.format_util import truncatedFloat
 
 

@@ -9,8 +9,8 @@ from lcml.pipeline.preprocess import cleanLightCurves
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
-from lcml.utils.data_util import reportClassHistogram, unarchiveAll
-
+from lcml.utils.dataset_util import reportClassHistogram
+from lcml.utils.pathing import unarchiveAll
 
 BasicLogging.initLogging()
 logger = BasicLogging.getLogger(__name__)

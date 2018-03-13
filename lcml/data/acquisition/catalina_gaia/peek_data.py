@@ -7,7 +7,8 @@ import os
 
 import numpy as np
 
-from lcml.utils import data_util, format_util
+import lcml.utils.pathing
+from lcml.utils import dataset_util, format_util
 
 
 def loadDataset(dataName, datasetName, useDeltaEncoder=False):
@@ -62,9 +63,9 @@ def _parseLightCurveCatalina(paths):
 def peekCatalina():
     datasetName = "catalina/periodic"
     extension = ".csv"
-    paths = data_util.getDatasetFilePaths(datasetName, extension)
+    paths = lcml.utils.pathing.getDatasetFilePaths(datasetName, extension)
     lightCurves, labels = _parseLightCurveCatalina(paths)
-    data_util.reportDataset(lightCurves, labels)
+    dataset_util.reportDataset(lightCurves, labels)
 
     datasets = lightCurves[:1]
     for i, d in enumerate(datasets):
@@ -75,7 +76,7 @@ def peekCatalina():
 
 
 def peekGaia(sampleSize=11):
-    paths = data_util.getDatasetFilePaths("gaia", ".csv")
+    paths = lcml.utils.pathing.getDatasetFilePaths("gaia", ".csv")
     for p in paths:
         if "16" not in p:
             continue

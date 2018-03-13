@@ -1,39 +1,11 @@
-import os
-import tarfile
-from collections import Counter
-
 import numpy as np
 from prettytable import PrettyTable
 
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import absoluteFilePaths, joinRoot
 from lcml.utils.format_util import fmtPct
 
 
 logger = BasicLogging.getLogger(__name__)
-
-
-def unarchiveAll(directory, ext="tar", mode="r:", remove=False):
-    """Given a directory, untars all tar files found to that same dir.
-    Optionally specify archive extension, compression type, and whether to
-    remove archive file after unarchiving."""
-    for i, f in enumerate(absoluteFilePaths(directory, ext=ext)):
-        with tarfile.open(f, mode) as tar:
-            tar.extractall(path=directory)
-
-        if remove:
-            os.remove(f)
-
-
-def getDatasetFilePaths(datasetName, ext):
-    """Returns the full paths of all dataset files in project data directory:
-    ./light_curve_ml/data/
-    :param datasetName - Name of specific data whose individual file paths will
-    be returned
-    :param ext - Required file extension of dataset files
-    """
-    path = joinRoot("data", datasetName)
-    return [os.path.join(path, f) for f in os.listdir(path) if f.endswith(ext)]
 
 
 def convertClassLabels(classLabels):

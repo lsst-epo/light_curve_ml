@@ -1,9 +1,11 @@
 from collections import namedtuple
+import os
 
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.extract import feetsExtractFeatures
 from lcml.pipeline.model_selection import gridSearchSelection
 from lcml.utils.context_util import joinRoot, loadJson
+from lcml.utils.pathing import ensurePath
 
 
 #: global parameters section of the pipeline conf file
@@ -50,6 +52,7 @@ def loadPipeline(conf):
     else:
         raise ValueError("unsupported extract function: %s" % extractType)
 
+    ensurePath(conf[DB_PARAMS]["dbPath"])
     extParams = conf[EXTRACT_FEATURES]["params"]
 
     selectionType = conf[MODEL_SELECTION]["function"]
@@ -59,6 +62,8 @@ def loadPipeline(conf):
         raise ValueError("unsupported selection function: %s" % selectionType)
 
     selParams = conf[MODEL_SELECTION]["params"]
+    ensurePath(conf[SERIALIZATION]["params"]["savePath"])
+
     return MlPipeline(globalParams=conf[GLOBAL_PARAMS],
                       dbParams=conf[DB_PARAMS],
                       loadData=FunctionAndParams(loadFcn, loadParams),
