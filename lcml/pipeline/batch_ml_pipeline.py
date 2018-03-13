@@ -43,6 +43,7 @@ def main():
     5) serialize winning model to disk
     6) report metrics
     """
+    logger.info("___Begin Batch ML pipeline___")
     startAll = time.time()
     args = _getArgs()
     pipe = fromRelativePath(args.path)
