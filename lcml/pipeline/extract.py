@@ -72,6 +72,7 @@ def feetsExtractFeatures(params, dbParams):
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
     cursor.execute(CREATE_TABLE_FEATURES % featuresTable)
+    conn.commit()
     insertOrReplQry = INSERT_REPLACE_INTO_FEATURES % featuresTable
     reportTableCount(cursor, featuresTable, msg="before extracting")
 

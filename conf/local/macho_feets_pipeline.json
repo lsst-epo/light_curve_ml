@@ -17,7 +17,6 @@
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
       "skiprows": 1,
-      "dataLimit": 100000,
       "stdLimit": 5,
       "errorLimit": 3,
       "filter": [-99.0]
@@ -34,10 +33,10 @@
   "modelSelection": {
     "function": "grid",
     "params": {
-        "estimatorsStart": 6,
-        "estimatorsStop": 8,
-        "rfFeaturesStart": 6,
-        "rfFeaturesStop": 8,
+        "estimatorsStart": 5,
+        "estimatorsStop": 15,
+        "rfFeaturesStart": 5,
+        "rfFeaturesStop": 15,
         "cv": 5,
         "jobs": -1
     }
