@@ -2,12 +2,13 @@ from sqlite3 import OperationalError
 
 from feets import FeatureSpace
 
-from lcml.pipeline.data_format import STANDARD_INPUT_DATA_TYPES
-from lcml.pipeline.data_format.db_format import (CREATE_TABLE_FEATURES,
-                                                 INSERT_REPLACE_INTO_FEATURES,
-                                                 SINGLE_COL_PAGED_SELECT_QRY,
-                                                 connFromParams, deserLc,
-                                                 reportTableCount, serArray)
+from lcml.pipeline.database import STANDARD_INPUT_DATA_TYPES
+from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_FEATURES,
+                                              INSERT_REPLACE_INTO_FEATURES,
+                                              SINGLE_COL_PAGED_SELECT_QRY,
+                                              connFromParams,
+                                              reportTableCount)
+from lcml.pipeline.database.serialization import deserLc, serArray
 from lcml.pipeline.preprocess import allFinite, NON_FINITE_VALUES
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct

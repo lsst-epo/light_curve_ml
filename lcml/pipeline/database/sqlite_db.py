@@ -1,7 +1,4 @@
-import cPickle
 import sqlite3
-
-import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
@@ -48,32 +45,6 @@ def connFromParams(dbParams):
         logger.exception("Cannot resolve path: %s", p)
 
     return conn
-
-
-def serLc(times, mags, errors):
-    """Serializes light curve attributes (as arrays or lists) to binary strings
-    """
-    t = serArray(times)
-    m = serArray(mags)
-    e = serArray(errors)
-    return t, m, e
-
-
-def serArray(a):
-    return cPickle.dumps(a)
-
-
-def deserLc(times, mags, errors):
-    """Deserializes 3 binary-string light curves to 3 numpy arrays of float64
-    (equivalent of Python float)."""
-    t = deserArray(times)
-    m = deserArray(mags)
-    e = deserArray(errors)
-    return t, m, e
-
-
-def deserArray(binStr):
-    return np.array(cPickle.loads(str(binStr)), dtype=np.float64)
 
 
 def reportTableCount(cursor, table, msg=""):

@@ -19,7 +19,8 @@
       "skiprows": 1,
       "stdLimit": 5,
       "errorLimit": 3,
-      "filter": [-99.0]
+      "filter": [-99.0],
+      "skip": false
     }
   },
   "extractFeatures": {
@@ -27,7 +28,7 @@
     "params": {
       "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true,
-      "skip": true
+      "skip": false
     }
   },
   "modelSelection": {

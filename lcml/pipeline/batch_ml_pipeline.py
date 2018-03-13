@@ -1,16 +1,15 @@
 import argparse
 import time
 
-from lcml.pipeline.data_format.db_format import connFromParams
+from lcml.pipeline.database.sqlite_db import connFromParams
 from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import reportModelSelection, selectBestModel
 from lcml.pipeline.persistence import loadModels, saveModel
 from lcml.pipeline.preprocess import cleanLightCurves
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import joinRoot
 from lcml.utils.dataset_util import reportClassHistogram
-from lcml.utils.pathing import unarchiveAll
+
 
 BasicLogging.initLogging()
 logger = BasicLogging.getLogger(__name__)
@@ -43,17 +42,15 @@ def main():
     5) serialize winning model to disk
     6) report metrics
     """
-    logger.info("___Begin Batch ML pipeline___")
+    logger.info("___Begin batch ML pipeline___")
     startAll = time.time()
     args = _getArgs()
     pipe = fromRelativePath(args.path)
     loadParams = pipe.loadData.params
-    dataDir = joinRoot(loadParams["relativePath"])
-    if loadParams.get("unarchive", False):
-        logger.info("Unarchiving files in %s ...", dataDir)
-        unarchiveAll(dataDir, remove=True)
 
-    if not loadParams.get("skip", False):
+    if loadParams.get("skip", False):
+        logger.info("Skip load and clean dataset")
+    else:
         logger.info("Loading dataset...")
         pipe.loadData.fcn(loadParams, pipe.dbParams)
 
@@ -65,7 +62,9 @@ def main():
     reportClassHistogram(histogram)
 
     extractParams = pipe.extractFeatures.params
-    if not extractParams.get("skip", False):
+    if extractParams.get("skip", False):
+        logger.info("Skip extract features")
+    else:
         logger.info("Extracting features...")
         extractStart = time.time()
         pipe.extractFeatures.fcn(extractParams, pipe.dbParams)

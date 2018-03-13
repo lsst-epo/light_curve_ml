@@ -7,7 +7,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
-from lcml.pipeline.data_format.db_format import connFromParams, deserArray
+from lcml.pipeline.database.sqlite_db import connFromParams
+from lcml.pipeline.database.serialization import deserArray
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels, convertClassLabels
 from lcml.utils.format_util import truncatedFloat
