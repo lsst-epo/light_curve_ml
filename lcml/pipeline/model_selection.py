@@ -36,8 +36,9 @@ def gridSearchSelection(params):
     # for feets len(features) ~= 64 => 8
     featuresStart = params["rfFeaturesStart"]
     featuresStop = params["rfFeaturesStop"]
+    classWeight = params["classWeight"]
     return ((RandomForestClassifier(n_estimators=t, max_features=f,
-                                    n_jobs=jobs),
+                                    n_jobs=jobs, class_weight=classWeight),
              {"trees": t, "maxFeatures": f})
             for f in range(featuresStart, featuresStop)
             for t in range(estimatorsStart, estimatorsStop))

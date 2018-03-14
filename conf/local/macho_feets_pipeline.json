@@ -20,7 +20,7 @@
       "stdLimit": 5,
       "errorLimit": 3,
       "filter": [-99.0],
-      "skip": false
+      "skip": true
     }
   },
   "extractFeatures": {
@@ -28,12 +28,13 @@
     "params": {
       "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true,
-      "skip": false
+      "skip": true
     }
   },
   "modelSelection": {
     "function": "grid",
     "params": {
+        "classWeight": "balanced",
         "estimatorsStart": 5,
         "estimatorsStop": 15,
         "rfFeaturesStart": 5,
