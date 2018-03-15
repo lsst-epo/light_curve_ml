@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -28,16 +29,13 @@ def main():
     np.set_printoptions(precision=2)
 
     # Plot non-normalized confusion matrix
-    plt.figure()
-    plotConfusionMatrix(cnf_matrix, classes=class_names,
-                        title="Confusion matrix, without normalization")
+    plotConfusionMatrix(cnf_matrix, classes=class_names, savePath=None,
+                        normalize=False, title="Non-normed confusion matrix")
 
     # Plot normalized confusion matrix
-    plt.figure()
-    plotConfusionMatrix(cnf_matrix, classes=class_names, normalize=True,
-                        title="Normalized confusion matrix")
+    plotConfusionMatrix(cnf_matrix, classes=class_names, savePath=None,
+                        normalize=True, title="Normalized confusion matrix")
 
-    plt.show()
 
 
 if __name__ == "__main__":

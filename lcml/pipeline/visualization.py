@@ -1,8 +1,8 @@
 import itertools
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-    plt = None
+import matplotlib.pyplot as plt
+from matplotlib.font_manager import FontProperties
+
+
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
@@ -15,26 +15,23 @@ def normalizeConfusionMatrix(matrix):
     return matrix.astype("float") / matrix.sum(axis=1)[:, np.newaxis]
 
 
-def plotConfusionMatrix(mat, classes, normalize=False, title="Confusion matrix",
-                        cmap=None):
+def plotConfusionMatrix(matrix, classes, savePath=None, normalize=True,
+                        title="Confusion matrix", cmap=None):
     """Plots a confusion matrix and its classes.
 
-    :param mat: ndarray confusion matrix
+    :param matrix: ndarray confusion matrix
     :param classes: list of class names
+    :param savePath: Full path where plot will be saved
     :param normalize: if True, normalize matrix cells
     :param title: figure title
     :param cmap: color map for intensity scale
     """
-    if not plt:
-        logger.warning("Skipping plot since Matplotlib unavailable")
-        return
-
     if normalize:
-        mat = normalizeConfusionMatrix(mat)
+        matrix = normalizeConfusionMatrix(matrix)
 
     cmap = cmap if cmap else plt.cm.Blues
-    plt.figure()
-    plt.imshow(mat, interpolation="nearest", cmap=cmap)
+    plt.figure(figsize=(8, 6))
+    plt.imshow(matrix, interpolation="nearest", cmap=cmap)
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
@@ -42,14 +39,35 @@ def plotConfusionMatrix(mat, classes, normalize=False, title="Confusion matrix",
     plt.yticks(tick_marks, classes)
 
     fmt = ".2f" if normalize else "d"
-    thresh = mat.max() / 2.
-    for i, j in itertools.product(range(mat.shape[0]), range(mat.shape[1])):
-        plt.text(j, i, format(mat[i, j], fmt),
-                 horizontalalignment="center",
-                 color="white" if mat[i, j] > thresh else "black")
+    thresh = matrix.max() / 2.
+    for i, j in itertools.product(range(matrix.shape[0]),
+                                  range(matrix.shape[1])):
+        cellValue = format(matrix[i, j], fmt) if matrix[i, j] else ""
+        color = "white" if matrix[i, j] > thresh else "black"
+        plt.text(j, i, cellValue, horizontalalignment="center", color=color)
 
     plt.tight_layout()
     plt.ylabel("True label")
     plt.xlabel("Predicted label")
+    if savePath:
+        plt.savefig(savePath, bbox_inches="tight")
+    else:
+        plt.show()
+    return matrix
+
+
+def contourPlot(x, y, z, title="Contour Plot"):
+    cs = plt.contourf(x, y, z, corner_mask=True)
+
+    fontP = FontProperties()
+    fontP.set_size("small")
+
+    nm, lbl = cs.legend_elements()
+    plt.legend(nm, lbl, title=None, prop=fontP, loc="center left",
+               bbox_to_anchor=(1, 0.5))
+    plt.contour(cs, colors="k")
+    plt.title(title)
+
+    # Plot grid
+    plt.grid(c="k", ls="-", alpha=0.3)
     plt.show()
-    return mat

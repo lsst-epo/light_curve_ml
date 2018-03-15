@@ -45,9 +45,8 @@
   },
   "serialization": {
     "params": {
-      "xloadPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier.pkl",
-      "loadPath": null,
-      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-ogle3.pkl"
+      "modelLoadPath": null,
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-ogle3.pkl"
     }
   }
 }

@@ -44,8 +44,8 @@
   },
   "serialization": {
     "params": {
-      "loadPath": null,
-      "savePath": "/data/models/ogle3/rf-classifier-ogle3-full.pkl"
+      "modelLoadPath": null,
+      "modelSavePath": "/data/models/ogle3/rf-classifier-ogle3-full.pkl"
     }
   }
 }
