@@ -35,18 +35,19 @@
     "function": "grid",
     "params": {
         "classWeight": "balanced",
-        "estimatorsStart": 5,
-        "estimatorsStop": 15,
-        "rfFeaturesStart": 5,
-        "rfFeaturesStop": 15,
+        "estimatorsStart": 15,
+        "estimatorsStop": 1000,
+        "rfFeaturesStart": 15,
+        "rfFeaturesStop": 30,
         "cv": 5,
         "jobs": -1
     }
   },
   "serialization": {
     "params": {
-      "loadPath": null,
-      "savePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/rf-classifier-macho.pkl"
+      "modelLoadPath": null,
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/rf-classifier-macho.pkl",
+      "confusionMatrixSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/confusion-matrix.png"
     }
   }
 }

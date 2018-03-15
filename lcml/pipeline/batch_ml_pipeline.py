@@ -8,6 +8,7 @@ from lcml.pipeline.persistence import loadModels, saveModel
 from lcml.pipeline.preprocess import cleanLightCurves
 from lcml.pipeline.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
+from lcml.utils.context_util import joinRoot
 from lcml.utils.dataset_util import reportClassHistogram
 
 
@@ -72,15 +73,15 @@ def main():
         logger.info("extracted in %.2fm", extractMins)
 
     models = None
-    loadPath = pipe.serialParams["loadPath"]
-    if loadPath:
-        models = loadModels(loadPath)
+    modelLoadPath = pipe.serialParams["modelLoadPath"]
+    if modelLoadPath:
+        models = loadModels(modelLoadPath)
     if not models:
         models = pipe.modelSelection.fcn(pipe.modelSelection.params)
     bestResult, allResults, classToLabel = selectBestModel(models,
         pipe.modelSelection.params, pipe.dbParams)
-    if pipe.serialParams["savePath"]:
-        saveModel(bestResult, pipe.serialParams["savePath"], pipe,
+    if pipe.serialParams["modelSavePath"]:
+        saveModel(bestResult, pipe.serialParams["modelSavePath"], pipe,
                   classToLabel)
 
     elapsedMins = (time.time() - startAll) / 60
@@ -91,7 +92,7 @@ def main():
     logger.info("Integer class label mapping %s", classToLabel)
     classLabels = [classToLabel[i] for i in sorted(classToLabel)]
     plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
-                        normalize=True)
+                        pipe.serialParams["confusionMatrixSavePath"])
 
 
 if __name__ == "__main__":

@@ -14,9 +14,9 @@ logger = BasicLogging.getLogger(__name__)
 #: Source: MACHO Tap server (http://machotap.asvo.nci.org.au/ncitap/tap),
 #: table 'public.varstar_view', see column 'classification' description
 MACHO_NUM_TO_LABEL = {'1': "rrlyrae-ab", '2': "rrlyrae-c", '3': "rrlyrae-e",
-                      '4': "ceph-fundamental", '5': "ceph-first-overtone",
+                      '4': "ceph-fundam", '5': "ceph-1st-overtone",
                       '6': "lpv-wood-a", '7': "lpv-wood-b", '8': "lpv-wood-c",
-                      '9': "lpv-wood-d", '10': "eclipsing-binary-default",
+                      '9': "lpv-wood-d", '10': "eclips-binary",
                       '11': "rrlyrae-plus-gb"}
 
 

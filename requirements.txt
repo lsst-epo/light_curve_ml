@@ -1,4 +1,5 @@
 astropy>=2
+matplotlib
 numpy
 pandas
 prettytable

@@ -62,7 +62,7 @@ def loadPipeline(conf):
         raise ValueError("unsupported selection function: %s" % selectionType)
 
     selParams = conf[MODEL_SELECTION]["params"]
-    ensureDir(conf[SERIALIZATION]["params"]["savePath"])
+    ensureDir(conf[SERIALIZATION]["params"]["modelSavePath"])
 
     return MlPipeline(globalParams=conf[GLOBAL_PARAMS],
                       dbParams=conf[DB_PARAMS],
