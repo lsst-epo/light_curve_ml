@@ -9,7 +9,6 @@ from sklearn.model_selection import cross_val_predict, cross_validate
 
 from lcml.pipeline.database.sqlite_db import connFromParams
 from lcml.pipeline.database.serialization import deserArray
-from lcml.pipeline.visualization import contourPlot
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels, convertClassLabels
 from lcml.utils.format_util import truncatedFloat
@@ -134,13 +133,6 @@ def reportModelSelection(bestResult, allResults, classToLabel, places,
 
     logger.info("Model search results...\n" + str(searchTable))
     logger.info("Winning model...\n" + str(winnerTable))
-
-    if plot:
-        # plot effects of hyperparameters on F1-micro
-        maxFeats = [r.hyperparameters["maxFeatures"] for r in allResults]
-        trees = [r.hyperparameters["trees"] for r in allResults]
-        f1Scores = [r.metrics.f1Overall for r in allResults]
-        contourPlot(maxFeats, trees, f1Scores)
 
 
 def _resultToRow(result, classToLabel, roundFlt):

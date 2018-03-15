@@ -6,9 +6,8 @@ from lcml.pipeline.ml_pipeline import fromRelativePath
 from lcml.pipeline.model_selection import reportModelSelection, selectBestModel
 from lcml.pipeline.persistence import loadModels, saveModel
 from lcml.pipeline.preprocess import cleanLightCurves
-from lcml.pipeline.visualization import plotConfusionMatrix
+from lcml.pipeline.visualization import contourPlot, plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import joinRoot
 from lcml.utils.dataset_util import reportClassHistogram
 
 
@@ -88,6 +87,13 @@ def main():
     logger.info("Pipeline completed in: %.3f min", elapsedMins)
     reportModelSelection(bestResult, allResults, classToLabel,
                          pipe.globalParams.get("places", 3))
+
+    # plot effects of hyperparameters on F1-micro
+    x, y, z = zip(*[(r.hyperparameters["trees"],
+                     r.hyperparameters["maxFeatures"],
+                     r.metrics.f1Overall)
+                    for r in allResults])
+    contourPlot(x, y, z)
 
     logger.info("Integer class label mapping %s", classToLabel)
     classLabels = [classToLabel[i] for i in sorted(classToLabel)]
