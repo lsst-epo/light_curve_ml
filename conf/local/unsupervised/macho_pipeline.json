@@ -1,0 +1,54 @@
+{
+  "globalParams": {
+    "type": "unsupervised",
+    "places": 3
+  },
+  "database": {
+    "dbPath": "data/macho/macho_processed.db",
+    "timeout": 60,
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "clean_lcs",
+    "feature_table": "lc_features",
+    "commitFrequency": 2000,
+    "pageSize": 1000
+  },
+  "loadData": {
+    "function": "macho",
+    "params": {
+      "dataName": "macho",
+      "relativePath": "data/macho/macho-train.csv",
+      "skiprows": 1,
+      "stdLimit": 5,
+      "errorLimit": 3,
+      "filter": [-99.0],
+      "skip": true
+    }
+  },
+  "extractFeatures": {
+    "function": "feets",
+    "params": {
+      "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
+      "impute": true,
+      "skip": true
+    }
+  },
+  "modelSelection": {
+    "function": "grid",
+    "params": {
+        "classWeight": "balanced",
+        "estimatorsStart": 19,
+        "estimatorsStop": 50,
+        "rfFeaturesStart": 19,
+        "rfFeaturesStop": 30,
+        "cv": 5,
+        "jobs": -1
+    }
+  },
+  "serialization": {
+    "params": {
+      "modelLoadPath": null,
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/rf-classifier-macho.pkl",
+      "confusionMatrixSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/confusion-matrix.png"
+    }
+  }
+}

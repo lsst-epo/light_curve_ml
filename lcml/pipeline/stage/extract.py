@@ -9,7 +9,7 @@ from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_FEATURES,
                                               connFromParams,
                                               reportTableCount)
 from lcml.pipeline.database.serialization import deserLc, serArray
-from lcml.pipeline.preprocess import allFinite, NON_FINITE_VALUES
+from lcml.pipeline.stage.preprocess import allFinite, NON_FINITE_VALUES
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 from lcml.utils.multiprocess import feetsExtract, multiprocessMapGenerator

@@ -9,7 +9,7 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
-from lcml.pipeline.preprocess import lcFilterBogus, SUFFICIENT_LC_DATA
+from lcml.pipeline.stage.preprocess import lcFilterBogus, SUFFICIENT_LC_DATA
 
 _GARBAGE_VALUES = {float("nan"), float("-inf"), float("inf")}
 _MACHO_REMOVE = _GARBAGE_VALUES.union({-99.0})

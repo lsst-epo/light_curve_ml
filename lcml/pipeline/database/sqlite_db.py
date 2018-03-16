@@ -47,11 +47,6 @@ def connFromParams(dbParams):
     return conn
 
 
-def reportTableCount(cursor, table, msg=""):
-    count = cursor.execute("SELECT COUNT(*) FROM %s" % table)
-    logger.info("Table %s rows: %s", msg, [_ for _ in count][0][0])
-
-
 def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
     """Perform a find with sqlite using single-column paging to maintain a
     reasonable memory footprint.
@@ -70,3 +65,18 @@ def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
 
         if rows:
             previousValue = rows[-1][columnInd]
+
+
+def classLabelHistogram(dbParams):
+    conn = connFromParams(dbParams)
+    cursor = conn.cursor()
+    histogramQry = "SELECT label, COUNT(*) FROM %s GROUP BY label"
+    cursor = cursor.execute(histogramQry % dbParams["clean_lc_table"])
+    histogram = dict([_ for _ in cursor])
+    conn.close()
+    return histogram
+
+
+def reportTableCount(cursor, table, msg=""):
+    count = cursor.execute("SELECT COUNT(*) FROM %s" % table)
+    logger.info("Table %s rows: %s", msg, [_ for _ in count][0][0])

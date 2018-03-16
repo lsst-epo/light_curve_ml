@@ -1,10 +1,8 @@
 from collections import namedtuple
-import os
 
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
-from lcml.pipeline.extract import feetsExtractFeatures
-from lcml.pipeline.model_selection import gridSearchSelection
-from lcml.utils.context_util import joinRoot, loadJson
+from lcml.pipeline.stage.extract import feetsExtractFeatures
+from lcml.pipeline.stage.model_selection import gridSearchSelection
 from lcml.utils.pathing import ensureDir
 
 
@@ -21,7 +19,7 @@ SERIALIZATION = "serialization"
 FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])
 
 
-class MlPipeline:
+class MlPipelineConf:
     """Container for functions and parameter of the major components of a ML
      pipeline"""
     def __init__(self, globalParams, dbParams, loadData, extractFeatures,
@@ -34,18 +32,14 @@ class MlPipeline:
         self.serialParams = serialParams
 
 
-def fromRelativePath(relPath):
-    path = joinRoot(relPath)
-    return loadPipeline(loadJson(path))
-
-
-def loadPipeline(conf):
+def loadPipelineConf(conf):
     """Constructs a pipeline from a .json config."""
     # load data fcn
     # loadType = conf[LOAD_DATA]["function"].lower()
     loadFcn = loadFlatLcDataset
-
     loadParams = conf[LOAD_DATA]["params"]
+    loadData = FunctionAndParams(loadFcn, loadParams)
+
     extractType = conf[EXTRACT_FEATURES]["function"]
     if extractType == "feets":
         extractFcn = feetsExtractFeatures
@@ -54,6 +48,7 @@ def loadPipeline(conf):
 
     ensureDir(conf[DB_PARAMS]["dbPath"])
     extParams = conf[EXTRACT_FEATURES]["params"]
+    extractFeatures = FunctionAndParams(extractFcn, extParams)
 
     selectionType = conf[MODEL_SELECTION]["function"]
     if selectionType == "grid":
@@ -61,12 +56,9 @@ def loadPipeline(conf):
     else:
         raise ValueError("unsupported selection function: %s" % selectionType)
 
-    selParams = conf[MODEL_SELECTION]["params"]
+    selectParams = conf[MODEL_SELECTION]["params"]
     ensureDir(conf[SERIALIZATION]["params"]["modelSavePath"])
-
-    return MlPipeline(globalParams=conf[GLOBAL_PARAMS],
-                      dbParams=conf[DB_PARAMS],
-                      loadData=FunctionAndParams(loadFcn, loadParams),
-                      extractFeatures=FunctionAndParams(extractFcn, extParams),
-                      modelSelection=FunctionAndParams(selectFcn, selParams),
-                      serialParams=conf[SERIALIZATION]["params"])
+    modelSelection = FunctionAndParams(selectFcn, selectParams)
+    serialParams = conf[SERIALIZATION]["params"]
+    return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadData,
+                          extractFeatures, modelSelection, serialParams)

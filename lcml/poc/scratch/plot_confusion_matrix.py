@@ -1,12 +1,11 @@
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from sklearn import svm, datasets
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 
-from lcml.pipeline.visualization import plotConfusionMatrix
+from lcml.pipeline.stage.visualization import plotConfusionMatrix
 
 
 def main():

@@ -1,5 +1,6 @@
 {
   "globalParams": {
+    "type": "supervised",
     "places": 3
   },
   "database": {
