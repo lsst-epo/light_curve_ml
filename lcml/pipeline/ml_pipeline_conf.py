@@ -59,6 +59,7 @@ def loadPipelineConf(conf):
     selectParams = conf[MODEL_SELECTION]["params"]
     ensureDir(conf[SERIALIZATION]["params"]["modelSavePath"])
     modelSelection = FunctionAndParams(selectFcn, selectParams)
+
     serialParams = conf[SERIALIZATION]["params"]
     return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadData,
                           extractFeatures, modelSelection, serialParams)
