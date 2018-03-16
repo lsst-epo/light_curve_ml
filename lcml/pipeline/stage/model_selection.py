@@ -29,19 +29,19 @@ ClassificationMetrics = namedtuple("ClassificationMetrics",
 def gridSearchSelection(params):
     jobs = params["jobs"]
     # default for num estimators is 10
-    estimatorsStart = params["estimatorsStart"]
-    estimatorsStop = params["estimatorsStop"]
+    treesStart = params["treesStart"]
+    treesStop = params["treesStop"]
 
     # default for max features is sqrt(len(features))
     # for feets len(features) ~= 64 => 8
-    featuresStart = params["rfFeaturesStart"]
-    featuresStop = params["rfFeaturesStop"]
+    featuresStart = params["maxFeaturesStart"]
+    featuresStop = params["maxFeaturesStop"]
     classWeight = params["classWeight"]
     return ((RandomForestClassifier(n_estimators=t, max_features=f,
                                     n_jobs=jobs, class_weight=classWeight),
              {"trees": t, "maxFeatures": f})
             for f in range(featuresStart, featuresStop)
-            for t in range(estimatorsStart, estimatorsStop))
+            for t in range(treesStart, treesStop))
 
 
 def selectBestModel(models, selectionParams, dbParams):
