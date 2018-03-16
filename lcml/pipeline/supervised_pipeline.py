@@ -41,7 +41,8 @@ class SupervisedPipeline(BatchPipeline):
                          r.hyperparameters["maxFeatures"],
                          r.metrics.f1Overall)
                         for r in allResults])
-        contourPlot(x, y, z)
+        savePath = "/Users/ryanjmccall/code/light_curve_ml/models/macho/hyper.png"
+        contourPlot(x, y, z, savePath)
 
         logger.info("Integer class label mapping %s", classToLabel)
         classLabels = [classToLabel[i] for i in sorted(classToLabel)]

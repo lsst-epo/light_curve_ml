@@ -36,10 +36,10 @@
     "function": "grid",
     "params": {
         "classWeight": "balanced",
-        "estimatorsStart": 19,
-        "estimatorsStop": 50,
-        "rfFeaturesStart": 19,
-        "rfFeaturesStop": 30,
+        "estimatorsStart": 26,
+        "estimatorsStop": 28,
+        "rfFeaturesStart": 49,
+        "rfFeaturesStop": 51,
         "cv": 5,
         "jobs": -1
     }

@@ -6,7 +6,7 @@ from lcml.utils.basic_logging import BasicLogging
 logger = BasicLogging.getLogger(__name__)
 
 
-def multiprocessMapGenerator(func, jobArgs, reportFrequency=100):
+def mpMapGenerator(func, jobArgs, reportFrequency=100):
     """Executes a function on a batch of inputs using multiprocessing in an
     unordered fashion (`multiprocessing.Pool.imap_unordered`). Reports progress
     periodically as jobs complete

@@ -7,8 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import cross_val_predict, cross_validate
 
-from lcml.pipeline.database.sqlite_db import connFromParams
-from lcml.pipeline.database.serialization import deserArray
+from lcml.pipeline.database.sqlite_db import connFromParams, selectFeatures
 from lcml.pipeline.visualization import contourPlot
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels, convertClassLabels
@@ -69,18 +68,7 @@ def selectBestModel(models, selectionParams, dbParams):
 
     labels = [r[0] for r in cursor.fetchall()]
     labels, classToLabel = convertClassLabels(labels)
-
-    query = "SELECT features from %s" % dbParams["feature_table"]
-    features = [deserArray(r[0]) for r in cursor.execute(query)]
-    # TODO potential memory issue
-    # each feature array will be around 576 bytes
-    # => can fit 17,361,111 feature vectors in 10GB RAM
-    #
-    # if this soaks up all the RAM try memory-mapped numpy array
-    # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
-    #
-    # - alternatively, we can randomly select a subset:
-    # choice = set(np.random.choice(setSize, subsetSize, replace=False))
+    features = selectFeatures(cursor, dbParams)
 
     bestResult = None
     allResults = []

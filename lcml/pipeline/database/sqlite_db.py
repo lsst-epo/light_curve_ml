@@ -1,5 +1,6 @@
 import sqlite3
 
+from lcml.pipeline.database.serialization import deserArray
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 
@@ -65,6 +66,20 @@ def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
 
         if rows:
             previousValue = rows[-1][columnInd]
+
+
+def selectFeatures(cursor, dbParams):
+    # TODO potential memory issue
+    # each feature array will be around 576 bytes
+    # => can fit 17,361,111 feature vectors in 10GB RAM
+    #
+    # if this soaks up all the RAM try memory-mapped numpy array
+    # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
+    #
+    # - alternatively, we can randomly select a subset:
+    # choice = set(np.random.choice(setSize, subsetSize, replace=False))
+    query = "SELECT features from %s" % dbParams["feature_table"]
+    return [deserArray(r[0]) for r in cursor.execute(query)]
 
 
 def classLabelHistogram(dbParams):

@@ -12,7 +12,7 @@ from lcml.pipeline.database.serialization import deserLc, serArray
 from lcml.pipeline.stage.preprocess import allFinite, NON_FINITE_VALUES
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
-from lcml.utils.multiprocess import feetsExtract, multiprocessMapGenerator
+from lcml.utils.multiprocess import feetsExtract, mpMapGenerator
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -81,8 +81,7 @@ def feetsExtractFeatures(params, dbParams):
     skippedLcCount = 0
     dbExceptions = 0
     totalLcCount = 0
-    for uid, label, ftNames, features in multiprocessMapGenerator(feetsExtract,
-                                                                  jobs):
+    for uid, label, ftNames, features in mpMapGenerator(feetsExtract, jobs):
         # loop variables come from lcml.utils.multiprocess._feetsExtract
         totalLcCount += 1
         if impute:

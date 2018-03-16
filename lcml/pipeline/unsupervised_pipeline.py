@@ -1,6 +1,7 @@
 from sklearn.cluster import KMeans
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
+from lcml.pipeline.database.sqlite_db import connFromParams, selectFeatures
 from lcml.utils.basic_logging import BasicLogging
 
 
@@ -12,15 +13,18 @@ class UnsupervisedPipeline(BatchPipeline):
         BatchPipeline.__init__(self, conf)
 
     def modelSelectionPhase(self):
-        # look into a good abstraction for the
+        # Method to load features
+
+        conn = connFromParams(self.dbParams)
+        cursor = conn.cursor()
+
+        # TODO make this labels and features
+        features = selectFeatures(cursor, self.dbParams)
+        print(len(features))
+
         centroidStart = 4
         centroidEnd = 12
         for clusters in range(centroidStart, centroidEnd):
-
             model = KMeans(n_clusters=clusters)
-
-            # xIris has dimensionality: [n_samples, n_features]
-            # model.fit(xIris)
-            # clustering = model.labels_[::10]
-            # print(clustering)
-            # print(yIris[::10])
+            model.fit(features)
+            print(len(model.labels_))
