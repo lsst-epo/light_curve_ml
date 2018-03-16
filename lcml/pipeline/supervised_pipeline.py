@@ -1,3 +1,5 @@
+import numpy as np
+
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.stage.model_selection import (reportModelSelection,
                                                  selectBestModel)
@@ -42,7 +44,11 @@ class SupervisedPipeline(BatchPipeline):
                          r.metrics.f1Overall)
                         for r in allResults])
         savePath = "/Users/ryanjmccall/code/light_curve_ml/models/macho/hyper.png"
-        contourPlot(x, y, z, savePath)
+        xAxis = sorted(np.unique(x))
+        yAxis = sorted(np.unique(y))
+        zMat = np.array(z).reshape(len(yAxis), len(xAxis))
+        contourPlot(xAxis, yAxis, zMat, savePath, title="RF Hyperparams",
+                    xLabel="trees", yLabel="maxFeatures")
 
         logger.info("Integer class label mapping %s", classToLabel)
         classLabels = [classToLabel[i] for i in sorted(classToLabel)]

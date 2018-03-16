@@ -39,8 +39,8 @@
         "estimatorsStart": 26,
         "estimatorsStop": 28,
         "rfFeaturesStart": 49,
-        "rfFeaturesStop": 51,
-        "cv": 5,
+        "rfFeaturesStop": 52,
+        "cv": 2,
         "jobs": -1
     }
   },

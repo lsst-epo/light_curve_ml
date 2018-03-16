@@ -4,19 +4,18 @@ from lcml.pipeline import fromRelativePath
 from lcml.utils.basic_logging import BasicLogging
 
 
-BasicLogging.initLogging()
-logger = BasicLogging.getLogger(__name__)
-
-
 def _pipelineArgs():
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", required=True,
                         help="relative path to pipeline conf")
+    parser.add_argument("--logFileName", required=True,
+                        help="desired name of log file in $LSST/logs")
     return parser.parse_args()
 
 
 def main():
     args = _pipelineArgs()
+    BasicLogging.initLogging(fileName=args.logFileName)
     pipe = fromRelativePath(args.path)
     pipe.runPipe()
 

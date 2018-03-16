@@ -51,7 +51,14 @@ class BasicLogging:
         pass
 
     @classmethod
-    def initLogging(cls, fmt=None):
+    def initLogging(cls, fileName=None, fmt=None):
+        """Initializes logging across app. Intended to be called before logger
+        objects are created. Configuration read from
+        `$LSST/conf/common/logging.json`.
+
+        :param fileName: log file name override
+        :param fmt: logger format override
+        """
         cls._config = jsonConfig("logging.json")  # store conf for debugging
         basicParams = cls._config["basicParams"]  # kwargs for basicConfig()
 
@@ -66,7 +73,8 @@ class BasicLogging:
             basicParams["format"] = DEFAULT_FORMAT
 
         cls._format = basicParams["format"]
-        basicParams["filename"] = joinRoot("logs", basicParams["filename"])
+        fName = fileName if fileName else basicParams["filename"]
+        basicParams["filename"] = joinRoot("logs", fName)
         if cls._config["active"]:
             # Python libraries may specify NullHandlers; however, this adds them
             # to the root logger. Its having 1 or more handlers effectively
@@ -100,6 +108,9 @@ def getBasicLogger(name, fileName,
                    logFormat=DEFAULT_FORMAT,
                    dateFmt=DATE_FORMAT,
                    level=logging.INFO):
+    """Initializes logging. Intended to be used by one-offs scripts isolated
+    to a single file. See also lcml.utils.basic_logging.BasicLogging#getLogger
+    """
     outFile = fileName.split(os.path.sep)[-1]
     outFile = outFile.replace("py", "log")
     logPath = os.path.join(os.environ.get("LSST"), "logs", outFile)

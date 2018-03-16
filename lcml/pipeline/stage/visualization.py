@@ -56,7 +56,8 @@ def plotConfusionMatrix(matrix, classes, savePath=None, normalize=True,
     return matrix
 
 
-def contourPlot(x, y, z, savePath=None, title="Contour Plot"):
+def contourPlot(x, y, z, savePath=None, title="Contour Plot", xLabel=None,
+                yLabel=None):
     cs = plt.contourf(x, y, z, corner_mask=True)
 
     fontP = FontProperties()
@@ -67,6 +68,10 @@ def contourPlot(x, y, z, savePath=None, title="Contour Plot"):
                bbox_to_anchor=(1, 0.5))
     plt.contour(cs, colors="k")
     plt.title(title)
+    if xLabel:
+        plt.xlabel(xLabel)
+    if yLabel:
+        plt.xlabel(yLabel)
 
     # Plot grid
     plt.grid(c="k", ls="-", alpha=0.3)
