@@ -36,10 +36,10 @@
     "function": "grid",
     "params": {
         "classWeight": "balanced",
-        "treesStart": 25,
-        "treesStop": 28,
+        "treesStart": 30,
+        "treesStop": 500,
         "maxFeaturesStart": 49,
-        "maxFeaturesStop": 52,
+        "maxFeaturesStop": 51,
         "cv": 5,
         "jobs": -1
     }

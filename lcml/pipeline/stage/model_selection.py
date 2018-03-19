@@ -27,7 +27,10 @@ ClassificationMetrics = namedtuple("ClassificationMetrics",
 
 
 def gridSearchSelection(params):
+    """Returns a generator of random forest classifiers for a grid of the two
+    critical hyperparameters."""
     jobs = params["jobs"]
+
     # default for num estimators is 10
     treesStart = params["treesStart"]
     treesStop = params["treesStop"]
