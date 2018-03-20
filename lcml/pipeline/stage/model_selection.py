@@ -149,10 +149,10 @@ def reportModelSelection(bestResult, allResults, classToLabel, places):
 def _resultToRow(result, classToLabel, roundFlt):
     """Converts a ModelSelectionResult to a list of formatted values to be used
     as a row in a table"""
-    f1Micro = roundFlt % result.metrics.f1Overall
+    f1Micro = roundFlt % result.metrics.f1Micro
     f1Individ = [(l, roundFlt % v)
                  for l, v
-                 in attachLabels(result.metrics.f1Individual, classToLabel)]
+                 in attachLabels(result.metrics.f1Macro, classToLabel)]
     f1Weighted = roundFlt % result.metrics.f1Weighted
     accuracy = roundFlt % (100 * result.metrics.accuracy)
     return [result.hyperparameters, f1Micro, f1Individ, f1Weighted, accuracy]

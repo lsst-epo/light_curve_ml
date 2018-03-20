@@ -36,12 +36,8 @@
     "function": "grid",
     "params": {
         "classWeight": "balanced",
-        "treesValues": [50, 100, 200, 300, 400, 500],
-        "treesStart": 30,
-        "treesStop": 500,
-        "maxFeaturesValues": ["sqrt", null],
-        "maxFeaturesStart": 49,
-        "maxFeaturesStop": 51,
+        "treesValues": [350, 400, 450, 500, 550, 600, 800, 1000],
+        "maxFeaturesValues": ["sqrt"],
         "folds": 5,
         "repeats": 1,
         "jobs": -1
