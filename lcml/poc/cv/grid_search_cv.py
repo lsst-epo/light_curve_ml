@@ -10,20 +10,19 @@ def main():
 
     njobs = -1
     classWeight = "balanced"
-    oob_score = False # experiment
-    estimator = RandomForestClassifier(n_estimators=50, max_features="sqrt",
-                                       n_jobs=njobs, class_weight=classWeight,
-                                       oob_score=oob_score)
-    param_grid = {"n_estimators": [100],
-                  "max_features": ["log2", None]}
-    scoring = "f1_micro"
-    # scoring = "f1_weighted"
+    # oob_score = False  # OOB estimates are usually very pessimistic thus we
+    #  recommend to use cross-validation instead and only use OOB if
+    # cross-validation is too time consuming.
+    estimator = RandomForestClassifier(n_jobs=njobs, class_weight=classWeight)
+    param_grid = {"n_estimators": [100, 200, 300],
+                  "max_features": ["sqrt", "log2", None]}
+    scoring = "f1_weighted"  # "f1_micro"
 
     pre_dispatch = "10 * n_jobs"
-    iid = True
+    iid = True  # assume class distribution is iid
 
     nSplits = 5
-    repeats = 2
+    repeats = 1
     cv = RepeatedStratifiedKFold(n_splits=nSplits, n_repeats=repeats)
 
     verbose = 2
@@ -35,10 +34,13 @@ def main():
     clf.fit(iris.data, iris.target)
 
     cvResults = clf.cv_results_
-    print(cvResults)
+    print("result keys: %s" % list(cvResults))
     bestEstimator = clf.best_estimator_
+
     bestScore = clf.best_score_
+    print("best score: %s" % bestScore)
     bestParams = clf.best_params_
+    print("best params: %s" % bestParams)
 
 
 if __name__ == "__main__":

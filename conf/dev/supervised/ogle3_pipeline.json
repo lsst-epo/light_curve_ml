@@ -38,14 +38,16 @@
         "treesStop": 15,
         "maxFeaturesStart": 5,
         "maxFeaturesStop": 15,
-        "cv": 5,
+        "folds": 5,
+        "repeats": 1,
         "jobs": -1
     }
   },
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/data/models/ogle3/rf-classifier-ogle3-full.pkl"
+      "modelSavePath": "/data/models/ogle3/rf-classifier-ogle3-full.pkl",
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3"
     }
   }
 }

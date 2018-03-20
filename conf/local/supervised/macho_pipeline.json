@@ -36,11 +36,14 @@
     "function": "grid",
     "params": {
         "classWeight": "balanced",
+        "treesValues": [50, 100, 200, 300, 400, 500],
         "treesStart": 30,
         "treesStop": 500,
+        "maxFeaturesValues": ["sqrt", null],
         "maxFeaturesStart": 49,
         "maxFeaturesStop": 51,
-        "cv": 5,
+        "folds": 5,
+        "repeats": 1,
         "jobs": -1
     }
   },
@@ -48,7 +51,7 @@
     "params": {
       "modelLoadPath": null,
       "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/rf-classifier-macho.pkl",
-      "confusionMatrixSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/confusion-matrix.png"
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho"
     }
   }
 }

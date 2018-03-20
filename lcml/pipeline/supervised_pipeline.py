@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.stage.model_selection import (reportModelSelection,
@@ -41,9 +42,10 @@ class SupervisedPipeline(BatchPipeline):
         # plot effects of hyperparameters on F1-micro
         x, y, z = zip(*[(r.hyperparameters["trees"],
                          r.hyperparameters["maxFeatures"],
-                         r.metrics.f1Overall)
+                         r.metrics.f1Weighted)
                         for r in allResults])
-        savePath = "/Users/ryanjmccall/code/light_curve_ml/models/macho/hyper.png"
+        imgPath = self.serParams["imgPath"]
+        savePath = os.path.join(imgPath, "hyper.png")
         xAxis = sorted(np.unique(x))
         yAxis = sorted(np.unique(y))
         zMat = np.array(z).reshape(len(yAxis), len(xAxis))
@@ -52,5 +54,6 @@ class SupervisedPipeline(BatchPipeline):
 
         logger.info("Integer class label mapping %s", classToLabel)
         classLabels = [classToLabel[i] for i in sorted(classToLabel)]
+        matSavePath = os.path.join(imgPath, "confusion-matrix.png")
         plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
-                            self.serParams["confusionMatrixSavePath"])
+                            matSavePath)
