@@ -8,7 +8,7 @@ from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import (cross_val_predict, cross_validate,
                                      RepeatedStratifiedKFold)
 
-from lcml.pipeline.database.sqlite_db import connFromParams, selectFeatures
+from lcml.pipeline.database.sqlite_db import connFromParams, selectLabelsAndFeatures
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels, convertClassLabels
 from lcml.utils.format_util import truncatedFloat
@@ -78,12 +78,9 @@ def selectBestModel(models, selectionParams, dbParams):
 
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    query = "SELECT label from %s" % dbParams["feature_table"]
-    cursor.execute(query)
 
-    labels = [r[0] for r in cursor.fetchall()]
+    labels, features = selectLabelsAndFeatures(cursor, dbParams)
     labels, classToLabel = convertClassLabels(labels)
-    features = selectFeatures(cursor, dbParams)
 
     bestResult = None
     allResults = []

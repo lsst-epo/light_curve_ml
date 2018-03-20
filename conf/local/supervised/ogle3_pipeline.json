@@ -1,55 +1,27 @@
 {
   "globalParams": {
-    "type": "supervised",
-    "places": 3
+    "type": "supervised"
   },
   "database": {
-    "dbPath": "data/ogle3/ogle3_processed.db",
-    "timeout": 60,
-    "raw_lc_table": "raw_lcs",
-    "clean_lc_table": "clean_lcs",
-    "feature_table": "lc_features",
-    "commitFrequency": 2000,
-    "pageSize": 1000
+    "dbPath": "data/ogle3/ogle3_processed.db"
   },
   "loadData": {
-    "function": "ogle3",
     "params": {
       "dataName": "ogle3",
       "relativePath": "data/ogle3/ogle3.csv",
-      "skiprows": 1,
-      "dataLimit": 100000,
-      "stdLimit": 5,
-      "errorLimit": 3,
-      "skip": false
-    }
-  },
-  "extractFeatures": {
-    "function": "feets",
-    "params": {
-      "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
-      "impute": true,
       "skip": false
     }
   },
   "modelSelection": {
     "function": "grid",
     "params": {
-        "classWeight": "balanced",
-        "treesStart": 5,
-        "treesStop": 15,
-        "maxFeaturesStart": 5,
-        "maxFeaturesStop": 15,
-        "folds": 5,
-        "repeats": 1,
-        "jobs": -1
     }
   },
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/rf-classifier-ogle3.pkl",
-      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3"
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/supervised/rf-classifier-ogle3.pkl",
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/supervised"
     }
   }
 }

@@ -52,7 +52,7 @@ def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
     """Perform a find with sqlite using single-column paging to maintain a
     reasonable memory footprint.
     """
-    # TODO remove current assumptions: column value is text, all rows selected
+    # TODO remove current assumptions - column value is text, all rows selected
     previousValue = ""
     rows = True
     while rows:
@@ -68,7 +68,7 @@ def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
             previousValue = rows[-1][columnInd]
 
 
-def selectFeatures(cursor, dbParams):
+def selectLabelsAndFeatures(cursor, dbParams):
     # TODO potential memory issue
     # each feature array will be around 576 bytes
     # => can fit 17,361,111 feature vectors in 10GB RAM
@@ -76,10 +76,16 @@ def selectFeatures(cursor, dbParams):
     # if this soaks up all the RAM try memory-mapped numpy array
     # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
     #
-    # - alternatively, we can randomly select a subset:
+    # - alternatively, randomly select a subset:
     # choice = set(np.random.choice(setSize, subsetSize, replace=False))
-    query = "SELECT features from %s" % dbParams["feature_table"]
-    return [deserArray(r[0]) for r in cursor.execute(query)]
+    query = "SELECT label, features from %s" % dbParams["feature_table"]
+    labels = []
+    features = []
+    for r in cursor.execute(query):
+        labels.append(r[0])
+        features.append(deserArray(r[1]))
+
+    return labels, features
 
 
 def classLabelHistogram(dbParams):

@@ -48,9 +48,15 @@ class SupervisedPipeline(BatchPipeline):
         savePath = os.path.join(imgPath, "hyper.png")
         xAxis = sorted(np.unique(x))
         yAxis = sorted(np.unique(y))
-        zMat = np.array(z).reshape(len(yAxis), len(xAxis))
-        contourPlot(xAxis, yAxis, zMat, savePath, title="RF Hyperparams",
-                    xLabel="trees", yLabel="maxFeatures")
+        if len(xAxis) > 1 and len(yAxis) > 1:
+            title = "RF Hyperparams"
+            if np.any([not x or isinstance(x, str) for x in yAxis]):
+                title += " - features: " + str(yAxis)
+                yAxis = np.arange(len(yAxis))
+
+            zMat = np.array(z).reshape(len(yAxis), len(xAxis))
+            contourPlot(xAxis, yAxis, zMat, savePath, title=title,
+                        yLabel="trees")
 
         logger.info("Integer class label mapping %s", classToLabel)
         classLabels = [classToLabel[i] for i in sorted(classToLabel)]

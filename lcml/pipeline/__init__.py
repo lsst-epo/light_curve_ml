@@ -5,14 +5,21 @@ from lcml.utils.context_util import joinRoot, loadJson
 
 
 def fromRelativePath(relPath):
-    path = joinRoot(relPath)
-    conf = loadPipelineConf(loadJson(path))
+    """Constructs a pipeline from config found at relative path. Relative config
+    overwrites general config found at `$LSST/conf/common/pipeline.json`
 
-    pipeType = conf.globalParams["type"]
+    :param relPath: rel path to specific config overriding default config
+    :return: Instance of `lcml.pipeline.batch_pipeline.BatchPipeline`
+    """
+    conf = loadJson(joinRoot("conf/common/pipeline.json"))
+    relConf = loadJson(joinRoot(relPath))
+    conf.update(relConf)
+    pipeConf = loadPipelineConf(conf)
+    pipeType = pipeConf.globalParams["type"]
     if pipeType == "supervised":
-        pipe = SupervisedPipeline(conf)
+        pipe = SupervisedPipeline(pipeConf)
     elif pipeType == "unsupervised":
-        pipe = UnsupervisedPipeline(conf)
+        pipe = UnsupervisedPipeline(pipeConf)
     else:
         raise ValueError("unsupported pipe type: %s" % pipeType)
 

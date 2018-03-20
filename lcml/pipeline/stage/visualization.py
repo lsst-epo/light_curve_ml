@@ -71,7 +71,7 @@ def contourPlot(x, y, z, savePath=None, title="Contour Plot", xLabel=None,
     if xLabel:
         plt.xlabel(xLabel)
     if yLabel:
-        plt.xlabel(yLabel)
+        plt.ylabel(yLabel)
 
     # Plot grid
     plt.grid(c="k", ls="-", alpha=0.3)

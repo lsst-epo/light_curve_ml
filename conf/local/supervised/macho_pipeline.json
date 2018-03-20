@@ -1,53 +1,35 @@
 {
   "globalParams": {
-    "type": "supervised",
-    "places": 3
+    "type": "supervised"
   },
   "database": {
-    "dbPath": "data/macho/macho_processed.db",
-    "timeout": 60,
-    "raw_lc_table": "raw_lcs",
-    "clean_lc_table": "clean_lcs",
-    "feature_table": "lc_features",
-    "commitFrequency": 2000,
-    "pageSize": 1000
+    "dbPath": "data/macho/macho_processed.db"
   },
   "loadData": {
-    "function": "macho",
     "params": {
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
-      "skiprows": 1,
-      "stdLimit": 5,
-      "errorLimit": 3,
       "filter": [-99.0],
       "skip": true
     }
   },
   "extractFeatures": {
-    "function": "feets",
     "params": {
-      "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
-      "impute": true,
       "skip": true
     }
   },
   "modelSelection": {
     "function": "grid",
     "params": {
-        "classWeight": "balanced",
-        "treesValues": [350, 400, 450, 500, 550, 600, 800, 1000],
-        "maxFeaturesValues": ["sqrt"],
-        "folds": 5,
-        "repeats": 1,
-        "jobs": -1
+        "treesValues": [900, 1000, 1100, 1200],
+        "maxFeaturesValues": ["sqrt", "log2"]
     }
   },
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/rf-classifier-macho.pkl",
-      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho"
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/rf-classifier-macho.pkl",
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised"
     }
   }
 }
