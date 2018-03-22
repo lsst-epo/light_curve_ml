@@ -4,6 +4,11 @@ sudo apt install python-pip
 pip install --upgrade pip
 sudo apt install p7zip-full python-tk
 
+>>> import matplotlib
+>>> matplotlib.matplotlib_fname()
+vim [fname]
+# switch backend to: Agg
+
 git config --global alias.co checkout
 git config --global alias.br branch
 git config --global alias.ci commit
