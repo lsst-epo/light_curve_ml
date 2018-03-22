@@ -1,3 +1,4 @@
+import numpy as np
 import sqlite3
 
 from lcml.pipeline.database.serialization import deserArray
@@ -82,8 +83,17 @@ def selectLabelsFeatures(cursor, dbParams):
     labels = []
     features = []
     for r in cursor.execute(query):
+        rawFeats = deserArray(r[1])
+
+        if not np.isfinite(rawFeats.sum()) and not np.isfinite(rawFeats).all():
+            logger.warning("some bogus value here: %s", rawFeats)
+            for i, f in enumerate(rawFeats):
+                if not np.isfinite(f):
+                    logger.warning("this val: %s", f)
+                    rawFeats[i] = 0.0
+
+        features.append(rawFeats)
         labels.append(r[0])
-        features.append(deserArray(r[1]))
 
     return labels, features
 
