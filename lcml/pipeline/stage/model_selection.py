@@ -21,9 +21,13 @@ ModelSelectionResult = namedtuple("ModelSelectionResult",
                                   ["model", "hyperparameters", "metrics"])
 
 
-ClassificationMetrics = namedtuple("ClassificationMetrics",
-                                   ["accuracy", "f1Micro", "f1Macro",
-                                    "f1Weighted", "confusionMatrix"])
+class ClassificationMetrics:
+    def __init__(self, accuracy, f1Micro, f1Macro, f1Weighted, confusionMatrix):
+        self.accuracy = accuracy
+        self.f1Micro = f1Micro
+        self.f1Macro = f1Macro
+        self.f1Weighted = f1Weighted
+        self.confusionMatrix = confusionMatrix
 
 
 def gridSearchSelection(params):
@@ -80,13 +84,14 @@ def selectBestModel(models, selectionParams, dbParams):
     cursor = conn.cursor()
 
     labels, features = selectLabelsFeatures(cursor, dbParams)
+    logger.info("Loaded %s feature vectors", len(features))
     labels, classToLabel = convertClassLabels(labels)
 
     bestResult = None
     allResults = []
     maxScore = 0
     modelCount = 0
-    logger.info("cross validating models...")
+    logger.info("Cross validating models...")
     for model, hyperparams in models:
         cvStart = time.time()
         modelCount += 1
@@ -98,14 +103,7 @@ def selectBestModel(models, selectionParams, dbParams):
         f1Micro = np.average(scores["test_f1_micro"])
         f1Weighted = np.average(scores["test_f1_weighted"])
 
-        # cannot compute these two from 'cross_validate' results
-        predicted = cross_val_predict(model, features, labels, cv=cv,
-                                      n_jobs=jobs)
-        f1Macro = f1_score(labels, predicted, average=None)
-        confusionMatrix = confusion_matrix(labels, predicted)
-
-        metrics = ClassificationMetrics(accuracy, f1Micro, f1Macro, f1Weighted,
-                                        confusionMatrix)
+        metrics = ClassificationMetrics(accuracy, f1Micro, [], f1Weighted, None)
         result = ModelSelectionResult(model, hyperparams, metrics)
         allResults.append(result)
         if f1Weighted > maxScore:
@@ -113,6 +111,13 @@ def selectBestModel(models, selectionParams, dbParams):
             bestResult = result
 
         logger.info("%s in %.2fs", hyperparams, time.time() - cvStart)
+
+    # compute additional metrics for the winner
+    # cannot compute these two metrics from 'cross_validate' results
+    predicted = cross_val_predict(bestResult.model, features, labels, cv=cv,
+                                  n_jobs=jobs)
+    bestResult.metrics.f1Macro = f1_score(labels, predicted, average=None)
+    bestResult.metrics.confusionMatrix = confusion_matrix(labels, predicted)
 
     conn.close()
     elapsed = time.time() - start

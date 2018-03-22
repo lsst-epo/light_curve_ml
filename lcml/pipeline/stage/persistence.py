@@ -35,7 +35,7 @@ def saveModel(result, modelPath, pipe, classToLabel):
               "loadParams": pipe.loadData.params,
               "extractParams": pipe.extractFeatures.params,
               "selectionParams": pipe.modelSelection.params}
-    metrics = result.metrics._asdict()
+    metrics = vars(result.metrics)
     metrics["mapping"] = classToLabel
 
     joblib.dump(result.model, modelPath)
