@@ -21,13 +21,16 @@
   "modelSelection": {
     "params": {
       "clusterValues": [4, 5, 6, 7, 8, 9, 10, 11],
-      "kmeansArgs": {
-        "n_init": 10,
+      "dataLimit": null,
+      "miniBatchKMeansArgs": {
+        "init": "k-means++",
         "max_iter": 300,
-        "n_jobs": -1,
-        "algorithm": "auto",
-        "copy_x": false,
-        "precompute_distances": true
+        "batch_size": 1000,
+        "verbose": false,
+        "max_no_improvement": 100,
+
+        "n_init": 10,
+        "reassignment_ratio": 0.1
       },
       "agglomerativeArgs": {
         "affinity": "euclidean",
