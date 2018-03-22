@@ -1,6 +1,7 @@
 from sqlite3 import OperationalError
 
 from feets import FeatureSpace
+import numpy as np
 
 from lcml.pipeline.database import STANDARD_INPUT_DATA_TYPES
 from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_FEATURES,
@@ -114,7 +115,7 @@ def feetsExtractFeatures(params, dbParams):
 def _imputeFeatures(featureNames, featureValues):
     """Sets non-finite feature values to 0.0"""
     for i, v in enumerate(featureValues):
-        if v in NON_FINITE_VALUES:
+        if not np.isfinite(v):
             logger.warning("imputing: %s %s => 0.0", featureNames[i],
                            featureValues[i])
             featureValues[i] = 0.0

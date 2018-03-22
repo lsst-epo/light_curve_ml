@@ -85,11 +85,11 @@ def selectLabelsFeatures(cursor, dbParams):
     for r in cursor.execute(query):
         rawFeats = deserArray(r[1])
 
+        # TODO eventually remove when features have been rerun
         if not np.isfinite(rawFeats.sum()) and not np.isfinite(rawFeats).all():
-            logger.warning("some bogus value here: %s", rawFeats)
             for i, f in enumerate(rawFeats):
                 if not np.isfinite(f):
-                    logger.warning("this val: %s", f)
+                    logger.warning("imputing 0.0 for: %s", f)
                     rawFeats[i] = 0.0
 
         features.append(rawFeats)
