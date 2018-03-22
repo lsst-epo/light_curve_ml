@@ -1,7 +1,8 @@
-from sklearn.cluster import KMeans
+from sklearn.cluster import AgglomerativeClustering, KMeans
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
-from lcml.pipeline.database.sqlite_db import connFromParams, selectLabelsAndFeatures
+from lcml.pipeline.database.sqlite_db import (connFromParams,
+                                              selectLabelsFeatures)
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import convertClassLabels
 
@@ -17,27 +18,27 @@ class UnsupervisedPipeline(BatchPipeline):
         conn = connFromParams(self.dbParams)
         cursor = conn.cursor()
 
-        labels, features = selectLabelsAndFeatures(cursor, self.dbParams)
+        labels, features = selectLabelsFeatures(cursor, self.dbParams)
         intLabels, classToLabel = convertClassLabels(labels)
-        logger.info("Loaded features: %d", len(features))
+        logger.info("Loaded: %d features", len(features))
+        clusterValues = self.selectionParams["clusterValues"]
 
-        print(len(features))
-        centroidStart = 4
-        centroidEnd = 12
+        # n_init - number of runs starting from random initialization, bumping
+        # may incr perf by avoiding local minima
+        kMeansKwargs = self.selectionParams["kmeansArgs"]
+        aggKwargs = self.selectionParams["agglomerativeArgs"]
+        sample = 10
+        for c in clusterValues:
+            kMeans = KMeans(n_clusters=c, **kMeansKwargs)
+            kMeans.fit(features)
 
-        # TODO bump to improve performance
-        nInit = 10  # number of runs starting from random initialization
-        maxIter = 300   # max iterations for a single run
-        nJobs = -1
-        precomputeDists = True
-        algorithm = "elkan"
-        copyX = False
-        kwargs = {"n_init": nInit, "max_iter": maxIter, "n_jobs": nJobs,
-                  "algorithm": algorithm, "copy_x": copyX,
-                  "precompute_distances": precomputeDists}
-        for clusters in range(centroidStart, centroidEnd):
-            model = KMeans(n_clusters=clusters, **kwargs)
-            model.fit(features)
+            kMeansLabels = kMeans.labels_
+            print(len(kMeans.labels_))
 
-            kMeansLabels = model.labels_
-            print(len(model.labels_))
+            ag = AgglomerativeClustering(n_clusters=c, **aggKwargs)
+            ag.fit(features)
+
+            print("\nclusters: %s", c)
+            print("labels: %s", labels[:sample])
+            print("kmeans: %s", kMeans.labels_[:sample])
+            print("aggl: %s", ag.labels_[:sample])

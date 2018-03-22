@@ -68,7 +68,7 @@ def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
             previousValue = rows[-1][columnInd]
 
 
-def selectLabelsAndFeatures(cursor, dbParams):
+def selectLabelsFeatures(cursor, dbParams):
     # TODO potential memory issue
     # each feature array will be around 576 bytes
     # => can fit 17,361,111 feature vectors in 10GB RAM

@@ -1,0 +1,35 @@
+{
+  "globalParams": {
+    "type": "supervised"
+  },
+  "database": {
+    "dbPath": "/data/db/macho/macho_processed.db"
+  },
+  "loadData": {
+    "params": {
+      "dataName": "macho",
+      "relativePath": "/data/datasets/macho/macho-train.csv",
+      "filter": [-99.0],
+      "skip": false
+    }
+  },
+  "extractFeatures": {
+    "params": {
+      "excludedFeatures": []
+    }
+  },
+  "modelSelection": {
+    "function": "grid",
+    "params": {
+        "treesValues": [900, 1000, 1100, 1200],
+        "maxFeaturesValues": ["sqrt", "log2"]
+    }
+  },
+  "serialization": {
+    "params": {
+      "modelLoadPath": null,
+      "modelSavePath": "/data/models/macho/supervised/rf-classifier-macho-train.pkl",
+      "imgPath": "/data/models/macho/supervised"
+    }
+  }
+}

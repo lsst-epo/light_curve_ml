@@ -1,7 +1,15 @@
 import argparse
 
+import numpy as np
+
+np.warnings.filterwarnings("ignore")
 from lcml.pipeline import fromRelativePath
+np.warnings.resetwarnings()
+
 from lcml.utils.basic_logging import BasicLogging
+
+
+logger = BasicLogging.getLogger(__name__)
 
 
 def _pipelineArgs():
@@ -17,7 +25,11 @@ def main():
     args = _pipelineArgs()
     BasicLogging.initLogging(fileName=args.logFileName)
     pipe = fromRelativePath(args.path)
-    pipe.runPipe()
+    try:
+        pipe.runPipe()
+    except BaseException:
+        logger.exception("Exiting due to unhandled exception from main pipeline"
+                         )
 
 
 if __name__ == "__main__":
