@@ -4,18 +4,14 @@ from lcml.pipeline.unsupervised_pipeline import UnsupervisedPipeline
 from lcml.utils.context_util import joinRoot, loadJson
 
 
-
-def recursiveMerge(a, b, path=None):
-    """Merges b into a recursively"""
-    if path is None:
-        path = []
-
+def recursiveMerge(a, b):
+    """Merges b into a recursively overwriting existing keys"""
     for key in b:
         if key in a:
             if isinstance(a[key], dict) and isinstance(b[key], dict):
-                recursiveMerge(a[key], b[key], path + [str(key)])
+                recursiveMerge(a[key], b[key])
             elif a[key] != b[key]:
-                raise ValueError('Conflict at %s' % '.'.join(path + [str(key)]))
+                a[key] = b[key]
         else:
             a[key] = b[key]
 
