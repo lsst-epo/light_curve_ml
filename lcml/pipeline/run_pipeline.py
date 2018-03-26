@@ -28,8 +28,7 @@ def main():
     try:
         pipe.runPipe()
     except BaseException:
-        logger.exception("Exiting due to unhandled exception from main pipeline"
-                         )
+        logger.exception("Unhandled exception from main pipeline, exiting.")
 
 
 if __name__ == "__main__":

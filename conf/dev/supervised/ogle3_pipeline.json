@@ -20,7 +20,7 @@
   "modelSelection": {
     "function": "grid",
     "params": {
-      "featuresLimit": 100,
+      "featuresLimit": null,
       "treesValues": [300, 350, 400, 450, 500, 550, 600, 650, 700, 750],
       "maxFeaturesValues": [
         "sqrt",

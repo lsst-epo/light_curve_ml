@@ -1,8 +1,6 @@
 sudo apt update
-sudo apt install python-minimal
-sudo apt install python-pip
+sudo apt install python-minimal python-pip sqlite3 p7zip-full python-tk
 pip install --upgrade pip
-sudo apt install p7zip-full python-tk
 
 >>> import matplotlib
 >>> matplotlib.matplotlib_fname()
@@ -17,7 +15,6 @@ git config --global alias.st status
 cd $HOME
 git clone https://github.com/carpyncho/feets.git
 git clone https://github.com/lsst-epo/light_curve_ml.git
-
 
 sudo mkfs -t ext4 /dev/xvdb      (‘xvdb’ maps to ‘sdb’ in the “Device” value in the screenshot above; change if needed)
 sudo mkdir /data

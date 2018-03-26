@@ -50,6 +50,7 @@ def plotConfusionMatrix(matrix, classes, savePath=None, normalize=True,
     plt.ylabel("True label")
     plt.xlabel("Predicted label")
     if savePath:
+        logger.info("Saving confusion matrix plot to %s", savePath)
         plt.savefig(savePath, bbox_inches="tight")
     else:
         plt.show()
@@ -76,6 +77,7 @@ def contourPlot(x, y, z, savePath=None, title="Contour Plot", xLabel=None,
     # Plot grid
     plt.grid(c="k", ls="-", alpha=0.3)
     if savePath:
+        logger.info("Saving contour plot to %s", savePath)
         plt.savefig(savePath, bbox_inches="tight")
     else:
         plt.show()

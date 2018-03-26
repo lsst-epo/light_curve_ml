@@ -1,5 +1,6 @@
 from abc import abstractmethod
 import argparse
+from datetime import timedelta
 import time
 
 from lcml.pipeline.database.sqlite_db import classLabelHistogram
@@ -69,8 +70,8 @@ class BatchPipeline:
 
         self.modelSelectionPhase()
 
-        elapsedMins = (time.time() - startAll) / 60
-        logger.info("Pipeline completed in: %.3f min", elapsedMins)
+        elapsedMins = timedelta(seconds=(time.time() - startAll))
+        logger.info("Pipeline completed in: %s", elapsedMins)
 
     @abstractmethod
     def modelSelectionPhase(self):
