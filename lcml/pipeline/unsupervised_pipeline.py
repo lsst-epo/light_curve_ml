@@ -3,9 +3,9 @@ from datetime import timedelta
 import time
 
 from prettytable import PrettyTable
-
 from sklearn import metrics
-from sklearn.cluster import AgglomerativeClustering, DBSCAN, MiniBatchKMeans
+from sklearn.cluster import (AgglomerativeClustering, DBSCAN, KMeans,
+                             MiniBatchKMeans)
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.database.sqlite_db import (connFromParams,
@@ -43,40 +43,52 @@ class UnsupervisedPipeline(BatchPipeline):
         if dataLimit:
             labels = labels[:dataLimit]
             features = features[:dataLimit]
-        clusterValues = self.selectionParams["clusterValues"]
 
-        # n_init - number of runs starting from random initialization, bumping
-        # may incr perf by avoiding local minima
-        kMeansKwargs = self.selectionParams["miniBatchKMeansArgs"]
+        # TODO if want to use this, figure out why it was returning -1
+        # density based estimation
+        # db = DBSCAN(n_jobs=-1)
+        # dbName = "dbscan"
+        # dbScores = []
+        # self.evaluateClusteringModel(db, dbName, labels, features, dbScores)
+
+        clusterValues = self.selectionParams["clusterValues"]
+        miniKMeansKwargs = self.selectionParams["miniBatchKMeansArgs"]
+        kmeansKwargs = self.selectionParams["kmeansArgs"]
         aggKwargs = self.selectionParams["agglomerativeArgs"]
 
-        db = DBSCAN(n_jobs=-1)
-        dbStart = time.time()
-        db.fit(features)
-        logger.info("dbscan fit in: %s",
-                    timedelta(seconds=(time.time() - dbStart)))
-        kmScores = []
-        agScores = []
-        kmName = "mini-batch k-means"
-        agName = "agglomerative"
+        miniKmName = "mini-batch k-means"
+        kmName = "k-means"
+        aggNameToLinkage = {"agg-ward": "ward", "agg-complete": "complete",
+                            "agg-average": "average"}
+        nameToScores = {k: list()
+                        for k in list(aggNameToLinkage) + [miniKmName + kmName]}
         for c in clusterValues:
             logger.info("clusters: %s", c)
-            kMeans = MiniBatchKMeans(n_clusters=c, **kMeansKwargs)
+            miniKMeans = MiniBatchKMeans(n_clusters=c, **miniKMeansKwargs)
+            self.evaluateClusteringModel(miniKMeans, miniKmName, labels,
+                                         features, nameToScores[miniKmName])
+            del miniKMeans
+
+            kMeans = KMeans(n_clusters=c, **kmeansKwargs)
             self.evaluateClusteringModel(kMeans, kmName, labels, features,
-                                         kmScores)
+                                         nameToScores[kmName])
+            del kMeans
 
-            agg = AgglomerativeClustering(n_clusters=c, **aggKwargs)
-            self.evaluateClusteringModel(agg, agName, labels, features,
-                                         agScores)
+            # for now we try all linkages
+            aggKwargs.pop("linkage", None)
+            for aggName, linkage in aggNameToLinkage.items():
+                agg = AgglomerativeClustering(n_clusters=c, linkage=linkage,
+                                              **aggKwargs)
+                self.evaluateClusteringModel(agg, aggName, labels, features,
+                                             nameToScores[aggName])
+                del agg
 
-        externMetrics = sorted(vars(kmScores[0][0]))
-        internMetrics = sorted(vars(kmScores[0][1]))
+        externMetrics = sorted(vars(nameToScores[miniKmName][0][0]))
+        internMetrics = sorted(vars(nameToScores[miniKmName][0][1]))
         clusterTable = PrettyTable(["clusters", "clustering algorithm"] +
                                    externMetrics + internMetrics)
-
-        nameScores = [(kmName, kmScores), (agName, agScores)]
         for i, c in enumerate(clusterValues):
-            for name, scores in nameScores:
+            for name, scores in nameToScores.items():
                 row = ([c, name] + self._scoreValues(scores[i][0]) +
                        self._scoreValues(scores[i][1]))
                 clusterTable.add_row(row)
@@ -98,6 +110,7 @@ class UnsupervisedPipeline(BatchPipeline):
         internal = UnsupervisedPipeline.computeInternalMetrics(features,
                                                                model.labels_)
         scores.append((external, internal))
+        return scores
 
     @staticmethod
     def computeExternalMetrics(labels, predLabels):

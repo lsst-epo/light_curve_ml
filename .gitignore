@@ -2,6 +2,7 @@
 /logs
 /models
 /results
+/tmp
 
 .idea
 *.pyc

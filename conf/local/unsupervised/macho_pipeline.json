@@ -20,21 +20,30 @@
   },
   "modelSelection": {
     "params": {
-      "clusterValues": [4, 5, 6, 7, 8, 9, 10, 11],
-      "dataLimit": null,
+      "dataLimit": 1000,
+      "clusterValues": [11],
       "miniBatchKMeansArgs": {
         "init": "k-means++",
-        "max_iter": 300,
-        "batch_size": 1000,
+        "max_iter": 1000,
+        "batch_size": 5000,
         "verbose": false,
-        "max_no_improvement": 100,
-
-        "n_init": 10,
-        "reassignment_ratio": 0.1
+        "max_no_improvement": 1000,
+        "n_init": 5000,
+        "reassignment_ratio": 1
+      },
+      "kmeansArgs": {
+        "init": "k-means++",
+        "max_iter": 1000,
+        "verbose": false,
+        "n_init": 5000,
+        "precompute_distances": "auto",
+        "n_jobs": -1,
+        "algorithm": "full"
       },
       "agglomerativeArgs": {
         "affinity": "euclidean",
-        "linkage": "ward"
+        "linkage": "ward",
+        "memory": "/Users/ryanjmccall/code/light_curve_ml/tmp"
       }
     }
   },
