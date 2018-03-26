@@ -54,7 +54,7 @@ class BasicLogging:
     def initLogging(cls, fileName=None, fmt=None):
         """Initializes logging across app. Intended to be called before logger
         objects are created. Configuration read from
-        `$LSST/conf/common/logging.json`.
+        `$LCML/conf/common/logging.json`.
 
         :param fileName: log file name override
         :param fmt: logger format override
@@ -113,7 +113,7 @@ def getBasicLogger(name, fileName,
     """
     outFile = fileName.split(os.path.sep)[-1]
     outFile = outFile.replace("py", "log")
-    logPath = os.path.join(os.environ.get("LSST"), "logs", outFile)
+    logPath = joinRoot("logs", outFile)
     logging.basicConfig(filename=logPath,
                         filemode="a",
                         format=logFormat,

@@ -38,8 +38,8 @@ class LcDataAdapter:
 
 
 class K2Adapter(LcDataAdapter):
-    """Parses Light curves from LSST csv K2 data. Ignore data having
-    nonzero SAP_QUALITY.
+    """Parses Light curves from LSST's csv K2 data. Ignore data having nonzero
+    SAP_QUALITY.
 
     Col 0 - TIME [64-bit floating point] - The time at the mid-point of the
     cadence in BKJD. Kepler Barycentric Julian Day (BKJD) is Julian day minus

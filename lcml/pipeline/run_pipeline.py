@@ -17,7 +17,7 @@ def _pipelineArgs():
     parser.add_argument("--path", required=True,
                         help="relative path to pipeline conf")
     parser.add_argument("--logFileName", required=True,
-                        help="desired name of log file in $LSST/logs")
+                        help="desired name of log file in $LCML/logs")
     return parser.parse_args()
 
 

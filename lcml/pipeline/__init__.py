@@ -20,7 +20,7 @@ def recursiveMerge(a, b):
 
 def fromRelativePath(relPath):
     """Constructs a pipeline from config found at relative path. Relative config
-    overwrites general config found at `$LSST/conf/common/pipeline.json`
+    overwrites general config found at `$LCML/conf/common/pipeline.json`
 
     :param relPath: rel path to specific config overriding default config
     :return: Instance of `lcml.pipeline.batch_pipeline.BatchPipeline`

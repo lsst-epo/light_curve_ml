@@ -5,7 +5,7 @@ import re
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.context_util import absoluteFilePaths
+from lcml.utils.context_util import absoluteFilePaths, joinRoot
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -32,7 +32,7 @@ def main():
     Additionally generates a second csv file containing the UIDs of missing data
     files.
     """
-    inDir = os.path.join(os.environ["LSST"], "data/macho/class")
+    inDir = joinRoot("data/macho/class")
     redBands = [",".join(["field-tile-seqn-band", "classLabel", "date_observed",
                           "magnitude", "error"]) + "\n"]
     blueBands = []
@@ -72,7 +72,7 @@ def main():
         if not len(data):
             missing.append(",".join((field, tile, seqn)) + "\n")
 
-    outDir = os.path.join(os.environ["LSST"], "data/macho")
+    outDir = joinRoot("data/macho")
     trainFile = os.path.join(outDir, "macho-train.csv")
     with open(trainFile, "w") as f:
         f.writelines(redBands)

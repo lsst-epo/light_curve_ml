@@ -9,6 +9,7 @@ import numpy as np
 from prettytable import PrettyTable
 import upsilon
 
+from lcml.utils.context_util import joinRoot
 from lcml.pipeline.stage.preprocess import lcFilterBogus, SUFFICIENT_LC_DATA
 
 _GARBAGE_VALUES = {float("nan"), float("-inf"), float("inf")}
@@ -162,8 +163,8 @@ def main():
     start = time.time()
     args = _getArgs()
     dataset = "macho"
-    dataDir = os.path.join(os.environ.get("LSST"), "data", dataset)
-    outDir = os.path.join(os.environ.get("LSST"), "results", dataset)
+    dataDir = joinRoot("data", dataset)
+    outDir = joinRoot("results", dataset)
     if not os.path.exists(outDir):
         os.makedirs(outDir)
 

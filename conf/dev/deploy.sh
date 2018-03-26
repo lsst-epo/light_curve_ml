@@ -29,12 +29,12 @@ scp -rp -i ~/.ssh/rjm_lsst_2018.pem ogle3/ ubuntu@ec2-34-215-180-36.us-west-2.co
 
 # in ~/.bashrc
 vim ~/.bashrc
-export LSST=/home/ubuntu/light_curve_ml
+export LCML=/home/ubuntu/light_curve_ml
 export PYTHONPATH=/home/ubuntu/light_curve_ml:$PYTHONPATH
 
 alias python=/usr/bin/python2
 
-cd $LSST
+cd $LCML
 mkdir logs
 pip install -r requirements.txt
 

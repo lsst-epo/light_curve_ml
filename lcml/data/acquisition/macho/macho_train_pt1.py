@@ -9,6 +9,7 @@ from prettytable import PrettyTable
 
 from lcml.data.acquisition.macho.macho_from_stilts import tapCommandBase
 from lcml.utils.basic_logging import BasicLogging
+from lcml.utils.context_util import joinRoot
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -19,11 +20,8 @@ def genList(start, end):
 
 
 def main():
-    inPath = os.path.join(os.environ["LSST"],
-                          "data/macho/macho-classifications.csv")
-
-    outDir = os.path.join(os.environ["LSST"], "data/macho/class")
-
+    inPath = joinRoot("data/macho/macho-classifications.csv")
+    outDir = joinRoot("data/macho/class")
     commandBase = tapCommandBase()
     query = ("SELECT dateobs, rmag, rerr, bmag, berr "
              "FROM public.photometry_view "

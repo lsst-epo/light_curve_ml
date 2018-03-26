@@ -2,8 +2,10 @@ import json
 import os
 
 
-_ROOT_DIR = os.environ.get("LSST", None)
-assert _ROOT_DIR is not None, "Please set the 'LSST' environment variable."
+_ROOT_ENV_VAR = "LCML"
+_ROOT_DIR = os.environ.get(_ROOT_ENV_VAR, None)
+assert _ROOT_DIR is not None, ("Please set the '%s' environment variable" %
+                               _ROOT_ENV_VAR)
 assert os.path.isdir(_ROOT_DIR), "Root dir: %s does not exist" % _ROOT_DIR
 
 

@@ -9,6 +9,7 @@ import time
 from prettytable import PrettyTable
 
 from lcml.utils.basic_logging import BasicLogging
+from lcml.utils.context_util import joinRoot
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -19,14 +20,14 @@ def genList(start, end):
 
 
 def tapCommandBase(jreBinaryPath="/usr/bin/java"):
-    jarPath = os.path.join(os.environ["LSST"], "jars/stilts.jar")
+    jarPath = joinRoot("jars/stilts.jar")
     commandBase = [jreBinaryPath, "-jar", jarPath, "tapquery"]
     return commandBase + ["tapurl=http://machotap.asvo.nci.org.au/ncitap/tap",
                           "compress=true"]
 
 
 def main():
-    outDir = os.path.join(os.environ["LSST"], "data/macho/raw")
+    outDir = joinRoot("data/macho/raw")
     commandBase = tapCommandBase()
 
     returnedLimit = 500000
