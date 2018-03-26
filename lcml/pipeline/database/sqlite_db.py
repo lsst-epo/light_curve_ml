@@ -69,8 +69,8 @@ def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
             previousValue = rows[-1][columnInd]
 
 
-def selectLabelsFeatures(cursor, dbParams):
-    # TODO potential memory issue
+def selectLabelsFeatures(cursor, dbParams, limit=None):
+    # potential memory issue
     # each feature array will be around 576 bytes
     # => can fit 17,361,111 feature vectors in 10GB RAM
     #
@@ -80,6 +80,8 @@ def selectLabelsFeatures(cursor, dbParams):
     # - alternatively, randomly select a subset:
     # choice = set(np.random.choice(setSize, subsetSize, replace=False))
     query = "SELECT label, features from %s" % dbParams["feature_table"]
+    if limit:
+        query += " LIMIT %s" % limit
     labels = []
     features = []
     for r in cursor.execute(query):

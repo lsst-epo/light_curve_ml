@@ -83,7 +83,8 @@ def selectBestModel(models, selectionParams, dbParams):
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
 
-    labels, features = selectLabelsFeatures(cursor, dbParams)
+    limit = selectionParams.get("featuresLimit", None)
+    labels, features = selectLabelsFeatures(cursor, dbParams, limit)
     logger.info("Loaded %s feature vectors", len(features))
     labels, classToLabel = convertClassLabels(labels)
 
