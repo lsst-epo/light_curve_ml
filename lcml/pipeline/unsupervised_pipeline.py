@@ -2,14 +2,12 @@ from collections import namedtuple
 from datetime import timedelta
 import time
 
+from joblib import Memory
 from prettytable import PrettyTable
 from sklearn import metrics
-from sklearn.cluster import (AgglomerativeClustering, DBSCAN, KMeans,
-                             MiniBatchKMeans)
+from sklearn.cluster import AgglomerativeClustering, MiniBatchKMeans
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
-from lcml.pipeline.database.sqlite_db import (connFromParams,
-                                              selectLabelsFeatures)
 from lcml.utils.basic_logging import BasicLogging
 
 
@@ -32,17 +30,7 @@ class UnsupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
 
-    def modelSelectionPhase(self):
-        conn = connFromParams(self.dbParams)
-        cursor = conn.cursor()
-
-        labels, features = selectLabelsFeatures(cursor, self.dbParams)
-        logger.info("Loaded: %d features", len(features))
-
-        dataLimit = self.selectionParams["dataLimit"]
-        if dataLimit:
-            labels = labels[:dataLimit]
-            features = features[:dataLimit]
+    def modelSelectionPhase(self, trainFeatures, trainLabels, classToLabel):
 
         # TODO if want to use this, figure out why it was returning -1
         # density based estimation
@@ -57,29 +45,34 @@ class UnsupervisedPipeline(BatchPipeline):
         aggKwargs = self.selectionParams["agglomerativeArgs"]
 
         miniKmName = "mini-batch k-means"
-        kmName = "k-means"
+        # kmName = "k-means"
         aggNameToLinkage = {"agg-ward": "ward", "agg-complete": "complete",
                             "agg-average": "average"}
         nameToScores = {k: list()
-                        for k in list(aggNameToLinkage) + [miniKmName + kmName]}
+                        for k in list(aggNameToLinkage) + [miniKmName]}
+        aggKwargs["memory"] = Memory(cachedir=aggKwargs["memory"])
         for c in clusterValues:
             logger.info("clusters: %s", c)
             miniKMeans = MiniBatchKMeans(n_clusters=c, **miniKMeansKwargs)
-            self.evaluateClusteringModel(miniKMeans, miniKmName, labels,
-                                         features, nameToScores[miniKmName])
+            self.evaluateClusteringModel(miniKMeans, miniKmName, trainLabels,
+                                         trainFeatures, nameToScores[miniKmName]
+                                         )
             del miniKMeans
 
-            kMeans = KMeans(n_clusters=c, **kmeansKwargs)
-            self.evaluateClusteringModel(kMeans, kmName, labels, features,
-                                         nameToScores[kmName])
-            del kMeans
+
+            # N.B. consumes all memory and crashes python
+            # kMeans = KMeans(n_clusters=c, **kmeansKwargs)
+            # self.evaluateClusteringModel(kMeans, kmName, labels, features,
+            #                              nameToScores[kmName])
+            # del kMeans
 
             # for now we try all linkages
-            aggKwargs.pop("linkage", None)
             for aggName, linkage in aggNameToLinkage.items():
+                affinity = "euclidean" if linkage == "ward" else "manhattan"
                 agg = AgglomerativeClustering(n_clusters=c, linkage=linkage,
-                                              **aggKwargs)
-                self.evaluateClusteringModel(agg, aggName, labels, features,
+                                              affinity=affinity, **aggKwargs)
+                self.evaluateClusteringModel(agg, aggName, trainLabels,
+                                             trainFeatures,
                                              nameToScores[aggName])
                 del agg
 
@@ -96,7 +89,7 @@ class UnsupervisedPipeline(BatchPipeline):
 
     @staticmethod
     def _scoreValues(scores):
-        """Converts nametuple to a list of values in key-sorted order"""
+        """Converts namedtuple to a list of values in key-sorted order"""
         return ["%.4f" % kv[1] for kv in sorted(vars(scores).items())]
 
     @staticmethod
@@ -129,3 +122,7 @@ class UnsupervisedPipeline(BatchPipeline):
         sc = metrics.silhouette_score(X, predLabels)
         ch = metrics.calinski_harabaz_score(X, predLabels)
         return InternalClusterMetrics(sc, ch)
+
+    def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
+        # FIXME
+        pass

@@ -8,9 +8,8 @@ from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import (cross_val_predict, cross_validate,
                                      RepeatedStratifiedKFold)
 
-from lcml.pipeline.database.sqlite_db import connFromParams, selectLabelsFeatures
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.dataset_util import attachLabels, convertClassLabels
+from lcml.utils.dataset_util import attachLabels
 from lcml.utils.format_util import truncatedFloat
 
 
@@ -62,7 +61,7 @@ def gridSearchSelection(params):
 _SCORING_TYPES = ["accuracy", "f1_micro", "f1_weighted"]
 
 
-def selectBestModel(models, selectionParams, dbParams):
+def selectBestModel(models, selectionParams, trainFeatures, trainLabels):
     """Peforms k-fold cross validation on all specified models and selects model
     with highest f1_micro score. Returns the best model, its hyperparameters,
     and its scoring metrics including accuracy, f1_micro, individual class f1,
@@ -70,23 +69,13 @@ def selectBestModel(models, selectionParams, dbParams):
 
     :param models: models having a range of hyperparaters to be tried
     :param selectionParams: params governing model selection
-    :param dbParams: params specifying database
     :returns Best ModelSelectionResult and list of all ModelSelectionResults
     """
     start = time.time()
+    jobs = selectionParams["jobs"]
     nSplits = selectionParams["folds"]
     repeats = selectionParams["repeats"]
     cv = RepeatedStratifiedKFold(n_splits=nSplits, n_repeats=repeats)
-
-    jobs = selectionParams["jobs"]
-
-    conn = connFromParams(dbParams)
-    cursor = conn.cursor()
-
-    limit = selectionParams.get("featuresLimit", None)
-    labels, features = selectLabelsFeatures(cursor, dbParams, limit)
-    logger.info("Loaded %s feature vectors", len(features))
-    labels, classToLabel = convertClassLabels(labels)
 
     bestResult = None
     allResults = []
@@ -120,14 +109,13 @@ def selectBestModel(models, selectionParams, dbParams):
     bestResult.metrics.f1Macro = f1_score(labels, predicted, average=None)
     bestResult.metrics.confusionMatrix = confusion_matrix(labels, predicted)
 
-    conn.close()
     elapsed = time.time() - start
     if not modelCount:
         raise ValueError("No models specified")
 
     logger.info("fit %s models in: %.2fs ave: %.3fs", modelCount, elapsed,
                 elapsed / modelCount)
-    return bestResult, allResults, classToLabel
+    return bestResult, allResults
 
 
 _REPORT_COLS = ["Hyperparameters", "F1 micro", "F1 macro", "F1 weighted",

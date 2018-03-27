@@ -1,7 +1,9 @@
 {
   "__Generic pipeline params__": null,
   "globalParams": {
-    "places": 3
+    "places": 3,
+    "dataLimit": null,
+    "trainSize": 0.80
   },
   "database": {
     "timeout": 300,

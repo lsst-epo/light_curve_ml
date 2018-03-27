@@ -3,10 +3,14 @@ import argparse
 from datetime import timedelta
 import time
 
-from lcml.pipeline.database.sqlite_db import classLabelHistogram
+from sklearn.model_selection import train_test_split
+
+from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
+                                              connFromParams,
+                                              selectLabelsFeatures)
 from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.basic_logging import BasicLogging
-from lcml.utils.dataset_util import reportClassHistogram
+from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -68,11 +72,31 @@ class BatchPipeline:
             extractMins = (time.time() - extractStart) / 60
             logger.info("extracted in %.2fm", extractMins)
 
-        self.modelSelectionPhase()
+
+        conn = connFromParams(self.dbParams)
+        cursor = conn.cursor()
+        limit = self.globalParams.get("dataLimit", None)
+        labels, features = selectLabelsFeatures(cursor, self.dbParams, limit)
+        conn.close()
+
+        logger.info("Loaded %s feature vectors", len(features))
+        classLabels = convertClassLabels(labels)
+
+        trainSize = self.globalParams["trainSize"]
+        featTrain, labelsTrain, featTest, labelsTest = train_test_split(
+            features, labels, train_size=trainSize)
+        logger.info("train set size: %s test set size: %s", len(labelsTrain),
+                    len(labelsTest))
+        winner = self.modelSelectionPhase(featTrain, labelsTrain, classLabels)
+        self.evaluateTestSet(winner, featTest, labelsTest, classLabels)
 
         elapsedMins = timedelta(seconds=(time.time() - startAll))
         logger.info("Pipeline completed in: %s", elapsedMins)
 
     @abstractmethod
-    def modelSelectionPhase(self):
+    def modelSelectionPhase(self, trainFeatures, trainLabels, classLabel):
         """Evaluate ML models, generate performance measures, report results"""
+
+    @abstractmethod
+    def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
+        """ TODO """

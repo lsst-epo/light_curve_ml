@@ -1,4 +1,5 @@
 astropy>=2
+joblib
 matplotlib
 numpy
 pandas

@@ -16,7 +16,7 @@ class SupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
 
-    def modelSelectionPhase(self):
+    def modelSelectionPhase(self, trainFeatures, trainLabels, classToLabel):
         """Runs the supervised portion of a batch machine learning pipeline.
         Performs following stages:
         4) obtain models and peform model selection
@@ -29,9 +29,9 @@ class SupervisedPipeline(BatchPipeline):
             models = loadModels(modelLoadPath)
         if not models:
             models = self.selectionFcn(self.selectionParams)
-        bestResult, allResults, classToLabel = (
-            selectBestModel(models, self.selectionParams, self.dbParams)
-        )
+
+        bestResult, allResults = selectBestModel(models, self.selectionParams,
+                                                 trainFeatures, trainLabels)
         if self.serParams["modelSavePath"]:
             saveModel(bestResult, self.serParams["modelSavePath"],
                       self.conf, classToLabel)
@@ -63,3 +63,7 @@ class SupervisedPipeline(BatchPipeline):
         matSavePath = os.path.join(imgPath, "confusion-matrix.png")
         plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
                             matSavePath)
+
+    def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
+        # FIXME
+        pass
