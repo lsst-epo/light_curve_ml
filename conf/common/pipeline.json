@@ -27,13 +27,14 @@
       "impute": true
     }
   },
-  "modelSelection": {
+  "modelSearch": {
     "function": "grid",
     "params": {
+        "model": "sklearn.ensemble.RandomForestClassifier",
         "classWeight": "balanced",
         "treesValues": [250, 500, 750, 1000],
         "maxFeaturesValues": ["sqrt", "log2"],
-        "folds": 5,
+        "folds": 10,
         "repeats": 1,
         "jobs": -1
     }

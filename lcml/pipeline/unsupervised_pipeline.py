@@ -31,18 +31,10 @@ class UnsupervisedPipeline(BatchPipeline):
         BatchPipeline.__init__(self, conf)
 
     def modelSelectionPhase(self, trainFeatures, trainLabels, classToLabel):
-
-        # TODO if want to use this, figure out why it was returning -1
-        # density based estimation
-        # db = DBSCAN(n_jobs=-1)
-        # dbName = "dbscan"
-        # dbScores = []
-        # self.evaluateClusteringModel(db, dbName, labels, features, dbScores)
-
-        clusterValues = self.selectionParams["clusterValues"]
-        miniKMeansKwargs = self.selectionParams["miniBatchKMeansArgs"]
-        kmeansKwargs = self.selectionParams["kmeansArgs"]
-        aggKwargs = self.selectionParams["agglomerativeArgs"]
+        clusterValues = self.searchParams["clusterValues"]
+        miniKMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
+        kmeansKwargs = self.searchParams["kmeansArgs"]
+        aggKwargs = self.searchParams["agglomerativeArgs"]
 
         miniKmName = "mini-batch k-means"
         # kmName = "k-means"

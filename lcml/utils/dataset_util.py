@@ -8,21 +8,21 @@ from lcml.utils.format_util import fmtPct
 logger = BasicLogging.getLogger(__name__)
 
 
-def convertClassLabels(classLabels):
+def convertClassLabels(labels):
     """Converts all class labels to integer values unique to individual
     classes. Labels are modified in-place.
-    :param classLabels: Unique class labels
+    :param labels: Unique class labels
     :return Mapping version of original input and a dict containing the mapping
     from integer to original class label
     """
     # 'LPV'-> 1
-    labelToInt = {v: i for i, v in enumerate(np.unique(classLabels))}
-    for i in range(len(classLabels)):
-        classLabels[i] = labelToInt[classLabels[i]]
+    labelToInt = {v: i for i, v in enumerate(np.unique(labels))}
+    for i in range(len(labels)):
+        labels[i] = labelToInt[labels[i]]
 
     # 1 -> 'LPV'
-    intToLable = {i: v for v, i in labelToInt.items()}
-    return classLabels, intToLable
+    intToLabel = {i: v for v, i in labelToInt.items()}
+    return labels, intToLabel
 
 
 def reportDataset(dataset, labels=None):

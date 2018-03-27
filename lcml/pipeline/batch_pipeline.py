@@ -1,3 +1,12 @@
+"""This batch pipeline currently assumes a fixed choice of model type, e.g.,
+random forest. It performs model selection for the model type using k-fold cross
+validation on the training set. Then the winning model is retrained on the full
+training set and evaluated on the test set.
+
+See 'Scenario 2 - Train a model and tune (optimize) its hyperparameters' at:
+https://sebastianraschka.com/faq/docs/evaluate-a-model.html
+"""
+
 from abc import abstractmethod
 import argparse
 from datetime import timedelta
@@ -35,8 +44,8 @@ class BatchPipeline:
         self.extractFcn = conf.extractFeatures.fcn
         self.extractParams = conf.extractFeatures.params
 
-        self.selectionFcn = conf.modelSelection.fcn
-        self.selectionParams = conf.modelSelection.params
+        self.searchFcn = conf.modelSearch.fcn
+        self.searchParams = conf.modelSearch.params
 
         self.serParams = conf.serialParams
 
@@ -72,31 +81,31 @@ class BatchPipeline:
             extractMins = (time.time() - extractStart) / 60
             logger.info("extracted in %.2fm", extractMins)
 
-
+        limit = self.globalParams.get("dataLimit", None)
         conn = connFromParams(self.dbParams)
         cursor = conn.cursor()
-        limit = self.globalParams.get("dataLimit", None)
         labels, features = selectLabelsFeatures(cursor, self.dbParams, limit)
         conn.close()
 
         logger.info("Loaded %s feature vectors", len(features))
-        classLabels = convertClassLabels(labels)
+        intLabels, intToStrLabels = convertClassLabels(labels)
 
         trainSize = self.globalParams["trainSize"]
-        featTrain, labelsTrain, featTest, labelsTest = train_test_split(
-            features, labels, train_size=trainSize)
-        logger.info("train set size: %s test set size: %s", len(labelsTrain),
-                    len(labelsTest))
-        winner = self.modelSelectionPhase(featTrain, labelsTrain, classLabels)
-        self.evaluateTestSet(winner, featTest, labelsTest, classLabels)
+        XTrain, XTest, yTrain, yTest = train_test_split(features, intLabels,
+                                                        train_size=trainSize,
+                                                        test_size=1 - trainSize)
+        logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
+        modelResult = self.modelSelectionPhase(XTrain, yTrain, intToStrLabels)
+        self.evaluateTestSet(modelResult, XTest, yTest, intToStrLabels)
 
         elapsedMins = timedelta(seconds=(time.time() - startAll))
         logger.info("Pipeline completed in: %s", elapsedMins)
 
     @abstractmethod
     def modelSelectionPhase(self, trainFeatures, trainLabels, classLabel):
-        """Evaluate ML models, generate performance measures, report results"""
+        """Performs model selection on the training set and returns the selected
+        model trained on the full training set"""
 
     @abstractmethod
     def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
-        """ TODO """
+        """Evaluates specified model on the held-out test set."""

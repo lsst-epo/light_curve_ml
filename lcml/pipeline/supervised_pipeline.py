@@ -2,12 +2,12 @@ import numpy as np
 import os
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
-from lcml.pipeline.stage.model_selection import (reportModelSelection,
+from lcml.pipeline.stage.model_selection import (getClassificationMetrics,
+                                                 reportModelSelection,
                                                  selectBestModel)
 from lcml.pipeline.stage.persistence import loadModels, saveModel
 from lcml.pipeline.stage.visualization import contourPlot, plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
-
 
 logger = BasicLogging.getLogger(__name__)
 
@@ -16,32 +16,37 @@ class SupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
 
-    def modelSelectionPhase(self, trainFeatures, trainLabels, classToLabel):
+    def modelSelectionPhase(self, trainFeatures, trainLabels, intToStrLabel):
         """Runs the supervised portion of a batch machine learning pipeline.
         Performs following stages:
         4) obtain models and peform model selection
         5) serialize winning model to disk
         6) report metrics
         """
-        models = None
+        modelHyperparams = None
         modelLoadPath = self.serParams["modelLoadPath"]
         if modelLoadPath:
-            models = loadModels(modelLoadPath)
-        if not models:
-            models = self.selectionFcn(self.selectionParams)
+            modelHyperparams = loadModels(modelLoadPath)
+        if not modelHyperparams:
+            modelHyperparams = self.searchFcn(self.searchParams)
 
-        bestResult, allResults = selectBestModel(models, self.selectionParams,
+        model = self.searchParams["model"]
+        bestResult, allResults = selectBestModel(model, modelHyperparams,
+                                                 self.searchParams,
                                                  trainFeatures, trainLabels)
         if self.serParams["modelSavePath"]:
             saveModel(bestResult, self.serParams["modelSavePath"],
-                      self.conf, classToLabel)
+                      self.conf, intToStrLabel)
 
-        reportModelSelection(bestResult, allResults, classToLabel,
-                             self.globalParams.get("places", 3))
+        roundPlaces = self.globalParams["places"]
+        reportModelSelection(allResults, intToStrLabel, roundPlaces,
+                             title="CV search results")
+        reportModelSelection([bestResult], intToStrLabel, roundPlaces,
+                             title="Best result")
 
-        # plot effects of hyperparameters on F1-micro
-        x, y, z = zip(*[(r.hyperparameters["trees"],
-                         r.hyperparameters["maxFeatures"],
+        # plot effects of hyperparameters on weight-average F1
+        x, y, z = zip(*[(r.hyperparameters["n_estimators"],
+                         r.hyperparameters["max_features"],
                          r.metrics.f1Weighted)
                         for r in allResults])
         imgPath = self.serParams["imgPath"]
@@ -58,12 +63,22 @@ class SupervisedPipeline(BatchPipeline):
             contourPlot(xAxis, yAxis, zMat, savePath, title=title,
                         yLabel="trees")
 
-        logger.info("Integer class label mapping %s", classToLabel)
-        classLabels = [classToLabel[i] for i in sorted(classToLabel)]
-        matSavePath = os.path.join(imgPath, "confusion-matrix.png")
+        logger.info("Integer class label mapping %s", intToStrLabel)
+        classLabels = [intToStrLabel[i] for i in sorted(intToStrLabel)]
+        matSavePath = os.path.join(imgPath, "train-set-confusion-matrix.png")
         plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
-                            matSavePath)
+                            matSavePath, title="Best-model CV confusion matrix")
+        return bestResult
 
-    def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
-        # FIXME
-        pass
+    def evaluateTestSet(self, modelResult, XTest, yTest, intToStrLabels):
+        logger.info("Evaluating model on test set...")
+        yHat = modelResult.model.predict(XTest)
+        metrics = getClassificationMetrics(yTest, yHat)
+
+        imgPath = self.serParams["imgPath"]
+        matSavePath = os.path.join(imgPath, "test-set-confusion-matrix.png")
+        plotConfusionMatrix(metrics.confusionMatrix, intToStrLabels,
+                            matSavePath, title="Test-set confusion matrix")
+
+        reportModelSelection([modelResult], intToStrLabels,
+                             title="Test set performance")

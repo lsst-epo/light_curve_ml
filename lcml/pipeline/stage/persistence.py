@@ -31,10 +31,12 @@ def saveModel(result, modelPath, pipe, classToLabel):
     :param pipe: ML pipeline
     :param classToLabel: mapping from int to class label
     """
+    searchParams = pipe.modelSearch.params
+    searchParams.pop("model", None)  # remove class object
     params = {META_PARAMS_HYPER: result.hyperparameters,
               "loadParams": pipe.loadData.params,
               "extractParams": pipe.extractFeatures.params,
-              "selectionParams": pipe.modelSelection.params}
+              "searchParams": searchParams}
     metrics = vars(result.metrics)
     metrics["mapping"] = classToLabel
 

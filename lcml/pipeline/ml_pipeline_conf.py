@@ -1,8 +1,9 @@
 from collections import namedtuple
+import importlib
 
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.stage.extract import feetsExtractFeatures
-from lcml.pipeline.stage.model_selection import gridSearchSelection
+from lcml.pipeline.stage.model_selection import randomForestGridSearch
 from lcml.utils.pathing import ensureDir
 
 
@@ -11,7 +12,7 @@ GLOBAL_PARAMS = "globalParams"
 DB_PARAMS = "database"
 LOAD_DATA = "loadData"
 EXTRACT_FEATURES = "extractFeatures"
-MODEL_SELECTION = "modelSelection"
+MODEL_SEARCH = "modelSearch"
 SERIALIZATION = "serialization"
 
 
@@ -23,12 +24,12 @@ class MlPipelineConf:
     """Container for functions and parameter of the major components of a ML
      pipeline"""
     def __init__(self, globalParams, dbParams, loadData, extractFeatures,
-                 modelSelection, serialParams):
+                 modelSearch, serialParams):
         self.globalParams = globalParams
         self.dbParams = dbParams
         self.loadData = loadData
         self.extractFeatures = extractFeatures
-        self.modelSelection = modelSelection
+        self.modelSearch = modelSearch
         self.serialParams = serialParams
 
 
@@ -50,16 +51,25 @@ def loadPipelineConf(conf):
     extParams = conf[EXTRACT_FEATURES]["params"]
     extractFeatures = FunctionAndParams(extractFcn, extParams)
 
-    selectionType = conf[MODEL_SELECTION]["function"]
-    if selectionType == "grid":
-        selectFcn = gridSearchSelection
+    searchType = conf[MODEL_SEARCH]["function"]
+    if searchType == "grid":
+        searchFcn = randomForestGridSearch
     else:
-        raise ValueError("unsupported selection function: %s" % selectionType)
+        raise ValueError("unsupported search function: %s" % searchType)
 
-    selectParams = conf[MODEL_SELECTION]["params"]
+    searchParams = conf[MODEL_SEARCH]["params"]
+
+    modelType = conf[MODEL_SEARCH]["params"]["model"]
+    strInd = modelType.rfind(".")
+    moduleName = modelType[:strInd]
+    className = modelType[strInd + 1:]
+    module = importlib.import_module(moduleName)
+    class_ = getattr(module, className)
+    searchParams["model"] = class_
+
     ensureDir(conf[SERIALIZATION]["params"]["modelSavePath"])
-    modelSelection = FunctionAndParams(selectFcn, selectParams)
+    modelSearch = FunctionAndParams(searchFcn, searchParams)
 
     serialParams = conf[SERIALIZATION]["params"]
     return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadData,
-                          extractFeatures, modelSelection, serialParams)
+                          extractFeatures, modelSearch, serialParams)

@@ -80,7 +80,7 @@ t22 = lambda: np.dot(np.ones((5, 3)), np.ones((3, 2)))
 def t23():
     """negative all elements between 3 and 8 in place"""
     z = np.arange(11)
-    # TODO logical indexing
+    # logical indexing
     z[(3 < z) & (z <= 8)] *= -1
     return z
 

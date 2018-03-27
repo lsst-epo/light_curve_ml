@@ -1,6 +1,7 @@
 {
   "globalParams": {
-    "type": "supervised"
+    "type": "supervised",
+    "dataLimit": 100
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db"
@@ -18,10 +19,11 @@
       "skip": true
     }
   },
-  "modelSelection": {
+  "modelSearch": {
     "function": "grid",
     "params": {
-        "treesValues": [900, 1000, 1100, 1200],
+        "folds": 2,
+        "treesValues": [90, 100, 110, 120],
         "maxFeaturesValues": ["sqrt", "log2"]
     }
   },

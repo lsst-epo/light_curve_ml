@@ -31,10 +31,10 @@ CREATE_TABLE_FEATURES = ("CREATE TABLE IF NOT EXISTS %s ("
 INSERT_REPLACE_INTO_FEATURES = "INSERT OR REPLACE INTO %s VALUES (?, ?, ?)"
 
 
-SINGLE_COL_PAGED_SELECT_QRY = ("SELECT * FROM {0} "
-                               "WHERE {1} > \"{2}\" "
-                               "ORDER BY {1} "
-                               "LIMIT {3}")
+SINGLE_COL_PAGED_SELECT_QRY = ("SELECT {0} FROM {1} "
+                               "WHERE {2} > \"{3}\" "
+                               "ORDER BY {2} "
+                               "LIMIT {4}")
 
 
 def connFromParams(dbParams):
@@ -49,24 +49,32 @@ def connFromParams(dbParams):
     return conn
 
 
-def singleColPagingItr(cursor, table, column, columnInd=0, pageSize=1000):
+def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
+                       pageSize=1000, textField=True):
     """Perform a find with sqlite using single-column paging to maintain a
     reasonable memory footprint.
+
+    :param cursor: db cursor
+    :param table: table to query
+    :param column: single column to page over
+    :param selRows: desired rows returned
+    :param columnInd: 0-based index of paging column
+    :param pageSize: limit on the number of records returned in a single page
+    :param textField: flag specifying whether column's data type is text
     """
-    # TODO remove current assumptions - column value is text, all rows selected
-    previousValue = ""
+    prevVal = None
     rows = True
     while rows:
-        # assumes column is type text, remove that
-        q = SINGLE_COL_PAGED_SELECT_QRY.format(table, column, previousValue,
-                                               pageSize)
+        _fmtPrevVal = "\"{}\"".format(prevVal) if textField else prevVal
+        q = SINGLE_COL_PAGED_SELECT_QRY.format(selRows, table, column,
+                                               _fmtPrevVal, pageSize)
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
             yield r
 
         if rows:
-            previousValue = rows[-1][columnInd]
+            prevVal = rows[-1][columnInd]
 
 
 def selectLabelsFeatures(cursor, dbParams, limit=None):

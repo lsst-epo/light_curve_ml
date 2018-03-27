@@ -50,7 +50,7 @@ def plotConfusionMatrix(matrix, classes, savePath=None, normalize=True,
     plt.ylabel("True label")
     plt.xlabel("Predicted label")
     if savePath:
-        logger.info("Saving confusion matrix plot to %s", savePath)
+        logger.info("Saving plot: '%s' to: %s", title, savePath)
         plt.savefig(savePath, bbox_inches="tight")
     else:
         plt.show()
