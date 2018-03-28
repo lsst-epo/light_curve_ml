@@ -3,7 +3,9 @@
     "type": "supervised"
   },
   "database": {
-    "dbPath": "/data/db/macho/macho_processed.db"
+    "dbPath": "/data/db/macho/macho_processed.db",
+    "commitFrequency": 200,
+    "pageSize": 100
   },
   "loadData": {
     "params": {
