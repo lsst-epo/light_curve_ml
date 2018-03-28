@@ -1,4 +1,5 @@
 from collections import namedtuple
+from datetime import timedelta
 import time
 
 import numpy as np
@@ -14,7 +15,7 @@ from lcml.utils.format_util import truncatedFloat
 logger = BasicLogging.getLogger(__name__)
 
 
-_SCORING_TYPES = ["accuracy", "f1_micro", "f1_weighted"]
+_SCORING_TYPES = ["accuracy", "f1_micro", "f1_macro", "f1_weighted"]
 
 
 ModelSelectionResult = namedtuple("ModelSelectionResult",
@@ -68,50 +69,50 @@ def randomForestGridSearch(params):
             for f in featuresAxis for t in treesAxis)
 
 
-def selectBestModel(modelClass, hyperparamsItr, searchParams, X, y):
+def selectBestModel(modelClass, hyperparamsItr, X, y, folds, repeats,
+                    selectionMetricName="test_f1_weighted"):
     """Peforms k-fold cross validation on all specified models and selects model
-    with highest f1_micro score. Returns the best model, its hyperparameters,
-    and its scoring metrics including accuracy, f1_micro, individual class f1,
-    and confusion matrix
+    with highest selection metric. Returns the best `ModelSelectionResult`
+    trained and evaluated on the train set as well as all `ModelSelectionResult`
+    instance obtained from cross validation.
 
-    :param modelClass: class of model to perform selection on
-    :param hyperparamsItr: models having a range of hyperparaters to be tried
-    :param searchParams: params governing model selection
+    :param modelClass: class of model on which selection is performed
+    :param hyperparamsItr: hyperparameters to be tried
     :param X: training set of feature vectors
     :param y: training set of class labels
+    :param folds: number of folds used in cv
+    :param repeats: number of CV repetitions with different randomization
+    :param selectionMetricName: the name of the metric on which the selection is
+    based
     :returns Best ModelSelectionResult and list of all ModelSelectionResults
     """
     start = time.time()
-    jobs = searchParams["jobs"]
-    folds = searchParams["folds"]
-    repeats = searchParams["repeats"]
     cv = RepeatedStratifiedKFold(n_splits=folds, n_repeats=repeats)
-
     bestHyperparams = None
-    cvResults = []
+    allResults = []
     maxScore = 0
-    modelCount = 0
+    modelCount = None
     logger.info("Selecting %s model using %s-fold cross-validation "
                 "repeat=%s on train set...", modelClass.__name__, folds,
                 repeats)
-    for kwargs in hyperparamsItr:
+    for modelCount, kwargs in enumerate(hyperparamsItr):
         cvStart = time.time()
-        modelCount += 1
         model = modelClass(**kwargs)
         scores = cross_validate(model, X, y, scoring=_SCORING_TYPES, cv=cv,
-                                n_jobs=jobs)
+                                n_jobs=-1)
 
-        # average across folds
+        # average metrics across folds
         accuracy = np.average(scores["test_accuracy"])
         f1Micro = np.average(scores["test_f1_micro"])
         f1Macro = np.average(scores["test_f1_macro"])
-        f1Weighted = np.average(scores["test_f1_weighted"])
-        mets = ClassificationMetrics(accuracy, f1Micro, f1Macro, f1Weighted,
-                                     None)
-        kwargs.pop("n_jobs", None)
-        cvResults.append(ModelSelectionResult(model, kwargs, mets))
-        if f1Weighted > maxScore:
-            maxScore = f1Weighted
+        f1Weight = np.average(scores["test_f1_weighted"])
+        mets = ClassificationMetrics(accuracy, f1Micro, f1Macro, f1Weight, None)
+        allResults.append(ModelSelectionResult(model, kwargs, mets))
+
+        # update max
+        selectMetric = np.average(scores[selectionMetricName])
+        if selectMetric > maxScore:
+            maxScore = selectMetric
             bestHyperparams = kwargs
 
         logger.info("%s in %.2fs", kwargs, time.time() - cvStart)
@@ -119,17 +120,18 @@ def selectBestModel(modelClass, hyperparamsItr, searchParams, X, y):
     if not modelCount:
         raise ValueError("No hyperparameters specified")
 
-    elapsed = time.time() - start
+    elapsed = timedelta(seconds=time.time() - start)
     logger.info("fit %s models in: %.2fs ave: %.3fs", modelCount, elapsed,
                 elapsed / modelCount)
 
     # train winner on entire training set
+    logger.info("training winning model on train set...")
     bestModel = modelClass(**bestHyperparams)
     bestModel.fit(X, y)
     yHat = bestModel.predict(X)
     bestMetrics = getClassificationMetrics(y, yHat)
     bestResult = ModelSelectionResult(bestModel, bestHyperparams, bestMetrics)
-    return bestResult, cvResults
+    return bestResult, allResults
 
 
 _REPORT_COLS = ["Hyperparameters", "F1 micro", "F1 macro", "F1 weighted",

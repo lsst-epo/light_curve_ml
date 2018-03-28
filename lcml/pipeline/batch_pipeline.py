@@ -6,9 +6,7 @@ training set and evaluated on the test set.
 See 'Scenario 2 - Train a model and tune (optimize) its hyperparameters' at:
 https://sebastianraschka.com/faq/docs/evaluate-a-model.html
 """
-
 from abc import abstractmethod
-import argparse
 from datetime import timedelta
 import time
 
@@ -25,28 +23,27 @@ from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
 logger = BasicLogging.getLogger(__name__)
 
 
-def pipelineArgs():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True,
-                        help="relative path to pipeline conf")
-    return parser.parse_args()
-
-
 class BatchPipeline:
     def __init__(self, conf):
         self.conf = conf
         self.globalParams = conf.globalParams
+
+        # database params
         self.dbParams = conf.dbParams
 
+        # loading data from external source and converting to valid light curves
         self.loadFcn = conf.loadData.fcn
         self.loadParams = conf.loadData.params
 
+        # extracting feature vectors from light curves
         self.extractFcn = conf.extractFeatures.fcn
         self.extractParams = conf.extractFeatures.params
 
+        # searching over hyperparameters for best model configuration
         self.searchFcn = conf.modelSearch.fcn
         self.searchParams = conf.modelSearch.params
 
+        # serialization of state to disk
         self.serParams = conf.serialParams
 
     def runPipe(self):
@@ -60,7 +57,7 @@ class BatchPipeline:
         startAll = time.time()
 
         if self.loadParams.get("skip", False):
-            logger.info("Skip load and clean dataset")
+            logger.info("Skip dataset loading and cleaning")
         else:
             logger.info("Loading dataset...")
             self.loadFcn(self.loadParams, self.dbParams)
@@ -75,17 +72,14 @@ class BatchPipeline:
         if self.extractParams.get("skip", False):
             logger.info("Skip extract features")
         else:
-            logger.info("Extracting features...")
+            logger.info("Extracting features from LCs...")
             extractStart = time.time()
             self.extractFcn(self.extractParams, self.dbParams)
-            extractMins = (time.time() - extractStart) / 60
-            logger.info("extracted in %.2fm", extractMins)
+            extractElapsed = timedelta(seconds=time.time() - extractStart)
+            logger.info("extracted in %.2fm", extractElapsed)
 
-        limit = self.globalParams.get("dataLimit", None)
-        conn = connFromParams(self.dbParams)
-        cursor = conn.cursor()
-        labels, features = selectLabelsFeatures(cursor, self.dbParams, limit)
-        conn.close()
+        dataLim = self.globalParams.get("dataLimit", None)
+        labels, features = selectLabelsFeatures(self.dbParams, dataLim)
 
         logger.info("Loaded %s feature vectors", len(features))
         intLabels, intToStrLabels = convertClassLabels(labels)
@@ -98,7 +92,7 @@ class BatchPipeline:
         modelResult = self.modelSelectionPhase(XTrain, yTrain, intToStrLabels)
         self.evaluateTestSet(modelResult, XTest, yTest, intToStrLabels)
 
-        elapsedMins = timedelta(seconds=(time.time() - startAll))
+        elapsedMins = timedelta(seconds=time.time() - startAll)
         logger.info("Pipeline completed in: %s", elapsedMins)
 
     @abstractmethod

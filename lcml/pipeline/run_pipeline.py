@@ -14,10 +14,10 @@ logger = BasicLogging.getLogger(__name__)
 
 def _pipelineArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path", required=True,
+    parser.add_argument("--path", "-p", required=True,
                         help="relative path to pipeline conf")
-    parser.add_argument("--logFileName", required=True,
-                        help="desired name of log file in $LCML/logs")
+    parser.add_argument("--logFileName", "-l", required=True,
+                        help="name of log file in $LCML/logs")
     return parser.parse_args()
 
 

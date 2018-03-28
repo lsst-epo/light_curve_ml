@@ -4,8 +4,11 @@ from lcml.pipeline.unsupervised_pipeline import UnsupervisedPipeline
 from lcml.utils.context_util import joinRoot, loadJson
 
 
+_DEFAULT_PIPE_CONF_REL_PATH = "conf/common/pipeline.json"
+
+
 def recursiveMerge(a, b):
-    """Merges b into a recursively overwriting existing keys"""
+    """Merges dicts b into a recursively overwriting existing keys"""
     for key in b:
         if key in a:
             if isinstance(a[key], dict) and isinstance(b[key], dict):
@@ -25,7 +28,7 @@ def fromRelativePath(relPath):
     :param relPath: rel path to specific config overriding default config
     :return: Instance of `lcml.pipeline.batch_pipeline.BatchPipeline`
     """
-    defaultConf = loadJson(joinRoot("conf/common/pipeline.json"))
+    defaultConf = loadJson(joinRoot(_DEFAULT_PIPE_CONF_REL_PATH))
     relConf = loadJson(joinRoot(relPath))
     conf = defaultConf.copy()
     conf = recursiveMerge(conf, relConf)
@@ -37,6 +40,6 @@ def fromRelativePath(relPath):
     elif pipeType == "unsupervised":
         pipe = UnsupervisedPipeline(pipeConf)
     else:
-        raise ValueError("unsupported pipe type: %s" % pipeType)
+        raise ValueError("unsupported pipeline type: %s" % pipeType)
 
     return pipe

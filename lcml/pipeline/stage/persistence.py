@@ -16,44 +16,42 @@ logger = BasicLogging.getLogger(__name__)
 META_ARCH_BITS = "archBits"
 META_SKLEARN = "sklearnVersion"
 META_MAIN = "mainFile"
-META_PARAMS = "params"
-META_PARAMS_HYPER = "hyperparameters"
+META_PIPELINE_PARAMS = "pipelineParams"
+META_MODEL_HYPERPARAMS = "hyperparameters"
 META_METRICS = "metrics"
 _META_FILENAME = "metadata.json"
 
 
 def saveModel(result, modelPath, pipe, classToLabel):
-    """If 'modelPath' is specified, the model and its metadata, including
-    'trainParams' and 'cvScore' are saved to disk.
+    """Save a model and its metadata to disk.
 
-    :param result: ModelSelectionResult to save
+    :param result: ModelSelectionResult to persist
     :param modelPath: save path
     :param pipe: ML pipeline
     :param classToLabel: mapping from int to class label
     """
-    searchParams = pipe.modelSearch.params
-    searchParams.pop("model", None)  # remove class object
-    params = {META_PARAMS_HYPER: result.hyperparameters,
-              "loadParams": pipe.loadData.params,
-              "extractParams": pipe.extractFeatures.params,
-              "searchParams": searchParams}
-    metrics = vars(result.metrics)
-    metrics["mapping"] = classToLabel
-
     joblib.dump(result.model, modelPath)
-    logger.info("Dumped model to: %s", modelPath)
-    metadataPath = _metadataPath(modelPath)
+    logger.info("Saved model to: %s", modelPath)
+
     archBits = platform.architecture()[0]
     mainFile = sys.modules["__main__"].__file__
+    searchParams = pipe.modelSearch.params.copy()
+    searchParams.pop("model", None)  # remove class object
+    params = {META_MODEL_HYPERPARAMS: result.hyperparameters,
+              "loadParams": pipe.loadData.params,
+              "extractParams": pipe.extractFeatures.params,
+              "searchParams": searchParams,
+              "mapping": classToLabel}
+    metrics = vars(result.metrics)
     metricsJson = {k: v.tolist() if type(v) is np.ndarray else v
                    for k, v in metrics.items()}
     metadata = {META_ARCH_BITS: archBits, META_SKLEARN: sklearn.__version__,
-                META_MAIN: mainFile, META_PARAMS: params,
+                META_MAIN: mainFile, META_PIPELINE_PARAMS: params,
                 META_METRICS: metricsJson}
+    metadataPath = _metadataPath(modelPath)
     with open(metadataPath, "w") as f:
         json.dump(metadata, f, indent=4, sort_keys=True)
-
-    logger.info("Wrote metadata to: %s", metadataPath)
+    logger.info("Saved metadata to: %s", metadataPath)
 
 
 def loadModels(modelPath):
@@ -80,7 +78,7 @@ def loadModels(modelPath):
 
     models = None
     if model is not None and metadata is not None:
-        hyperparams = metadata[META_PARAMS][META_PARAMS_HYPER]
+        hyperparams = metadata[META_PIPELINE_PARAMS][META_MODEL_HYPERPARAMS]
         models = [(model, hyperparams)]
 
     return models

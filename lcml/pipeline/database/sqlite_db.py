@@ -77,17 +77,21 @@ def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
             prevVal = rows[-1][columnInd]
 
 
-def selectLabelsFeatures(cursor, dbParams, limit=None):
-    # potential memory issue
-    # each feature array will be around 576 bytes
-    # => can fit 17,361,111 feature vectors in 10GB RAM
-    #
-    # if this soaks up all the RAM try memory-mapped numpy array
+SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
+
+
+def selectLabelsFeatures(dbParams, limit=None):
+    """Selects features and their associated labels"""
+    # if this soaks up all the RAM,
+    # a) try memory-mapped numpy array:
     # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
     #
-    # - alternatively, randomly select a subset:
+    # b) allow random subset selection:
     # choice = set(np.random.choice(setSize, subsetSize, replace=False))
-    query = "SELECT label, features from %s" % dbParams["feature_table"]
+    conn = connFromParams(dbParams)
+    cursor = conn.cursor()
+
+    query = SELECT_FEATURES_LABELS_QRY % dbParams["feature_table"]
     if limit:
         query += " LIMIT %s" % limit
     labels = []
@@ -105,6 +109,7 @@ def selectLabelsFeatures(cursor, dbParams, limit=None):
         features.append(rawFeats)
         labels.append(r[0])
 
+    conn.close()
     return labels, features
 
 
