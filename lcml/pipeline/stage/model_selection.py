@@ -121,7 +121,7 @@ def selectBestModel(modelClass, hyperparamsItr, X, y, folds, repeats,
         raise ValueError("No hyperparameters specified")
 
     elapsed = timedelta(seconds=time.time() - start)
-    logger.info("fit %s models in: %.2fs ave: %.3fs", modelCount, elapsed,
+    logger.info("fit %s models in: %s ave: %s", modelCount, elapsed,
                 elapsed / modelCount)
 
     # train winner on entire training set
@@ -138,28 +138,30 @@ _REPORT_COLS = ["Hyperparameters", "F1 micro", "F1 macro", "F1 weighted",
                 "Accuracy"]
 
 
-def reportModelSelection(results, classToLabel, places=3, title=None):
+def reportModelSelection(hyperparamsList, metricsList, classToLabel,
+                         places=3, title=None):
     """Reports the hyperparameters and associated metrics obtain from model
     selection."""
     t = PrettyTable(_REPORT_COLS)
     if title:
         t.title = title
     roundedFloat = truncatedFloat(places)
-    for result in results:
-        t.add_row(_resultToRow(result, classToLabel, roundedFloat))
+    for i, hyperparams in enumerate(hyperparamsList):
+        mets = metricsList[i]
+        t.add_row(_resultToRow(hyperparams, mets, classToLabel, roundedFloat))
 
     logger.info("\n%s", t)
 
 
-def _resultToRow(result, classToLabel, roundFlt):
+def _resultToRow(hyperparameters, metrics, classToLabel, roundFlt):
     """Converts a ModelSelectionResult to a list of formatted values to be used
     as a row in a table"""
-    f1Micro = roundFlt % result.metrics.f1Micro
-    f1Individ = result.metrics.f1Macro
+    f1Micro = roundFlt % metrics.f1Micro
+    f1Individ = metrics.f1Macro
     if isinstance(f1Individ, (np.ndarray, list)):
         f1Individ = [(l, roundFlt % v)
                      for l, v
-                     in attachLabels(result.metrics.f1Macro, classToLabel)]
-    f1Weighted = roundFlt % result.metrics.f1Weighted
-    accuracy = roundFlt % (100 * result.metrics.accuracy)
-    return [result.hyperparameters, f1Micro, f1Individ, f1Weighted, accuracy]
+                     in attachLabels(metrics.f1Macro, classToLabel)]
+    f1Weighted = roundFlt % metrics.f1Weighted
+    accuracy = roundFlt % (100 * metrics.accuracy)
+    return [hyperparameters, f1Micro, f1Individ, f1Weighted, accuracy]

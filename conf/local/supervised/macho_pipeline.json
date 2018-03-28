@@ -1,7 +1,7 @@
 {
   "globalParams": {
     "type": "supervised",
-    "dataLimit": 500
+    "dataLimit": 1000
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db"

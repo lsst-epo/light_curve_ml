@@ -33,17 +33,19 @@ class SupervisedPipeline(BatchPipeline):
         model = self.searchParams["model"]
         folds = self.searchParams["folds"]
         repeats = self.searchParams["repeats"]
-        bestResult, allResults = selectBestModel(model, modelHyperparams,
+        bestRes, allResults = selectBestModel(model, modelHyperparams,
                                                  XTrain, yTrain, folds, repeats)
         if self.serParams["modelSavePath"]:
-            saveModel(bestResult, self.serParams["modelSavePath"],
+            saveModel(bestRes, self.serParams["modelSavePath"],
                       self.conf, intToStrLabel)
 
         roundPlaces = self.globalParams["places"]
-        reportModelSelection(allResults, intToStrLabel, roundPlaces,
-                             title="CV search results")
-        reportModelSelection([bestResult], intToStrLabel, roundPlaces,
-                             title="Best result")
+        _hypeList = [x.hyperparameters for x in allResults]
+        _metricsList = [x.metrics for x in allResults]
+        reportModelSelection(_hypeList, _metricsList, intToStrLabel,
+                             roundPlaces, title="CV search results")
+        reportModelSelection([bestRes.hyperparameters], [bestRes.metrics],
+                             intToStrLabel, roundPlaces, title="Best result")
 
         imgPath = self.serParams["imgPath"]
         self.plotHyperparamSearch(allResults, imgPath)
@@ -51,9 +53,9 @@ class SupervisedPipeline(BatchPipeline):
         logger.info("Integer class label mapping %s", intToStrLabel)
         classLabels = [intToStrLabel[i] for i in sorted(intToStrLabel)]
         matSavePath = os.path.join(imgPath, "train-set-confusion-matrix.png")
-        plotConfusionMatrix(bestResult.metrics.confusionMatrix, classLabels,
+        plotConfusionMatrix(bestRes.metrics.confusionMatrix, classLabels,
                             matSavePath, title="Best-model CV confusion matrix")
-        return bestResult
+        return bestRes
 
     @staticmethod
     def plotHyperparamSearch(allResults, imgPath):
@@ -85,5 +87,5 @@ class SupervisedPipeline(BatchPipeline):
         plotConfusionMatrix(metrics.confusionMatrix, intToStrLabels,
                             matSavePath, title="Test-set confusion matrix")
 
-        reportModelSelection([modelResult], intToStrLabels,
-                             title="Test set performance")
+        reportModelSelection([modelResult.hyperparameters], [metrics],
+                             intToStrLabels, title="Test set performance")
