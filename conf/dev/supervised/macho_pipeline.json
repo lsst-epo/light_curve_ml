@@ -23,6 +23,9 @@
   "modelSearch": {
     "function": "grid",
     "params": {
+        "folds": 10,
+        "treesValues": [900, 1000, 1100, 1200],
+        "maxFeaturesValues": ["sqrt", "log2"]
     }
   },
   "serialization": {
