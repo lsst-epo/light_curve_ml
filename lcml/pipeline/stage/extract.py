@@ -19,7 +19,7 @@ from lcml.utils.multiprocess import feetsExtract, mpMapGenerator
 logger = BasicLogging.getLogger(__name__)
 
 
-def feetsJobGenerator(fs, dbParams):
+def feetsJobGenerator(fs, dbParams, selRows="*"):
     """Returns a generator of tuples of the form:
     (featureSpace (feets.FeatureSpace),  id (str), label (str), times (ndarray),
      mags (ndarray), errors(ndarray))
@@ -37,8 +37,9 @@ def feetsJobGenerator(fs, dbParams):
     previousId = ""  # low precedence text value
     rows = True
     while rows:
-        q = SINGLE_COL_PAGED_SELECT_QRY.format(table, column, previousId,
-                                               pageSize)
+        _fmtPrevId = "\"{}\"".format(previousId)
+        q = SINGLE_COL_PAGED_SELECT_QRY.format(selRows, table, column,
+                                               _fmtPrevId, pageSize)
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
