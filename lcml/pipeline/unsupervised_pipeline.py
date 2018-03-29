@@ -40,8 +40,8 @@ class UnsupervisedPipeline(BatchPipeline):
         # kmName = "k-means"
         aggNameToLinkage = {"agg-ward": "ward", "agg-complete": "complete",
                             "agg-average": "average"}
-        nameToScores = {k: list()
-                        for k in list(aggNameToLinkage) + [miniKmName]}
+        nameToScores = {k: list() for k in list(aggNameToLinkage) + [miniKmName]
+                        }
         aggKwargs["memory"] = Memory(cachedir=aggKwargs["memory"])
         for c in clusterValues:
             logger.info("clusters: %s", c)

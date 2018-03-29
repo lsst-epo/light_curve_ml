@@ -1,4 +1,4 @@
-import cPickle
+import pickle
 
 import numpy as np
 
@@ -13,7 +13,7 @@ def serLc(times, mags, errors):
 
 
 def serArray(a):
-    return cPickle.dumps(a)
+    return pickle.dumps(a)
 
 
 def deserLc(times, mags, errors):
@@ -26,4 +26,5 @@ def deserLc(times, mags, errors):
 
 
 def deserArray(binStr):
-    return np.array(cPickle.loads(str(binStr)), dtype=np.float64)
+    return np.array(pickle.loads(binStr.encode("utf-8"), encoding="bytes"),
+                    dtype=np.float64)

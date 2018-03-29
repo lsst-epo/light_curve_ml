@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
                                               connFromParams,
-                                              selectLabelsFeatures)
+                                              selectFeaturesLabels)
 from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
@@ -79,7 +79,7 @@ class BatchPipeline:
             logger.info("extracted in %.2fm", extractElapsed)
 
         dataLim = self.globalParams.get("dataLimit", None)
-        labels, features = selectLabelsFeatures(self.dbParams, dataLim)
+        features, labels = selectFeaturesLabels(self.dbParams, dataLim)
 
         logger.info("Loaded %s feature vectors", len(features))
         intLabels, intToStrLabels = convertClassLabels(labels)

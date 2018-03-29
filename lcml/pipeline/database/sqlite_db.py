@@ -80,7 +80,7 @@ def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
 SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
 
 
-def selectLabelsFeatures(dbParams, limit=None):
+def selectFeaturesLabels(dbParams, limit=None):
     """Selects features and their associated labels"""
     # if this soaks up all the RAM,
     # a) try memory-mapped numpy array:
@@ -110,7 +110,7 @@ def selectLabelsFeatures(dbParams, limit=None):
         labels.append(r[0])
 
     conn.close()
-    return labels, features
+    return features, labels
 
 
 def classLabelHistogram(dbParams):
