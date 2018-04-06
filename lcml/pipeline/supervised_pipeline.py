@@ -9,6 +9,7 @@ from lcml.pipeline.stage.persistence import loadModels, saveModel
 from lcml.pipeline.stage.visualization import contourPlot, plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 
+
 logger = BasicLogging.getLogger(__name__)
 
 
@@ -84,8 +85,10 @@ class SupervisedPipeline(BatchPipeline):
 
         imgPath = self.serParams["imgPath"]
         matSavePath = os.path.join(imgPath, "test-set-confusion-matrix.png")
-        plotConfusionMatrix(metrics.confusionMatrix, intToStrLabels,
+        classLabels = [intToStrLabels[i] for i in sorted(intToStrLabels)]
+        plotConfusionMatrix(metrics.confusionMatrix, classLabels,
                             matSavePath, title="Test-set confusion matrix")
 
         reportModelSelection([modelResult.hyperparameters], [metrics],
-                             intToStrLabels, title="Test set performance")
+                             intToStrLabels,
+                             title="Test set performance")

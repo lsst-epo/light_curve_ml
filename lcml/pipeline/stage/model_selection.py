@@ -157,11 +157,11 @@ def _resultToRow(hyperparameters, metrics, classToLabel, roundFlt):
     """Converts a ModelSelectionResult to a list of formatted values to be used
     as a row in a table"""
     f1Micro = roundFlt % metrics.f1Micro
-    f1Individ = metrics.f1Macro
-    if isinstance(f1Individ, (np.ndarray, list)):
-        f1Individ = [(l, roundFlt % v)
+    f1Macro = roundFlt % metrics.f1Macro
+    if isinstance(f1Macro, (np.ndarray, list)):
+        f1Macro = [(l, roundFlt % v)
                      for l, v
                      in attachLabels(metrics.f1Macro, classToLabel)]
     f1Weighted = roundFlt % metrics.f1Weighted
     accuracy = roundFlt % (100 * metrics.accuracy)
-    return [hyperparameters, f1Micro, f1Individ, f1Weighted, accuracy]
+    return [hyperparameters, f1Micro, f1Macro, f1Weighted, accuracy]

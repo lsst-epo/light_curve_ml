@@ -14,7 +14,7 @@ and checking out commit:
  
 8df90f7eed63885d2e5885f4944e74121f49e5bd 
 
-then running it's install
+then running its install
 
 `pip install -e .`
 

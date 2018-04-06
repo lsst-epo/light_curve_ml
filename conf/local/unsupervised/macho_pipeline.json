@@ -1,6 +1,7 @@
 {
   "globalParams": {
-    "type": "unsupervised"
+    "type": "unsupervised",
+    "trainSize": 0.999999
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db"

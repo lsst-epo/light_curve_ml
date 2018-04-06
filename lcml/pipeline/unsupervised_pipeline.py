@@ -33,11 +33,9 @@ class UnsupervisedPipeline(BatchPipeline):
     def modelSelectionPhase(self, trainFeatures, trainLabels, classToLabel):
         clusterValues = self.searchParams["clusterValues"]
         miniKMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
-        kmeansKwargs = self.searchParams["kmeansArgs"]
         aggKwargs = self.searchParams["agglomerativeArgs"]
 
         miniKmName = "mini-batch k-means"
-        # kmName = "k-means"
         aggNameToLinkage = {"agg-ward": "ward", "agg-complete": "complete",
                             "agg-average": "average"}
         nameToScores = {k: list() for k in list(aggNameToLinkage) + [miniKmName]
