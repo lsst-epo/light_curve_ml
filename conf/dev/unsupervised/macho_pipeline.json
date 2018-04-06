@@ -1,0 +1,55 @@
+{
+  "globalParams": {
+    "type": "unsupervised",
+    "trainSize": 0.999999
+  },
+  "database": {
+    "dbPath": "/data/db/macho/macho_processed.db"
+  },
+  "loadData": {
+    "params": {
+      "dataName": "macho",
+      "relativePath": "data/macho/macho-train.csv",
+      "filter": [-99.0],
+      "skip": true
+    }
+  },
+  "extractFeatures": {
+    "params": {
+      "skip": true
+    }
+  },
+  "modelSearch": {
+    "params": {
+      "clusterValues": [4, 5, 6, 7, 8, 9, 10, 11],
+      "miniBatchKMeansArgs": {
+        "init": "k-means++",
+        "max_iter": 1000,
+        "batch_size": 5000,
+        "verbose": false,
+        "max_no_improvement": 1000,
+        "n_init": 5000,
+        "reassignment_ratio": 1
+      },
+      "kmeansArgs": {
+        "init": "k-means++",
+        "max_iter": 1000,
+        "verbose": false,
+        "n_init": 5000,
+        "precompute_distances": "auto",
+        "n_jobs": -1,
+        "algorithm": "full"
+      },
+      "agglomerativeArgs": {
+        "memory": "/data/tmp"
+      }
+    }
+  },
+  "serialization": {
+    "params": {
+      "modelLoadPath": null,
+      "modelSavePath": "/data/models/macho/unsupervised/classifier-macho.pkl",
+      "imgPath": "/data/models/macho/unsupervised"
+    }
+  }
+}
