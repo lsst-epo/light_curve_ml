@@ -21,8 +21,8 @@
     "function": "grid",
     "params": {
       "featuresLimit": null,
-      "treesValues": [300, 350, 400, 450, 500, 550, 600, 650, 700, 750],
-      "maxFeaturesValues": [
+      "n_trees": [300, 350, 400, 450, 500, 550, 600, 650, 700, 750],
+      "max_features": [
         "sqrt",
         "log2"
       ]

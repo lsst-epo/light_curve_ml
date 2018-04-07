@@ -32,8 +32,8 @@
     "params": {
         "model": "sklearn.ensemble.RandomForestClassifier",
         "classWeight": "balanced",
-        "treesValues": [250, 500, 750, 1000],
-        "maxFeaturesValues": ["sqrt", "log2"],
+        "n_trees": [250, 500, 750, 1000],
+        "max_features": ["sqrt", "log2"],
         "folds": 5,
         "repeats": 1,
         "jobs": -1

@@ -23,8 +23,12 @@
     "function": "grid",
     "params": {
         "folds": 5,
-        "treesValues": [900, 1000, 1100, 1200],
-        "maxFeaturesValues": ["sqrt", "log2"]
+        "search": {
+          "n_trees": [50, 100, 250, 900, 1000, 1100, 1200],
+          "criterion": ["gini", "entropy"],
+          "max_features": [3, 6, 9, 12, 18],
+          "min_samples_leaf": [1, 2, 3]
+        }
     }
   },
   "serialization": {

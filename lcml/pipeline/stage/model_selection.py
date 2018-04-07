@@ -5,7 +5,7 @@ import time
 import numpy as np
 from prettytable import PrettyTable
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from sklearn.model_selection import cross_validate, RepeatedStratifiedKFold
+from sklearn.model_selection import cross_validate, GridSearchCV, RepeatedStratifiedKFold
 
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels
@@ -48,15 +48,15 @@ def randomForestGridSearch(params):
     classWeight = params["classWeight"]
 
     # default for num estimators is 10
-    if "treesValues" in params:
-        treesAxis = params["treesValues"]
+    if "n_trees" in params:
+        treesAxis = params["n_trees"]
     else:
         treesStart = params["treesStart"]
         treesStop = params["treesStop"]
         treesAxis = range(treesStart, treesStop)
 
-    if "maxFeaturesValues" in params:
-        featuresAxis = params["maxFeaturesValues"]
+    if "max_features" in params:
+        featuresAxis = params["max_features"]
     else:
         # default for max features is sqrt(len(features))
         # for feets len(features) ~= 64 => 8
@@ -67,6 +67,40 @@ def randomForestGridSearch(params):
     return (({"n_estimators": t, "max_features": f, "n_jobs": jobs,
               "class_weight": classWeight})
             for f in featuresAxis for t in treesAxis)
+
+
+def gridSearchCv(modelClass, X, y, folds, repeats):
+    # TODO meld this with supervised pipeline, pass in params, compute metrics
+    # as in `selectBestModel` which may require splitting in selection and
+    #  training
+    njobs = -1
+    classWeight = "balanced"
+    estimator = modelClass(n_jobs=njobs, class_weight=classWeight)
+
+    param_grid = {"n_estimators": [100, 200, 300],
+                  "max_features": ["sqrt", "log2", None]}
+    scoring = "f1_weighted"
+    pre_dispatch = "10 * n_jobs"
+    iid = True  # assume class distribution is iid
+    verbose = 2
+    error_score = "raise"
+
+    cv = RepeatedStratifiedKFold(n_splits=folds, n_repeats=repeats)
+    clf = GridSearchCV(estimator=estimator, param_grid=param_grid,
+                       scoring=scoring, pre_dispatch=pre_dispatch, iid=iid,
+                       cv=cv, verbose=verbose, error_score=error_score)
+    clf.fit(X, y)
+
+    cvResults = clf.cv_results_
+    print("result keys: %s" % list(cvResults))
+
+    bestScore = clf.best_score_
+    print("best score: %s" % bestScore)
+    bestParams = clf.best_params_
+    print("best params: %s" % bestParams)
+
+    metrics = None
+    return ModelSelectionResult(clf.best_estimator_, clf.best_params_, metrics)
 
 
 def selectBestModel(modelClass, hyperparamsItr, X, y, folds, repeats,

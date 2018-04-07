@@ -2,10 +2,10 @@ from collections import namedtuple
 from datetime import timedelta
 import time
 
-from joblib import Memory
 from prettytable import PrettyTable
 from sklearn import metrics
 from sklearn.cluster import AgglomerativeClustering, MiniBatchKMeans
+from sklearn.externals.joblib import Memory
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.utils.basic_logging import BasicLogging
