@@ -37,7 +37,7 @@ def savePipelineResults(conf: MlPipelineConf, classMapping: dict,
     :param testMetrics: best model's scores on test set
     """
     path = conf.serialParams["modelSavePath"]
-    if not path:
+    if not path or not result:
         return
 
     joblib.dump(result.model, path)

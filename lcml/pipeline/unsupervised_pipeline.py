@@ -66,8 +66,8 @@ class UnsupervisedPipeline(BatchPipeline):
                                              nameToScores[aggName])
                 del agg
 
-        externMetrics = sorted(vars(nameToScores[miniKmName][0][0]))
-        internMetrics = sorted(vars(nameToScores[miniKmName][0][1]))
+        externMetrics = sorted(nameToScores[miniKmName][0][0]._asdict())
+        internMetrics = sorted(nameToScores[miniKmName][0][1]._asdict())
         clusterTable = PrettyTable(["clusters", "clustering algorithm"] +
                                    externMetrics + internMetrics)
         for i, c in enumerate(clusterValues):
@@ -80,7 +80,7 @@ class UnsupervisedPipeline(BatchPipeline):
     @staticmethod
     def _scoreValues(scores):
         """Converts namedtuple to a list of values in key-sorted order"""
-        return ["%.4f" % kv[1] for kv in sorted(vars(scores).items())]
+        return ["%.4f" % kv[1] for kv in sorted(scores._asdict().items())]
 
     @staticmethod
     def evaluateClusteringModel(model, modelName, labels, features, scores):
