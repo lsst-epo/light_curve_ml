@@ -1,5 +1,5 @@
 sudo apt update
-sudo apt install python-minimal python-pip sqlite3 p7zip-full python-tk
+sudo apt install python3-minimal python3-pip sqlite3 p7zip-full python3-tk
 pip install --upgrade pip
 
 >>> import matplotlib

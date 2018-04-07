@@ -13,8 +13,9 @@ import time
 from sklearn.model_selection import train_test_split
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
-                                              connFromParams,
                                               selectFeaturesLabels)
+from lcml.pipeline.stage.model_selection import ClassificationMetrics, ModelSelectionResult
+from lcml.pipeline.stage.persistence import savePipelineResults
 from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
@@ -82,24 +83,28 @@ class BatchPipeline:
         features, labels = selectFeaturesLabels(self.dbParams, dataLim)
 
         logger.info("Loaded %s feature vectors", len(features))
-        intLabels, intToStrLabels = convertClassLabels(labels)
+        intLabels, labelsIntToStr = convertClassLabels(labels)
 
         trainSize = self.globalParams["trainSize"]
         XTrain, XTest, yTrain, yTest = train_test_split(features, intLabels,
                                                         train_size=trainSize,
                                                         test_size=1 - trainSize)
         logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
-        modelResult = self.modelSelectionPhase(XTrain, yTrain, intToStrLabels)
-        self.evaluateTestSet(modelResult, XTest, yTest, intToStrLabels)
+        bestResult = self.modelSelectionPhase(XTrain, yTrain, labelsIntToStr)
+        testMetrics = self.evaluateTestSet(bestResult, XTest, yTest,
+                                           labelsIntToStr)
+        savePipelineResults(self.conf, labelsIntToStr, bestResult, testMetrics)
 
         elapsedMins = timedelta(seconds=time.time() - startAll)
         logger.info("Pipeline completed in: %s", elapsedMins)
 
     @abstractmethod
-    def modelSelectionPhase(self, trainFeatures, trainLabels, classLabel):
+    def modelSelectionPhase(self, trainFeatures, trainLabels,
+                            classLabel) -> ModelSelectionResult:
         """Performs model selection on the training set and returns the selected
         model trained on the full training set"""
 
     @abstractmethod
-    def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
+    def evaluateTestSet(self, model, featuresTest, labelsTest,
+                        classLabels) -> ClassificationMetrics:
         """Evaluates specified model on the held-out test set."""

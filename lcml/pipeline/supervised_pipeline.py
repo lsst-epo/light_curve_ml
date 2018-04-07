@@ -2,10 +2,12 @@ import numpy as np
 import os
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
-from lcml.pipeline.stage.model_selection import (getClassificationMetrics,
+from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
+                                                 getClassificationMetrics,
+                                                 ModelSelectionResult,
                                                  reportModelSelection,
                                                  selectBestModel)
-from lcml.pipeline.stage.persistence import loadModels, saveModel
+from lcml.pipeline.stage.persistence import loadModels
 from lcml.pipeline.stage.visualization import contourPlot, plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 
@@ -17,7 +19,8 @@ class SupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
 
-    def modelSelectionPhase(self, XTrain, yTrain, intToStrLabel):
+    def modelSelectionPhase(self, XTrain, yTrain,
+                            intToStrLabel) -> ModelSelectionResult:
         """Runs the supervised portion of a batch machine learning pipeline.
         Performs following stages:
         4) obtain models and peform model selection
@@ -35,10 +38,7 @@ class SupervisedPipeline(BatchPipeline):
         folds = self.searchParams["folds"]
         repeats = self.searchParams["repeats"]
         bestRes, allResults = selectBestModel(model, modelHyperparams,
-                                                 XTrain, yTrain, folds, repeats)
-        if self.serParams["modelSavePath"]:
-            saveModel(bestRes, self.serParams["modelSavePath"],
-                      self.conf, intToStrLabel)
+                                              XTrain, yTrain, folds, repeats)
 
         roundPlaces = self.globalParams["places"]
         _hypeList = [x.hyperparameters for x in allResults]
@@ -78,7 +78,8 @@ class SupervisedPipeline(BatchPipeline):
             contourPlot(xAxis, yAxis, zMat, savePath, title=title,
                         yLabel="trees")
 
-    def evaluateTestSet(self, modelResult, XTest, yTest, intToStrLabels):
+    def evaluateTestSet(self, modelResult, XTest, yTest, intToStrLabels) -> (
+            ClassificationMetrics):
         logger.info("Evaluating model on test set...")
         yHat = modelResult.model.predict(XTest)
         metrics = getClassificationMetrics(yTest, yHat)
@@ -92,3 +93,4 @@ class SupervisedPipeline(BatchPipeline):
         reportModelSelection([modelResult.hyperparameters], [metrics],
                              intToStrLabels,
                              title="Test set performance")
+        return metrics

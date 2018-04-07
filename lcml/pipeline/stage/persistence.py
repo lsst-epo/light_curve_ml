@@ -7,6 +7,9 @@ import numpy as np
 import sklearn
 from sklearn.externals import joblib
 
+from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
+from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
+                                                 ModelSelectionResult)
 from lcml.utils.basic_logging import BasicLogging
 
 
@@ -18,40 +21,52 @@ META_SKLEARN = "sklearnVersion"
 META_MAIN = "mainFile"
 META_PIPELINE_PARAMS = "pipelineParams"
 META_MODEL_HYPERPARAMS = "hyperparameters"
-META_METRICS = "metrics"
+META_CV_METRICS = "cvMetrics"
+META_TEST_METRICS = "testMetrics"
 _META_FILENAME = "metadata.json"
 
 
-def saveModel(result, modelPath, pipe, classToLabel):
-    """Save a model and its metadata to disk.
+def savePipelineResults(conf: MlPipelineConf, classMapping: dict,
+                        result: ModelSelectionResult,
+                        testMetrics: ClassificationMetrics):
+    """Save the key aspects and results of a pipeline run to disk.
 
-    :param result: ModelSelectionResult to persist
-    :param modelPath: save path
-    :param pipe: ML pipeline
-    :param classToLabel: mapping from int to class label
+    :param conf: ML pipeline conf containing params
+    :param classMapping: class label mapping, int to string
+    :param result: ModelSelectionResult of best model found in cross-validation
+    :param testMetrics: best model's scores on test set
     """
-    joblib.dump(result.model, modelPath)
-    logger.info("Saved model to: %s", modelPath)
+    path = conf.serialParams["modelSavePath"]
+    if not path:
+        return
+
+    joblib.dump(result.model, path)
+    logger.info("Saved model to: %s", path)
 
     archBits = platform.architecture()[0]
     mainFile = sys.modules["__main__"].__file__
-    searchParams = pipe.modelSearch.params.copy()
+    searchParams = conf.modelSearch.params.copy()
     searchParams.pop("model", None)  # remove class object
     params = {META_MODEL_HYPERPARAMS: result.hyperparameters,
-              "loadParams": pipe.loadData.params,
-              "extractParams": pipe.extractFeatures.params,
+              "loadParams": conf.loadData.params,
+              "extractParams": conf.extractFeatures.params,
               "searchParams": searchParams,
-              "mapping": classToLabel}
-    metrics = vars(result.metrics)
-    metricsJson = {k: v.tolist() if type(v) is np.ndarray else v
-                   for k, v in metrics.items()}
+              "mapping": classMapping}
+    cvMetricsDict = _metricsToDict(result.metrics)
+    testMetricsDict = _metricsToDict(testMetrics)
     metadata = {META_ARCH_BITS: archBits, META_SKLEARN: sklearn.__version__,
                 META_MAIN: mainFile, META_PIPELINE_PARAMS: params,
-                META_METRICS: metricsJson}
-    metadataPath = _metadataPath(modelPath)
+                META_CV_METRICS: cvMetricsDict,
+                META_TEST_METRICS: testMetricsDict}
+    metadataPath = _metadataPath(path)
     with open(metadataPath, "w") as f:
         json.dump(metadata, f, indent=4, sort_keys=True)
     logger.info("Saved metadata to: %s", metadataPath)
+
+
+def _metricsToDict(metrics: ClassificationMetrics) -> dict:
+    return {k: v.tolist() if type(v) is np.ndarray else v
+            for k, v in vars(metrics).items()}
 
 
 def loadModels(modelPath):
