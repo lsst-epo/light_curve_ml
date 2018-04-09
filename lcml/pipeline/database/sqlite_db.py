@@ -110,7 +110,8 @@ def selectFeaturesLabels(dbParams, limit=None):
         labels.append(r[0])
 
     conn.close()
-    logger.info("Feature vectors have length: %s", len(features[0]))
+    if features:
+        logger.info("Feature vectors have length: %s", len(features[0]))
     return features, labels
 
 

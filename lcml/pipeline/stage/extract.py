@@ -53,7 +53,7 @@ def feetsJobGenerator(fs, dbParams, selRows="*"):
     conn.close()
 
 
-def feetsExtractFeatures(params, dbParams):
+def feetsExtractFeatures(params, dbParams, limit):
     """Runs light curves through 'feets' library obtaining feature vectors.
     Perfoms the extraction using multiprocessing. Output order of jobs will not
     necessarily correspond to input order, therefore, class labels are returned
@@ -83,6 +83,7 @@ def feetsExtractFeatures(params, dbParams):
     skippedLcCount = 0
     dbExceptions = 0
     totalLcCount = 0
+    count = 0
     for uid, label, ftNames, features in mpMapGenerator(feetsExtract, jobs):
         # loop variables come from lcml.utils.multiprocess._feetsExtract
         totalLcCount += 1
@@ -101,6 +102,10 @@ def feetsExtractFeatures(params, dbParams):
         except OperationalError:
             logger.exception("Failed to insert %s", args)
             dbExceptions += 1
+
+        count += 1
+        if count >= limit:
+            break
 
     reportTableCount(cursor, featuresTable, msg="after extracting")
     conn.commit()

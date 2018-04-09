@@ -12,7 +12,8 @@
       "dataName": "macho",
       "relativePath": "/data/datasets/macho/macho-train.csv",
       "filter": [-99.0],
-      "skip": true
+      "skip": false,
+      "transform": false
     }
   },
   "extractFeatures": {

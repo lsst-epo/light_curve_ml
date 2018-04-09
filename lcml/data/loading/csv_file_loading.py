@@ -123,13 +123,12 @@ class MachoAdapter(LcDataAdapter):
         errors.append(row[4])
 
 
-def loadFlatLcDataset(params, dbParams):
+def loadFlatLcDataset(params, dbParams, limit: float):
     """Loads and aggregates light curves from single csv file of individual data
     points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])
     logger.info("Loading from: %s", dataPath)
     skiprows = params["skiprows"]
-    dataLimit = params.get("dataLimit", float("inf"))
     table = dbParams["raw_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
 
@@ -156,7 +155,7 @@ def loadFlatLcDataset(params, dbParams):
 
         completedLcs = 0
         uid = label = times = mags = errors = None
-        for i, row in enumerate(reader):
+        for row in reader:
             if adapter.rowEquals(row, uid):
                 # continue building current LC
                 adapter.appendRow(times, mags, errors, row)
@@ -173,12 +172,13 @@ def loadFlatLcDataset(params, dbParams):
                         logger.info("committing progress: %s", completedLcs)
                         conn.commit()
 
+                    if completedLcs >= limit:
+                        break
+
                 # initialize new LC
                 uid, label, times, mags, errors = adapter.initLcFrom(row)
 
-            if i >= dataLimit:
-                break
-
-    reportTableCount(cursor, table, msg="after loading")
+    logger.info("committing progress: %s", completedLcs)
     conn.commit()
+    reportTableCount(cursor, table, msg="after loading")
     conn.close()

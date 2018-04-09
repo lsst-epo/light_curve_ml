@@ -28,4 +28,4 @@ def deserLc(times: bytes, mags: bytes, errors: bytes) -> (
 
 def deserArray(bytesObj: bytes) -> np.ndarray:
     bytesArray = pickle.loads(bytesObj, encoding="bytes")
-    return np.array(bytesArray, dtype=np.float64).reshape(-1, 1)
+    return np.array(bytesArray, dtype=np.float64)

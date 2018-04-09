@@ -14,7 +14,8 @@ from sklearn.model_selection import train_test_split
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
                                               selectFeaturesLabels)
-from lcml.pipeline.stage.model_selection import ClassificationMetrics, ModelSelectionResult
+from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
+                                                 ModelSelectionResult)
 from lcml.pipeline.stage.persistence import savePipelineResults
 from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.basic_logging import BasicLogging
@@ -56,15 +57,15 @@ class BatchPipeline:
         """
         logger.info("___Begin batch ML pipeline___")
         startAll = time.time()
-
+        dataLimit = self.globalParams.get("dataLimit", float("inf"))
         if self.loadParams.get("skip", False):
             logger.info("Skip dataset loading and cleaning")
         else:
             logger.info("Loading dataset...")
-            self.loadFcn(self.loadParams, self.dbParams)
+            self.loadFcn(self.loadParams, self.dbParams, dataLimit)
 
             logger.info("Cleaning dataset...")
-            cleanLightCurves(self.loadParams, self.dbParams)
+            cleanLightCurves(self.loadParams, self.dbParams, dataLimit)
 
         logger.info("Cleaned dataset class histogram...")
         histogram = classLabelHistogram(self.dbParams)
@@ -75,25 +76,21 @@ class BatchPipeline:
         else:
             logger.info("Extracting features from LCs...")
             extractStart = time.time()
-            self.extractFcn(self.extractParams, self.dbParams)
+            self.extractFcn(self.extractParams, self.dbParams, dataLimit)
             extractElapsed = timedelta(seconds=time.time() - extractStart)
-            logger.info("extracted in %.2fm", extractElapsed)
+            logger.info("extracted in %s", extractElapsed)
 
-        dataLim = self.globalParams.get("dataLimit", None)
-        features, labels = selectFeaturesLabels(self.dbParams, dataLim)
-
-        logger.info("Loaded %s feature vectors", len(features))
-        intLabels, labelsIntToStr = convertClassLabels(labels)
-
-        trainSize = self.globalParams["trainSize"]
-        XTrain, XTest, yTrain, yTest = train_test_split(features, intLabels,
-                                                        train_size=trainSize,
-                                                        test_size=1 - trainSize)
-        logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
-        bestResult = self.modelSelectionPhase(XTrain, yTrain, labelsIntToStr)
-        testMetrics = self.evaluateTestSet(bestResult, XTest, yTest,
-                                           labelsIntToStr)
-        savePipelineResults(self.conf, labelsIntToStr, bestResult, testMetrics)
+        features, labels = selectFeaturesLabels(self.dbParams, dataLimit)
+        if features:
+            logger.info("Loaded %s feature vectors", len(features))
+            intLabels, labelMapping = convertClassLabels(labels)
+            trainSize = self.globalParams["trainSize"]
+            XTrain, XTest, yTrain, yTest = train_test_split(features, intLabels,
+                train_size=trainSize, test_size=1 - trainSize)
+            logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
+            best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
+            testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
+            savePipelineResults(self.conf, labelMapping, best, testMetrics)
 
         elapsedMins = timedelta(seconds=time.time() - startAll)
         logger.info("Pipeline completed in: %s", elapsedMins)

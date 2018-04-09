@@ -74,7 +74,14 @@ DEFAULT_STD_LIMIT = 5
 DEFAULT_ERROR_LIMIT = 3
 
 
-def cleanLightCurves(params, dbParams):
+def _transformArray(scaler: StandardScaler, a: np.ndarray) -> np.ndarray:
+    _reshaped = a.reshape(-1, 1)
+    _transformed = scaler.fit(_reshaped).transform(_reshaped)
+    return _transformed.reshape(-1)
+
+
+_COUNT_QRY = "SELECT COUNT(*) from %s"
+def cleanLightCurves(params, dbParams, limit: float):
     """Clean lightcurves and report details on discards."""
     removes = set(params["filter"]) if "filter" in params else set()
     removes = removes.union(NON_FINITE_VALUES)
@@ -90,21 +97,20 @@ def cleanLightCurves(params, dbParams):
 
     reportTableCount(cursor, cleanTable, msg="before cleaning")
     insertOrReplace = INSERT_REPLACE_INTO_LCS % cleanTable
-    _countSel = [_
-                 for _ in cursor.execute("SELECT COUNT(*) from %s" % rawTable)]
-    totalLcs = _countSel[0]
+    totalLcs = [_ for _ in cursor.execute(_COUNT_QRY % rawTable)][0][0]
+    totalLcs = max(totalLcs, limit)
 
     shortIssueCount = 0
     bogusIssueCount = 0
     outlierIssueCount = 0
     insertCount = 0
     scaler = StandardScaler(copy=False)
-    cursor.execute("SELECT * FROM %s" % rawTable)
-    for r in singleColPagingItr(cursor, rawTable, "id"):
+    for i, r in enumerate(singleColPagingItr(cursor, rawTable, "id")):
         times, mags, errors = deserLc(*r[2:])
-        trMags = scaler.fit(mags).transform(mags)
-        trErrors = scaler.fit(errors).transform(errors)
-        lc, issue, _ = preprocessLc(times, trMags, trErrors, removes=removes,
+        if params["transform"]:
+            mags = _transformArray(scaler, mags)
+            errors = _transformArray(scaler, errors)
+        lc, issue, _ = preprocessLc(times, mags, errors, removes=removes,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
         if lc:
             args = (r[0], r[1]) + serLc(*lc)
@@ -122,6 +128,9 @@ def cleanLightCurves(params, dbParams):
             outlierIssueCount += 1
         else:
             raise ValueError("Bad reason: %s" % issue)
+
+        if i >= limit:
+            break
 
     reportTableCount(cursor, cleanTable, msg="after cleaning")
     conn.commit()
