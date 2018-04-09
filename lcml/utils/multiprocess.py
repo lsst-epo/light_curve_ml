@@ -45,4 +45,10 @@ def _feetsExtract(featureSpace, uid, label, times, mags, errors):
     :param errors: lc errors
     :return: lc uid, lc class label, feature names, feature values
     """
-    return (uid, label) + featureSpace.extract(times, mags, errors)
+    try:
+        ftNames, features = featureSpace.extract(times, mags, errors)
+    except BaseException:
+        logger.exception("Feets bombed for LC uid: %s", uid)
+        raise
+
+    return uid, label, ftNames, features
