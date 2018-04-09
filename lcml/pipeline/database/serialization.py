@@ -3,8 +3,8 @@ import pickle
 import numpy as np
 
 
-def serLc(times, mags, errors):
-    """Serializes light curve attributes (as arrays or lists) to binary strings
+def serLc(times, mags, errors) -> (bytes, bytes, bytes):
+    """Serializes light curve attributes (as arrays or lists) to bytes objs
     """
     t = serArray(times)
     m = serArray(mags)
@@ -12,12 +12,13 @@ def serLc(times, mags, errors):
     return t, m, e
 
 
-def serArray(a):
+def serArray(a: np.ndarray) -> bytes:
     return pickle.dumps(a)
 
 
-def deserLc(times, mags, errors):
-    """Deserializes 3 binary-string light curves to 3 numpy arrays of float64
+def deserLc(times: bytes, mags: bytes, errors: bytes) -> (
+        np.ndarray, np.ndarray, np.ndarray):
+    """Deserializes bytes light curves to numpy arrays of float64
     (equivalent of Python float)."""
     t = deserArray(times)
     m = deserArray(mags)
@@ -25,6 +26,6 @@ def deserLc(times, mags, errors):
     return t, m, e
 
 
-def deserArray(binStr):
-    return np.array(pickle.loads(binStr.encode("utf-8"), encoding="bytes"),
-                    dtype=np.float64)
+def deserArray(bytesObj: bytes) -> np.ndarray:
+    bytesArray = pickle.loads(bytesObj, encoding="bytes")
+    return np.array(bytesArray, dtype=np.float64).reshape(-1, 1)

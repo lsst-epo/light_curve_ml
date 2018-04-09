@@ -9,12 +9,12 @@
     "params": {
       "dataName": "ogle3",
       "relativePath": "/data/datasets/ogle3/ogle3.csv",
-      "skip": true
+      "skip": false
     }
   },
   "extractFeatures": {
     "params": {
-      "skip": true
+      "skip": false
     }
   },
   "modelSearch": {

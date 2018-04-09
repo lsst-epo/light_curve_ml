@@ -1,6 +1,7 @@
 import numpy as np
 
 from feets import preprocess
+from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_LCS,
                                               INSERT_REPLACE_INTO_LCS,
@@ -89,16 +90,21 @@ def cleanLightCurves(params, dbParams):
 
     reportTableCount(cursor, cleanTable, msg="before cleaning")
     insertOrReplace = INSERT_REPLACE_INTO_LCS % cleanTable
+    _countSel = [_
+                 for _ in cursor.execute("SELECT COUNT(*) from %s" % rawTable)]
+    totalLcs = _countSel[0]
 
     shortIssueCount = 0
     bogusIssueCount = 0
     outlierIssueCount = 0
-    totalLcs = cursor.execute("SELECT COUNT(*) from %s" % rawTable).next()[0]
-    cursor.execute("SELECT * FROM %s" % rawTable)
     insertCount = 0
+    scaler = StandardScaler(copy=False)
+    cursor.execute("SELECT * FROM %s" % rawTable)
     for r in singleColPagingItr(cursor, rawTable, "id"):
         times, mags, errors = deserLc(*r[2:])
-        lc, issue, _ = preprocessLc(times, mags, errors, removes=removes,
+        trMags = scaler.fit(mags).transform(mags)
+        trErrors = scaler.fit(errors).transform(errors)
+        lc, issue, _ = preprocessLc(times, trMags, trErrors, removes=removes,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
         if lc:
             args = (r[0], r[1]) + serLc(*lc)

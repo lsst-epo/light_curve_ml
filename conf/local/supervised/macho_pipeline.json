@@ -1,21 +1,24 @@
 {
   "globalParams": {
-    "type": "supervised"
+    "type": "supervised",
+    "dataLimit": 10
   },
   "database": {
-    "dbPath": "data/macho/macho_processed.db"
+    "dbPath": "data/macho/macho_processed.db",
+    "commitFrequency": 5000,
+    "pageSize": 5000
   },
   "loadData": {
     "params": {
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
       "filter": [-99.0],
-      "skip": true
+      "skip": false
     }
   },
   "extractFeatures": {
     "params": {
-      "skip": true
+      "skip": false
     }
   },
   "modelSearch": {
@@ -34,10 +37,10 @@
         },
         "gridSearch": {
           "param_grid": {
-            "n_estimators": [50, 100, 250, 900, 1000, 1100, 1200],
+            "n_estimators": [50],
             "criterion": ["gini", "entropy"],
-            "max_features": [3, 6, 9, 12, 18],
-            "min_samples_leaf": [1, 2, 3]
+            "max_features": [6, 9],
+            "min_samples_leaf": [1]
           },
           "scoring": "f1_weighted",
           "pre_dispatch": "10 * n_jobs",
