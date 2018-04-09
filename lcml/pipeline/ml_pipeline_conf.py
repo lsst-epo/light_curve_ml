@@ -3,7 +3,7 @@ import importlib
 
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.stage.extract import feetsExtractFeatures
-from lcml.pipeline.stage.model_selection import randomForestGridSearch
+from lcml.pipeline.stage.model_selection import gridSearchCv
 from lcml.utils.pathing import ensureDir
 
 
@@ -33,6 +33,16 @@ class MlPipelineConf:
         self.serialParams = serialParams
 
 
+def _initModel(modelConfig: dict):
+    modelClass = modelConfig["class"]
+    strInd = modelClass.rfind(".")
+    moduleName = modelClass[:strInd]
+    className = modelClass[strInd + 1:]
+    module = importlib.import_module(moduleName)
+    class_ = getattr(module, className)
+    return class_(**modelConfig["params"])
+
+
 def loadPipelineConf(conf):
     """Constructs a pipeline from a .json config."""
     # load data fcn
@@ -53,23 +63,15 @@ def loadPipelineConf(conf):
 
     searchType = conf[MODEL_SEARCH]["function"]
     if searchType == "grid":
-        searchFcn = randomForestGridSearch
+        searchFcn = gridSearchCv
     else:
         raise ValueError("unsupported search function: %s" % searchType)
 
     searchParams = conf[MODEL_SEARCH]["params"]
-
-    modelType = conf[MODEL_SEARCH]["params"]["model"]
-    strInd = modelType.rfind(".")
-    moduleName = modelType[:strInd]
-    className = modelType[strInd + 1:]
-    module = importlib.import_module(moduleName)
-    class_ = getattr(module, className)
-    searchParams["model"] = class_
-
-    ensureDir(conf[SERIALIZATION]["params"]["modelSavePath"])
+    searchParams["model"] = _initModel(conf[MODEL_SEARCH]["model"])
     modelSearch = FunctionAndParams(searchFcn, searchParams)
 
     serialParams = conf[SERIALIZATION]["params"]
+    ensureDir(serialParams["modelSavePath"])
     return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadData,
                           extractFeatures, modelSearch, serialParams)

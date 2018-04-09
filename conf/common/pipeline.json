@@ -10,8 +10,8 @@
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
-    "commitFrequency": 2000,
-    "pageSize": 1000
+    "commitFrequency": 200,
+    "pageSize": 100
   },
   "loadData": {
     "params": {

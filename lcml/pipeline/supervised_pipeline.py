@@ -1,13 +1,14 @@
+from datetime import timedelta
 import numpy as np
 import os
+import time
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
-                                                 getClassificationMetrics,
+                                                 defaultClassificationMetrics,
                                                  ModelSelectionResult,
-                                                 reportModelSelection,
-                                                 selectBestModel)
-from lcml.pipeline.stage.persistence import loadModels
+                                                 reportModelSelection)
+from lcml.pipeline.stage.persistence import loadModelAndHyperparms
 from lcml.pipeline.stage.visualization import contourPlot, plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 
@@ -22,41 +23,32 @@ class SupervisedPipeline(BatchPipeline):
     def modelSelectionPhase(self, XTrain, yTrain,
                             intToStrLabel) -> ModelSelectionResult:
         """Runs the supervised portion of a batch machine learning pipeline.
-        Performs following stages:
-        4) obtain models and peform model selection
-        5) serialize winning model to disk
-        6) report metrics
+        Loads a model and its hyperparams from disk if specified or performs
+        model selection and to obtain a ModelSelectionResult.
         """
-        modelHyperparams = None
         modelLoadPath = self.serParams["modelLoadPath"]
         if modelLoadPath:
-            modelHyperparams = loadModels(modelLoadPath)
-        if not modelHyperparams:
-            modelHyperparams = self.searchFcn(self.searchParams)
+            model, hyperparams = loadModelAndHyperparms(modelLoadPath)
+            result = ModelSelectionResult(model, hyperparams, None)
+        else:
+            start = time.time()
+            result = self.searchFcn(self.searchParams["model"], XTrain, yTrain,
+                                    self.searchParams["cv"],
+                                    self.searchParams["gridSearch"])
+            logger.info("search completed in: %s",
+                        timedelta(seconds=time.time() - start))
 
-        model = self.searchParams["model"]
-        folds = self.searchParams["folds"]
-        repeats = self.searchParams["repeats"]
-        bestRes, allResults = selectBestModel(model, modelHyperparams,
-                                              XTrain, yTrain, folds, repeats)
-
-        roundPlaces = self.globalParams["places"]
-        _hypeList = [x.hyperparameters for x in allResults]
-        _metricsList = [x.metrics for x in allResults]
-        reportModelSelection(_hypeList, _metricsList, intToStrLabel,
-                             roundPlaces, title="CV search results")
-        reportModelSelection([bestRes.hyperparameters], [bestRes.metrics],
-                             intToStrLabel, roundPlaces, title="Best result")
+            roundPlaces = self.globalParams["places"]
+            reportModelSelection([result.hyperparameters], [result.metrics],
+                                 intToStrLabel, roundPlaces,
+                                 title="Best result")
 
         imgPath = self.serParams["imgPath"]
-        self.plotHyperparamSearch(allResults, imgPath)
-
-        logger.info("Integer class label mapping %s", intToStrLabel)
         classLabels = [intToStrLabel[i] for i in sorted(intToStrLabel)]
         matSavePath = os.path.join(imgPath, "train-set-confusion-matrix.png")
-        plotConfusionMatrix(bestRes.metrics.confusionMatrix, classLabels,
+        plotConfusionMatrix(result.metrics.confusionMatrix, classLabels,
                             matSavePath, title="Best-model CV confusion matrix")
-        return bestRes
+        return result
 
     @staticmethod
     def plotHyperparamSearch(allResults, imgPath):
@@ -82,7 +74,7 @@ class SupervisedPipeline(BatchPipeline):
             ClassificationMetrics):
         logger.info("Evaluating model on test set...")
         yHat = modelResult.model.predict(XTest)
-        metrics = getClassificationMetrics(yTest, yHat)
+        metrics = defaultClassificationMetrics(yTest, yHat)
 
         imgPath = self.serParams["imgPath"]
         matSavePath = os.path.join(imgPath, "test-set-confusion-matrix.png")

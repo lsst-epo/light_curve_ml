@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import sys
+from typing import Tuple, Union
 
 import numpy as np
 import sklearn
@@ -69,7 +70,8 @@ def _metricsToDict(metrics: ClassificationMetrics) -> dict:
             for k, v in vars(metrics).items()}
 
 
-def loadModels(modelPath):
+def loadModelAndHyperparms(modelPath) -> Tuple[Union[object, None],
+                                               Union[dict, None]]:
     """Load previous winning model and its metadata from disk"""
     try:
         model = joblib.load(modelPath)
@@ -91,12 +93,11 @@ def loadModels(modelPath):
                         metadata[META_ARCH_BITS], platform.architecture()[0])
         raise ValueError("Unusable model")
 
-    models = None
     if model is not None and metadata is not None:
         hyperparams = metadata[META_PIPELINE_PARAMS][META_MODEL_HYPERPARAMS]
-        models = [(model, hyperparams)]
+        return model, hyperparams
 
-    return models
+    return None, None
 
 
 def _metadataPath(modelPath):

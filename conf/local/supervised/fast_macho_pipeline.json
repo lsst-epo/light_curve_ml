@@ -1,14 +1,16 @@
 {
   "globalParams": {
-    "type": "supervised"
+    "type": "supervised",
+    "dataLimit": 500
   },
   "database": {
-    "dbPath": "/data/db/ogle3/ogle3_processed.db"
+    "dbPath": "data/macho/macho_processed.db"
   },
   "loadData": {
     "params": {
-      "dataName": "ogle3",
-      "relativePath": "/data/datasets/ogle3/ogle3.csv",
+      "dataName": "macho",
+      "relativePath": "data/macho/macho-train.csv",
+      "filter": [-99.0],
       "skip": true
     }
   },
@@ -33,10 +35,10 @@
         },
         "gridSearch": {
           "param_grid": {
-            "n_estimators": [50, 100, 250],
+            "n_estimators": [20, 30],
             "criterion": ["gini", "entropy"],
-            "max_features": [3, 6, 9, 12, 18],
-            "min_samples_leaf": [1, 2, 3]
+            "max_features": [3, 6],
+            "min_samples_leaf": [1]
           },
           "scoring": "f1_weighted",
           "pre_dispatch": "10 * n_jobs",
@@ -50,8 +52,8 @@
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/data/models/ogle3/supervised/rf-classifier-ogle3-full.pkl",
-      "imgPath": "/data/models/ogle3/supervised"
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/rf-classifier-macho.pkl",
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised"
     }
   }
 }

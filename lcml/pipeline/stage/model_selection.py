@@ -1,11 +1,15 @@
 from collections import namedtuple
 from datetime import timedelta
+from functools import reduce
+import operator
 import time
+from typing import Generator
 
 import numpy as np
 from prettytable import PrettyTable
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
-from sklearn.model_selection import cross_validate, GridSearchCV, RepeatedStratifiedKFold
+from sklearn.model_selection import (cross_validate, GridSearchCV,
+                                     RepeatedStratifiedKFold)
 
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels
@@ -13,9 +17,6 @@ from lcml.utils.format_util import truncatedFloat
 
 
 logger = BasicLogging.getLogger(__name__)
-
-
-_SCORING_TYPES = ["accuracy", "f1_micro", "f1_macro", "f1_weighted"]
 
 
 ModelSelectionResult = namedtuple("ModelSelectionResult",
@@ -32,8 +33,9 @@ class ClassificationMetrics:
         self.confusionMatrix = confusionMatrix
 
 
-def getClassificationMetrics(y, yHat):
-    # TODO research average=None vs. average="macro"
+def defaultClassificationMetrics(y, yHat) -> ClassificationMetrics:
+    """Default metrics suitable for multiclass classification, unequal classes.
+    """
     return ClassificationMetrics(accuracy_score(y, yHat),
                                  f1_score(y, yHat, average="micro"),
                                  f1_score(y, yHat, average="macro"),
@@ -41,7 +43,59 @@ def getClassificationMetrics(y, yHat):
                                  confusion_matrix(y, yHat))
 
 
-def randomForestGridSearch(params):
+def reportParamGrid(paramGrid: dict):
+    product = reduce(operator.mul, (len(x) for x in paramGrid.values()), 1)
+    logger.info("Param grid:\n%s\nyields %s possibilities", paramGrid, product)
+
+
+def gridSearchCv(estimator, X, y, cvParams: dict,
+                 gridSearchParams: dict) -> ModelSelectionResult:
+    reportParamGrid(gridSearchParams["param_grid"])
+    cv = RepeatedStratifiedKFold(**cvParams)
+    clf = GridSearchCV(estimator=estimator, cv=cv, refit=True,
+                       **gridSearchParams)
+    clf.fit(X, y)
+
+    yHat = clf.best_estimator_.predict(X)
+    metrics = defaultClassificationMetrics(y, yHat)
+    return ModelSelectionResult(clf.best_estimator_, clf.best_params_, metrics)
+
+
+_REPORT_COLS = ["Hyperparameters", "F1 micro", "F1 macro", "F1 weighted",
+                "Accuracy"]
+
+
+def reportModelSelection(hyperparamsList, metricsList, classToLabel,
+                         places=3, title=None):
+    """Reports the hyperparameters and associated metrics obtain from model
+    selection."""
+    t = PrettyTable(_REPORT_COLS)
+    if title:
+        t.title = title
+    roundedFloat = truncatedFloat(places)
+    for i, hyperparams in enumerate(hyperparamsList):
+        mets = metricsList[i]
+        t.add_row(_resultToRow(hyperparams, mets, classToLabel, roundedFloat))
+
+    logger.info("\n%s", t)
+
+
+def _resultToRow(hyperparameters, metrics, classToLabel, roundFlt):
+    """Converts a ModelSelectionResult to a list of formatted values to be used
+    as a row in a table"""
+    f1Micro = roundFlt % metrics.f1Micro
+    f1Macro = roundFlt % metrics.f1Macro
+    if isinstance(f1Macro, (np.ndarray, list)):
+        f1Macro = [(l, roundFlt % v)
+                     for l, v
+                     in attachLabels(metrics.f1Macro, classToLabel)]
+    f1Weighted = roundFlt % metrics.f1Weighted
+    accuracy = roundFlt % (100 * metrics.accuracy)
+    return [hyperparameters, f1Micro, f1Macro, f1Weighted, accuracy]
+
+
+# DEPRECATED
+def randomForestGridSearch(params) -> Generator[dict, None, None]:
     """Returns a generator of `RandomForestClassifier` params and hyperparams
     as a kwarg dict"""
     jobs = params["jobs"]
@@ -64,45 +118,13 @@ def randomForestGridSearch(params):
         featuresStop = params["maxFeaturesStop"]
         featuresAxis = range(featuresStart, featuresStop)
 
-    return (({"n_estimators": t, "max_features": f, "n_jobs": jobs,
-              "class_weight": classWeight})
+    return ({"n_estimators": t, "max_features": f, "n_jobs": jobs,
+              "class_weight": classWeight}
             for f in featuresAxis for t in treesAxis)
 
 
-def gridSearchCv(modelClass, X, y, folds, repeats):
-    # TODO meld this with supervised pipeline, pass in params, compute metrics
-    # as in `selectBestModel` which may require splitting in selection and
-    #  training
-    njobs = -1
-    classWeight = "balanced"
-    estimator = modelClass(n_jobs=njobs, class_weight=classWeight)
-
-    param_grid = {"n_estimators": [100, 200, 300],
-                  "max_features": ["sqrt", "log2", None]}
-    scoring = "f1_weighted"
-    pre_dispatch = "10 * n_jobs"
-    iid = True  # assume class distribution is iid
-    verbose = 2
-    error_score = "raise"
-
-    cv = RepeatedStratifiedKFold(n_splits=folds, n_repeats=repeats)
-    clf = GridSearchCV(estimator=estimator, param_grid=param_grid,
-                       scoring=scoring, pre_dispatch=pre_dispatch, iid=iid,
-                       cv=cv, verbose=verbose, error_score=error_score)
-    clf.fit(X, y)
-
-    cvResults = clf.cv_results_
-    print("result keys: %s" % list(cvResults))
-
-    bestScore = clf.best_score_
-    print("best score: %s" % bestScore)
-    bestParams = clf.best_params_
-    print("best params: %s" % bestParams)
-
-    metrics = None
-    return ModelSelectionResult(clf.best_estimator_, clf.best_params_, metrics)
-
-
+# DEPRECATED
+_SCORING_TYPES = ["accuracy", "f1_micro", "f1_macro", "f1_weighted"]
 def selectBestModel(modelClass, hyperparamsItr, X, y, folds, repeats,
                     selectionMetricName="test_f1_weighted"):
     """Peforms k-fold cross validation on all specified models and selects model
@@ -163,39 +185,6 @@ def selectBestModel(modelClass, hyperparamsItr, X, y, folds, repeats,
     bestModel = modelClass(**bestHyperparams)
     bestModel.fit(X, y)
     yHat = bestModel.predict(X)
-    bestMetrics = getClassificationMetrics(y, yHat)
+    bestMetrics = defaultClassificationMetrics(y, yHat)
     bestResult = ModelSelectionResult(bestModel, bestHyperparams, bestMetrics)
     return bestResult, allResults
-
-
-_REPORT_COLS = ["Hyperparameters", "F1 micro", "F1 macro", "F1 weighted",
-                "Accuracy"]
-
-
-def reportModelSelection(hyperparamsList, metricsList, classToLabel,
-                         places=3, title=None):
-    """Reports the hyperparameters and associated metrics obtain from model
-    selection."""
-    t = PrettyTable(_REPORT_COLS)
-    if title:
-        t.title = title
-    roundedFloat = truncatedFloat(places)
-    for i, hyperparams in enumerate(hyperparamsList):
-        mets = metricsList[i]
-        t.add_row(_resultToRow(hyperparams, mets, classToLabel, roundedFloat))
-
-    logger.info("\n%s", t)
-
-
-def _resultToRow(hyperparameters, metrics, classToLabel, roundFlt):
-    """Converts a ModelSelectionResult to a list of formatted values to be used
-    as a row in a table"""
-    f1Micro = roundFlt % metrics.f1Micro
-    f1Macro = roundFlt % metrics.f1Macro
-    if isinstance(f1Macro, (np.ndarray, list)):
-        f1Macro = [(l, roundFlt % v)
-                     for l, v
-                     in attachLabels(metrics.f1Macro, classToLabel)]
-    f1Weighted = roundFlt % metrics.f1Weighted
-    accuracy = roundFlt % (100 * metrics.accuracy)
-    return [hyperparameters, f1Micro, f1Macro, f1Weighted, accuracy]
