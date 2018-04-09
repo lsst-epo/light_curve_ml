@@ -98,7 +98,8 @@ def cleanLightCurves(params, dbParams, limit: float):
     reportTableCount(cursor, cleanTable, msg="before cleaning")
     insertOrReplace = INSERT_REPLACE_INTO_LCS % cleanTable
     totalLcs = [_ for _ in cursor.execute(_COUNT_QRY % rawTable)][0][0]
-    totalLcs = max(totalLcs, limit)
+    if limit != float("inf"):
+        totalLcs = max(totalLcs, limit)
 
     shortIssueCount = 0
     bogusIssueCount = 0

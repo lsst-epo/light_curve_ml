@@ -92,21 +92,21 @@ def selectFeaturesLabels(dbParams, limit=None):
     cursor = conn.cursor()
 
     query = SELECT_FEATURES_LABELS_QRY % dbParams["feature_table"]
-    if limit:
+    if limit not in (None, float("inf")):
         query += " LIMIT %s" % limit
+
     labels = []
     features = []
     for r in cursor.execute(query):
-        rawFeats = deserArray(r[1])
+        # rawFeats = deserArray(r[1])
+        # # TODO eventually remove when features have been rerun
+        # if not np.isfinite(rawFeats.sum()) and not np.isfinite(rawFeats).all():
+        #     for i, f in enumerate(rawFeats):
+        #         if not np.isfinite(f):
+        #             logger.warning("imputing 0.0 for: %s", f)
+        #             rawFeats[i] = 0.0
 
-        # TODO eventually remove when features have been rerun
-        if not np.isfinite(rawFeats.sum()) and not np.isfinite(rawFeats).all():
-            for i, f in enumerate(rawFeats):
-                if not np.isfinite(f):
-                    logger.warning("imputing 0.0 for: %s", f)
-                    rawFeats[i] = 0.0
-
-        features.append(rawFeats)
+        features.append(deserArray(r[1]))
         labels.append(r[0])
 
     conn.close()

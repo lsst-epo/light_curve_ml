@@ -12,14 +12,14 @@
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
       "filter": [-99.0],
-      "skip": false,
+      "skip": true,
       "transform": false
     }
   },
   "extractFeatures": {
     "params": {
       "excludedFeatures": [],
-      "skip": true
+      "skip": false
     }
   },
   "modelSearch": {
@@ -47,7 +47,7 @@
           "pre_dispatch": "10 * n_jobs",
           "n_jobs": -1,
           "iid": true,
-          "verbose": 2,
+          "verbose": 1,
           "error_score": "raise"
         }
     }
