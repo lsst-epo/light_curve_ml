@@ -1,4 +1,3 @@
-import numpy as np
 import sqlite3
 
 from lcml.pipeline.database.serialization import deserArray

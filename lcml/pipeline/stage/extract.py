@@ -10,7 +10,7 @@ from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_FEATURES,
                                               connFromParams,
                                               reportTableCount)
 from lcml.pipeline.database.serialization import deserLc, serArray
-from lcml.pipeline.stage.preprocess import allFinite, NON_FINITE_VALUES
+from lcml.pipeline.stage.preprocess import allFinite
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 from lcml.utils.multiprocess import feetsExtract, mpMapGenerator
@@ -27,6 +27,7 @@ def feetsJobGenerator(fs, dbParams, selRows="*"):
 
     :param fs: feets.FeatureSpace object required to perform extraction
     :param dbParams: additional params
+    :param selRows: which rows to select from clean LC table
     """
     table = dbParams["clean_lc_table"]
     pageSize = dbParams["pageSize"]
