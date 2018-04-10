@@ -1,15 +1,11 @@
 astropy>=2
+
+# recent commit from feets library
+-e git+https://github.com/carpyncho/feets.git@40157f9bbfad87cc23753bad76a8414614e56814#egg=feets
 matplotlib
 numpy
 pandas
 prettytable
-
 pytz
 scikit-learn
 scipy
-
-# install from source at commit 8df90f7eed63885d2e5885f4944e74121f49e5bd
-# feets
-# nupic>=1.0
-# htmresearch
-# upsilon

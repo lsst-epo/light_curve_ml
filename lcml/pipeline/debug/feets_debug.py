@@ -50,6 +50,12 @@ def main():
         return
 
     times, mag, err = deserLc(*row[2:])
+
+    startInd = 500
+    endInd = 1000
+    times = times[startInd:endInd]
+    mag = mag[startInd:endInd]
+    err = err[startInd:endInd]
     conn.close()
 
     i = 0
@@ -67,7 +73,8 @@ def main():
             fts, values = fs.extract(times, mag, err)
         except BaseException as e:
             print(e)
-            print("failed for feature: %s")
+            print("failed for feature: %s with exception: %s" % (featureName,
+                                                                 e))
             break
 
         if len(fts) and len(values):
@@ -79,6 +86,7 @@ def main():
     print("total %s skipped: %s" % (i, len(skipped)))
     print("skipped: %s" % skipped)
     print("elapsed: %s" % timedelta(seconds=time.time()-start))
+
 
 if __name__ == "__main__":
     main()

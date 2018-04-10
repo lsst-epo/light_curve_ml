@@ -1,5 +1,7 @@
 import argparse
 
+import matplotlib
+matplotlib.use("Agg")
 import numpy as np
 
 np.warnings.filterwarnings("ignore")

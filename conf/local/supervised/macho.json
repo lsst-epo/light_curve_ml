@@ -38,10 +38,10 @@
         },
         "gridSearch": {
           "param_grid": {
-            "n_estimators": [50, 100, 250, 900, 1000, 1100, 1200],
+            "n_estimators": [50],
             "criterion": ["gini", "entropy"],
-            "max_features": [3, 6, 9, 12, 18],
-            "min_samples_leaf": [1, 2, 3]
+            "max_features": [3],
+            "min_samples_leaf": [1]
           },
           "scoring": "f1_weighted",
           "pre_dispatch": "10 * n_jobs",
