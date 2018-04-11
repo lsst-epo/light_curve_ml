@@ -48,6 +48,15 @@ def connFromParams(dbParams):
     return conn
 
 
+def ensureDbTables(dbParams: dict):
+    conn = connFromParams(dbParams)
+    cursor = conn.cursor()
+    cursor.execute(CREATE_TABLE_LCS % dbParams["raw_lc_table"])
+    cursor.execute(CREATE_TABLE_LCS % dbParams["clean_lc_table"])
+    cursor.execute(CREATE_TABLE_FEATURES % dbParams["feature_table"])
+    conn.commit()
+
+
 def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
                        pageSize=1000, textField=True):
     """Perform a find with sqlite using single-column paging to maintain a

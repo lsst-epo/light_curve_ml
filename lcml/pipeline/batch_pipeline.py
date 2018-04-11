@@ -13,6 +13,7 @@ import time
 from sklearn.model_selection import train_test_split
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
+                                              ensureDbTables,
                                               selectFeaturesLabels)
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
@@ -57,6 +58,9 @@ class BatchPipeline:
         """
         logger.info("___Begin batch ML pipeline___")
         startAll = time.time()
+
+        ensureDbTables(self.dbParams)
+
         dataLimit = self.globalParams.get("dataLimit", float("inf"))
         if self.loadParams.get("skip", False):
             logger.info("Skip dataset loading and cleaning")
@@ -70,7 +74,6 @@ class BatchPipeline:
         logger.info("Cleaned dataset class histogram...")
         histogram = classLabelHistogram(self.dbParams)
         reportClassHistogram(histogram)
-
         if self.extractParams.get("skip", False):
             logger.info("Skip extract features")
         else:

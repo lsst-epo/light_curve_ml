@@ -3,8 +3,7 @@ import numpy as np
 from feets import preprocess
 from sklearn.preprocessing import StandardScaler
 
-from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_LCS,
-                                              INSERT_REPLACE_INTO_LCS,
+from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_LCS,
                                               connFromParams,
                                               reportTableCount,
                                               singleColPagingItr)
@@ -93,8 +92,6 @@ def cleanLightCurves(params, dbParams, limit: float):
     commitFrequency = dbParams["commitFrequency"]
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    cursor.execute(CREATE_TABLE_LCS % cleanTable)
-
     reportTableCount(cursor, cleanTable, msg="before cleaning")
     insertOrReplace = INSERT_REPLACE_INTO_LCS % cleanTable
     totalLcs = [_ for _ in cursor.execute(_COUNT_QRY % rawTable)][0][0]

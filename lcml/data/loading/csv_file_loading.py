@@ -5,8 +5,7 @@ from abc import abstractmethod
 import csv
 import logging
 
-from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_LCS,
-                                              INSERT_REPLACE_INTO_LCS,
+from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_LCS,
                                               connFromParams,
                                               reportTableCount)
 from lcml.pipeline.database.serialization import serLc
@@ -145,7 +144,6 @@ def loadFlatLcDataset(params, dbParams, limit: float):
 
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    cursor.execute(CREATE_TABLE_LCS % table)
     reportTableCount(cursor, table, msg="before loading")
     insertOrReplaceQuery = INSERT_REPLACE_INTO_LCS % table
     with open(dataPath, "r") as f:
