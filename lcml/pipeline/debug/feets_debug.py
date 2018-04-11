@@ -2,6 +2,7 @@
 import argparse
 from datetime import timedelta
 import time
+import traceback
 from typing import Generator, List
 
 from feets import FeatureSpace
@@ -33,6 +34,10 @@ def featuresByData(data: List[str]) -> Generator[str, None, None]:
             yield fname
 
 
+START_SLICE = 0
+END_SLICE = 1000000
+
+
 def main():
     start = time.time()
     args = _clargs()
@@ -49,14 +54,12 @@ def main():
         print("Found no LCs!")
         return
 
+    conn.close()
     times, mag, err = deserLc(*row[2:])
 
-    startInd = 500
-    endInd = 1000
-    times = times[startInd:endInd]
-    mag = mag[startInd:endInd]
-    err = err[startInd:endInd]
-    conn.close()
+    times = times[START_SLICE:END_SLICE]
+    mag = mag[START_SLICE:END_SLICE]
+    err = err[START_SLICE:END_SLICE]
 
     i = 0
     skipped = list()
@@ -72,7 +75,7 @@ def main():
         try:
             fts, values = fs.extract(times, mag, err)
         except BaseException as e:
-            print(e)
+            traceback.print_exc()
             print("failed for feature: %s with exception: %s" % (featureName,
                                                                  e))
             break
@@ -83,6 +86,7 @@ def main():
         else:
             skipped.append(featureName)
 
+    time.sleep(0.2)
     print("total %s skipped: %s" % (i, len(skipped)))
     print("skipped: %s" % skipped)
     print("elapsed: %s" % timedelta(seconds=time.time()-start))

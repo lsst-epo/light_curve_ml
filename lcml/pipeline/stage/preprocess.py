@@ -75,7 +75,7 @@ DEFAULT_ERROR_LIMIT = 3
 
 def _transformArray(scaler: StandardScaler, a: np.ndarray) -> np.ndarray:
     _reshaped = a.reshape(-1, 1)
-    _transformed = scaler.fit(_reshaped).transform(_reshaped)
+    _transformed = scaler.fit_transform(_reshaped)
     return _transformed.reshape(-1)
 
 

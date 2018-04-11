@@ -12,14 +12,14 @@
       "dataName": "macho",
       "relativePath": "/data/datasets/macho/macho-train.csv",
       "filter": [-99.0],
-      "skip": false,
+      "skip": true,
       "transform": false
     }
   },
   "extractFeatures": {
     "params": {
       "excludedFeatures": [],
-      "skip": true
+      "skip": false
     }
   },
   "modelSearch": {
