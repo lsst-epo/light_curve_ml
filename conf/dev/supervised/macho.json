@@ -38,9 +38,9 @@
         },
         "gridSearch": {
           "param_grid": {
-            "n_estimators": [50, 100, 250, 900, 1000, 1100, 1200],
+            "n_estimators": [500, 700, 900, 1100],
             "criterion": ["gini", "entropy"],
-            "max_features": [3, 6, 9, 12, 18],
+            "max_features": [9, 12, 18],
             "min_samples_leaf": [1, 2, 3]
           },
           "scoring": "f1_weighted",
