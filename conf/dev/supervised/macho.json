@@ -19,7 +19,7 @@
   "extractFeatures": {
     "params": {
       "excludedFeatures": [],
-      "skip": false
+      "skip": true
     }
   },
   "modelSearch": {
