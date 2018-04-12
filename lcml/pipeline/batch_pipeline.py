@@ -63,11 +63,14 @@ class BatchPipeline:
 
         dataLimit = self.globalParams.get("dataLimit", float("inf"))
         if self.loadParams.get("skip", False):
-            logger.info("Skip dataset loading and cleaning")
+            logger.info("Skip dataset loading")
         else:
             logger.info("Loading dataset...")
             self.loadFcn(self.loadParams, self.dbParams, dataLimit)
 
+        if self.loadParams.get("skipCleaning", False):
+            logger.info("Skip dataset cleaning")
+        else:
             logger.info("Cleaning dataset...")
             cleanLightCurves(self.loadParams, self.dbParams, dataLimit)
 

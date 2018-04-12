@@ -63,7 +63,7 @@ def preprocessLc(timeData, magData, errorData, removes, stdLimit, errorLimit):
     if len(_tm) < SUFFICIENT_LC_DATA:
         return None, OUTLIERS_REASON, removedCounts
 
-    return (_tm, _mag, _err), None, removedCounts
+    return [_tm, _mag, _err], None, removedCounts
 
 
 #: Default value for preprocessing param `std threshold`
@@ -73,7 +73,7 @@ DEFAULT_STD_LIMIT = 5
 DEFAULT_ERROR_LIMIT = 3
 
 
-def _transformArray(scaler: StandardScaler, a: np.ndarray) -> np.ndarray:
+def _standardizeArray(scaler: StandardScaler, a: np.ndarray) -> np.ndarray:
     _reshaped = a.reshape(-1, 1)
     _transformed = scaler.fit_transform(_reshaped)
     return _transformed.reshape(-1)
@@ -103,14 +103,16 @@ def cleanLightCurves(params, dbParams, limit: float):
     outlierIssueCount = 0
     insertCount = 0
     scaler = StandardScaler(copy=False)
+    standardize = params.get("standardize", False)
     for i, r in enumerate(singleColPagingItr(cursor, rawTable, "id")):
         times, mags, errors = deserLc(*r[2:])
-        if params["transform"]:
-            mags = _transformArray(scaler, mags)
-            errors = _transformArray(scaler, errors)
         lc, issue, _ = preprocessLc(times, mags, errors, removes=removes,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
         if lc:
+            if standardize:
+                lc[1] = _standardizeArray(scaler, lc[1])
+                lc[2] = _standardizeArray(scaler, lc[2])
+
             args = (r[0], r[1]) + serLc(*lc)
             cursor.execute(insertOrReplace, args)
             insertCount += 1

@@ -11,9 +11,11 @@
     "params": {
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
-      "filter": [-99.0],
       "skip": true,
-      "transform": false
+
+      "skipCleaning": false,
+      "filter": [-99.0],
+      "standardize": true
     }
   },
   "extractFeatures": {
