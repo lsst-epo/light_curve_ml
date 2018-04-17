@@ -1,11 +1,14 @@
+from collections import Counter
+import operator
 from sqlite3 import OperationalError
+from typing import List
 
 from feets import FeatureSpace
 import numpy as np
+from prettytable import PrettyTable
 
 from lcml.pipeline.database import STANDARD_INPUT_DATA_TYPES
-from lcml.pipeline.database.sqlite_db import (CREATE_TABLE_FEATURES,
-                                              INSERT_REPLACE_INTO_FEATURES,
+from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_FEATURES,
                                               SINGLE_COL_PAGED_SELECT_QRY,
                                               connFromParams,
                                               reportTableCount)
@@ -13,7 +16,7 @@ from lcml.pipeline.database.serialization import deserLc, serArray
 from lcml.pipeline.stage.preprocess import allFinite
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
-from lcml.utils.multiprocess import feetsExtract, mpMapGenerator
+from lcml.utils.multiprocess import feetsExtract, reportingImapUnordered
 
 
 logger = BasicLogging.getLogger(__name__)
@@ -54,7 +57,7 @@ def feetsJobGenerator(fs, dbParams, selRows="*"):
     conn.close()
 
 
-def feetsExtractFeatures(params, dbParams, limit):
+def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
     """Runs light curves through 'feets' library obtaining feature vectors.
     Perfoms the extraction using multiprocessing. Output order of jobs will not
     necessarily correspond to input order, therefore, class labels are returned
@@ -62,6 +65,7 @@ def feetsExtractFeatures(params, dbParams, limit):
 
     :param params: extract parameters
     :param dbParams: db parameters
+    :param limit: upper limit on the number of LC processed
     :returns feature vectors for each LC and list of corresponding class labels
     """
     # recommended excludes (slow): "CAR_mean", "CAR_sigma", "CAR_tau"
@@ -79,48 +83,62 @@ def feetsExtractFeatures(params, dbParams, limit):
     reportTableCount(cursor, featuresTable, msg="before extracting")
 
     jobs = feetsJobGenerator(fs, dbParams)
-    skippedLcCount = 0
+    lcCount = 0
+    skipCount = 0
     dbExceptions = 0
-    totalLcCount = 0
-    count = 0
-    for uid, label, ftNames, features in mpMapGenerator(feetsExtract, jobs):
+    imputeCounter = Counter()
+    for uid, label, ftNames, features in reportingImapUnordered(feetsExtract,
+                                                                jobs):
         # loop variables come from lcml.utils.multiprocess._feetsExtract
-        totalLcCount += 1
         if impute:
-            _imputeFeatures(ftNames, features)
+            _imputeFeatures(ftNames, features, imputeCounter)
         elif not allFinite(features):
-            skippedLcCount += 1
+            skipCount += 1
             continue
 
         args = (uid, label, serArray(features))
-
         try:
             cursor.execute(insertOrReplQry, args)
-            if totalLcCount % ciFreq == 0:
+            if lcCount % ciFreq == 0:
                 conn.commit()
         except OperationalError:
             logger.exception("Failed to insert %s", args)
             dbExceptions += 1
 
-        count += 1
-        if count >= limit:
+        if lcCount > limit:
             break
+
+        lcCount += 1
 
     reportTableCount(cursor, featuresTable, msg="after extracting")
     conn.commit()
     conn.close()
-    if skippedLcCount:
+
+    if skipCount:
         logger.warning("Skipped due to bad feature value rate: %s",
-                       fmtPct(skippedLcCount, totalLcCount))
+                       fmtPct(skipCount, lcCount))
 
     if dbExceptions:
         logger.warning("Db exception count: %s", dbExceptions)
 
+    if imputeCounter:
+        t = PrettyTable(["feature name", "imputes", "impute rate",
+                         "percentage of all imputes"])
+        totalImputes = sum(imputeCounter.values())
+        for name, count in sorted(imputeCounter.items(),
+                                  key=operator.itemgetter(1), reverse=True):
+            t.add_row([name, count, fmtPct(count, lcCount),
+                       fmtPct(count, totalImputes)])
 
-def _imputeFeatures(featureNames, featureValues):
+        logger.info("\n" + str(t))
+
+
+def _imputeFeatures(featureNames: List[str], featureValues: List[float],
+                    imputes: Counter):
     """Sets non-finite feature values to 0.0"""
     for i, v in enumerate(featureValues):
         if not np.isfinite(v):
             logger.warning("imputing: %s %s => 0.0", featureNames[i],
                            featureValues[i])
+            imputes[featureNames[i]] += 1
             featureValues[i] = 0.0

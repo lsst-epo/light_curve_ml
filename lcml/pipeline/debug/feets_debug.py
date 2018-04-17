@@ -81,8 +81,11 @@ def main():
             break
 
         if len(fts) and len(values):
-            msg = "OK" if np.isfinite(values[0]) else "NOT FINITE!"
+            msg = "OK" if np.all(np.isnan(values)) else "NOT FINITE!"
             print("%s %s: %s" % (msg, fts[0], values[0]))
+            if len(values) != 1:
+                print("lengths: features: %s values: %s" % (len(fts),
+                                                            len(values)))
         else:
             skipped.append(featureName)
 
