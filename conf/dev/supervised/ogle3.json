@@ -9,9 +9,9 @@
     "params": {
       "dataName": "ogle3",
       "relativePath": "/data/datasets/ogle3/ogle3.csv",
-      "skip": false,
+      "skip": true,
       "skipCleaning": true,
-      "standardize": true
+      "standardize": false
     }
   },
   "extractFeatures": {
@@ -35,9 +35,9 @@
         },
         "gridSearch": {
           "param_grid": {
-            "n_estimators": [50, 100, 250],
+            "n_estimators": [50, 100, 250, 500, 1000],
             "criterion": ["gini", "entropy"],
-            "max_features": [3, 6, 9, 12, 18],
+            "max_features": [3, 9, 18],
             "min_samples_leaf": [1, 2, 3]
           },
           "scoring": "f1_weighted",
