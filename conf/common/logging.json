@@ -12,7 +12,7 @@
   "modules": [
     {
       "module": "lcml.pipeline.standard.standard_ml_pipeline",
-      "level": "debug"
+      "level": "info"
     }
   ]
 }

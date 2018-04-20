@@ -100,6 +100,7 @@ def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
         try:
             cursor.execute(insertOrReplQry, args)
             if lcCount % ciFreq == 0:
+                logger.info("commit progress: %s", lcCount)
                 conn.commit()
         except OperationalError:
             logger.exception("Failed to insert %s", args)
@@ -134,11 +135,9 @@ def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
 
 
 def _imputeFeatures(featureNames: List[str], featureValues: List[float],
-                    imputes: Counter):
+                    imputes: Counter, imputeValue=0.0):
     """Sets non-finite feature values to 0.0"""
     for i, v in enumerate(featureValues):
         if not np.isfinite(v):
-            logger.warning("imputing: %s %s => 0.0", featureNames[i],
-                           featureValues[i])
             imputes[featureNames[i]] += 1
-            featureValues[i] = 0.0
+            featureValues[i] = imputeValue

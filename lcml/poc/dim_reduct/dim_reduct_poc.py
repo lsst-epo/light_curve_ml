@@ -1,3 +1,5 @@
+import time
+
 import matplotlib.pyplot as plt
 from sklearn import datasets
 from sklearn.decomposition import PCA
@@ -5,7 +7,12 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.database.sqlite_db import selectFeaturesLabels
+from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import jsonConfig
+
+
+BasicLogging.initLogging()
+logger = BasicLogging.getLogger(__name__)
 
 
 def testIris():
@@ -58,33 +65,41 @@ def main():
     dbConf["dbPath"] = "data/macho/macho_processed.db"
 
     X, y = selectFeaturesLabels(dbConf)
+    logger.info("feature vectors: %s", len(X))
     X_normed = StandardScaler().fit_transform(X)
 
     pcaVarianceExplained = []
     ldaVarianceExplained = []
-
-    componentsStart = 5
-    componentsStop = 60  # using around 63 features total
+    componentsStart = 2
+    componentsStop = 55  # using around 63 features total
     components = list(range(componentsStart, componentsStop))
     for c in components:
         # TODO what are the rules of thumb for number of components for clustering
         # TODO similar what is a good amount of variance capture to go ahead and use?
         pca = PCA(n_components=c)
-        pca.fit(X_normed)
-        X_r = pca.transform(X_normed)
-        pcaVarianceExplained.append(sum(pca.explained_variance_ratio_))
+        s = time.time()
+        pca.fit_transform(X_normed)
+        logger.info("pca in %s", time.time() - s)
+        pcaVe = sum(pca.explained_variance_ratio_)
+        pcaVarianceExplained.append(pcaVe)
 
         lda = LinearDiscriminantAnalysis(n_components=c)
-        X_r2 = lda.fit_transform(X_normed, y)
-        ldaVarianceExplained.append(sum(lda.explained_variance_ratio_))
+        s = time.time()
+        lda.fit_transform(X_normed, y)
+        logger.info("lda in %s", time.time() - s)
+        ldaVe = sum(lda.explained_variance_ratio_)
+        ldaVarianceExplained.append(ldaVe)
+        logger.info("components: %s PCA: %s LDA: %s", c, pcaVe, ldaVe)
+
 
     # TODO look into the guts of LDA to see what we can take away
-    plt.plot(components, pcaVarianceExplained)
-    plt.plot(components, ldaVarianceExplained)
+    plt.semilogy(components, pcaVarianceExplained, label="PCA (unlabeled)")
+    plt.semilogy(components, ldaVarianceExplained, label="LDA (labeled)")
     plt.xlabel("components")
     plt.ylabel("variance explained")
     plt.title("Variance explained vs. components")
     plt.grid(True)
+    plt.legend(loc="lower right")
     plt.show()
 
 

@@ -10,7 +10,8 @@
       "dataName": "ogle3",
       "relativePath": "/data/datasets/ogle3/ogle3.csv",
       "skip": false,
-      "skipCleaning": true
+      "skipCleaning": true,
+      "standardize": true
     }
   },
   "extractFeatures": {
