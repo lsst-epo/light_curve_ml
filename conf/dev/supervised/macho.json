@@ -5,6 +5,7 @@
   "database": {
     "dbPath": "/data/db/macho/macho_processed.db",
     "clean_lc_table": "standardized_lcs",
+    "feature_table": "standard_lc_features",
     "commitFrequency": 200,
     "pageSize": 100
   },
