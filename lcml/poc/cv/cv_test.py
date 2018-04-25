@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Refresher on performing cross-validation"""
 from sklearn import datasets, svm
 from sklearn.metrics import accuracy_score

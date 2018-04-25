@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Obtains MACHO lightcurves using STILTS command-line tool."""
 from collections import defaultdict
 import logging

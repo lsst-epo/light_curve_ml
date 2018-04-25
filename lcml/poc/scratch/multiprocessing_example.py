@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import multiprocessing
 from multiprocessing import Pool
 import time
@@ -49,7 +50,7 @@ def f(a):
     return 2 * a
 
 
-def testTheWaters(size):
+def main(size):
     pool = Pool(processes=6) # run no more than 6 at a time
 
     s = time.time()
@@ -57,5 +58,6 @@ def testTheWaters(size):
     total = sum(result)
     print("%s in %.2fs" % (total, time.time() - s))
 
+
 if __name__ == "__main__":
-    testTheWaters(int(1e5))
+    main(int(1e5))

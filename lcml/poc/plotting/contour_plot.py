@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from matplotlib.font_manager import FontProperties
 import matplotlib.pyplot as plt
 import numpy as np

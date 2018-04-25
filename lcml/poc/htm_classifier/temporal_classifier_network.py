@@ -1,4 +1,4 @@
-
+#!/usr/bin/env python2
 """Classifier network using the NuPIC Network API.
 Consists of Spatial Pooler -> Temporal Memory -> Union Pooler data.
 Anomaly Likelihood is calculated from Temporal Memory and Sequence

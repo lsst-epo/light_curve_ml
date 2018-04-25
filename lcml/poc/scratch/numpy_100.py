@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Numpy exercises from https://github.com/rougier/numpy-100"""
 import numpy as np
 

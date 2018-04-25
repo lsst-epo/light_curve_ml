@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Main entry point for running lcml ML pipeline. Expects paths to pipeline conf
+file and log file."""
 import argparse
 
 import matplotlib

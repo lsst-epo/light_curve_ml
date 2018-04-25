@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import time
 from multiprocessing import cpu_count, Pool
 import sqlite3

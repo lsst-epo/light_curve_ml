@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from confluent_kafka import avro, Consumer, KafkaError, Producer
 from confluent_kafka.avro import AvroConsumer, AvroProducer
 from confluent_kafka.avro.serializer import SerializerError

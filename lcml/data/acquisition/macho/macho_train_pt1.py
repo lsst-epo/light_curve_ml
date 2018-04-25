@@ -1,4 +1,5 @@
-"""Obtains MACHO lightcurves using STILTS command-line tool."""
+#!/usr/bin/env python3
+"""Obtains labeled MACHO lightcurves using STILTS command-line tool."""
 from collections import defaultdict
 import os
 import subprocess

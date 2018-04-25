@@ -29,7 +29,7 @@ vim ~/.bashrc
 export LCML=/home/ubuntu/light_curve_ml
 export PYTHONPATH=/home/ubuntu/light_curve_ml:$PYTHONPATH
 
-alias python=/usr/bin/python2
+alias python=/usr/bin/python3
 
 cd $LCML
 mkdir logs

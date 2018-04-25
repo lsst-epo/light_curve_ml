@@ -1,4 +1,5 @@
-"""Tries out Feets tutorial"""
+#!/usr/bin/env python3
+"""Try out Feets tutorial"""
 import time
 
 from feets import datasets, FeatureSpace, preprocess

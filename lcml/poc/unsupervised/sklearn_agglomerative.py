@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from sklearn import datasets
 from sklearn.cluster import AgglomerativeClustering
 
