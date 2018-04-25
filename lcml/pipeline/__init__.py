@@ -1,3 +1,4 @@
+from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.ml_pipeline_conf import loadPipelineConf
 from lcml.pipeline.supervised_pipeline import SupervisedPipeline
 from lcml.pipeline.unsupervised_pipeline import UnsupervisedPipeline
@@ -7,7 +8,7 @@ from lcml.utils.context_util import joinRoot, loadJson
 _DEFAULT_PIPE_CONF_REL_PATH = "conf/common/pipeline.json"
 
 
-def recursiveMerge(a, b):
+def recursiveMerge(a: dict, b: dict) -> dict:
     """Merges dicts b into a recursively overwriting existing keys"""
     for key in b:
         if key in a:
@@ -21,17 +22,16 @@ def recursiveMerge(a, b):
     return a
 
 
-def fromRelativePath(relPath):
+def fromRelativePath(relPath: str) -> BatchPipeline:
     """Constructs a pipeline from config found at relative path. Relative config
     overwrites general config found at `$LCML/conf/common/pipeline.json`
 
-    :param relPath: rel path to specific config overriding default config
-    :return: Instance of `lcml.pipeline.batch_pipeline.BatchPipeline`
+    :param relPath: relative path to specific config overriding default config
+    :return: constructed BatchPipeline object
     """
     defaultConf = loadJson(joinRoot(_DEFAULT_PIPE_CONF_REL_PATH))
     relConf = loadJson(joinRoot(relPath))
-    conf = defaultConf.copy()
-    conf = recursiveMerge(conf, relConf)
+    conf = recursiveMerge(defaultConf.copy(), relConf)
 
     pipeConf = loadPipelineConf(conf)
     pipeType = pipeConf.globalParams["type"]
