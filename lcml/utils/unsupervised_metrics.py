@@ -3,14 +3,15 @@ from collections import namedtuple
 from sklearn import metrics
 
 
-EXTERNAL_METRICS = ["adjustedMutualInformation", "adjustedRandScore",
-                    "completeness", "fowlkesMallows", "homogeneity", "vMeasure"]
+EXTERNAL_METRICS = sorted(["adjustedMutualInformation", "adjustedRandScore",
+                           "completeness", "fowlkesMallows", "homogeneity",
+                           "vMeasure"])
 
 
 ExternalClusterMetrics = namedtuple("ExternalClusterMetrics", EXTERNAL_METRICS)
 
 
-INTERNAL_METRICS = ["calinskiHarabaz", "silhouetteCoefficient"]
+INTERNAL_METRICS = sorted(["calinskiHarabaz", "silhouetteCoefficient"])
 
 
 InternalClusterMetrics = namedtuple("InternalClusterMetrics", INTERNAL_METRICS)

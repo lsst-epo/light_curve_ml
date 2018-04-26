@@ -2,11 +2,15 @@
 from collections import namedtuple
 from datetime import timedelta
 import time
-from typing import List
+from typing import Dict, List
 
+import numpy as np
 from prettytable import PrettyTable
 from sklearn.cluster import AgglomerativeClustering, MiniBatchKMeans
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.externals.joblib import Memory
+from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.utils.basic_logging import BasicLogging
@@ -19,29 +23,69 @@ from lcml.utils.unsupervised_metrics import (EXTERNAL_METRICS, INTERNAL_METRICS,
 logger = BasicLogging.getLogger(__name__)
 
 
+KMEANS_NAME = "mini-batch k-means"
+AGGLOM_NAME_TO_LINKAGE = {"agg-ward": "ward",
+                          "agg-complete": "complete",
+                          "agg-average": "average"}
+
+
 class UnsupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
-
-    def modelSelectionPhase(self, features, labels, classToLabel):
-        clusters = self.searchParams["clusterValues"]
-        miniKMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
         aggKwargs = self.searchParams["agglomerativeArgs"]
         aggKwargs["memory"] = Memory(cachedir=aggKwargs["memory"])
 
-        kMeansName = "mini-batch k-means"
-        agglomNameToLinkage = {"agg-ward": "ward", "agg-complete": "complete",
-                               "agg-average": "average"}
-        scores = {k: list() for k in list(agglomNameToLinkage) + [kMeansName]}
+    def modelSelectionPhase(self, X: List[np.ndarray], y: List[str],
+                            classToLabel: Dict[int, str]):
+        logger.info("feature vectors: %s", len(X))
+        X_normed = StandardScaler().fit_transform(X)
+        pcaVarianceExplained = []
+        ldaVarianceExplained = []
+        components = list(range(self.searchParams["componentsStart"],
+                                self.searchParams["componentsStop"],
+                                self.searchParams["componentsStep"]))
+        for c in components:
+            pca = PCA(n_components=c)
+            s = time.time()
+            pcaReduced = pca.fit_transform(X_normed)
+            logger.info("pca in %s", time.time() - s)
+            pcaVarExp = sum(pca.explained_variance_ratio_)
+            pcaVarianceExplained.append(pcaVarExp)
+
+            lda = LinearDiscriminantAnalysis(n_components=c)
+            s = time.time()
+            ldaReduced = lda.fit_transform(X_normed, y)
+            logger.info("lda in %s", time.time() - s)
+            ldaVarExp = sum(lda.explained_variance_ratio_)
+            ldaVarianceExplained.append(ldaVarExp)
+            logger.info("components: %s PCA: %s LDA: %s", c, pcaVarExp,
+                        ldaVarExp)
+            logger.info("model selection for pca reduced...")
+            self._modelSelection(pcaReduced, y)
+
+            logger.info("selection for lda reduced...")
+            self._modelSelection(ldaReduced, y)
+
+    def _modelSelection(self, features: List[np.ndarray], labels: List[str]):
+        # TODO pass in the type of reduction, the number of components, and the
+        # TODO variance explained. include these in the table as first column
+
+        # TODO also pass in the table from caller and only print out once
+        clusters = self.searchParams["clusterValues"]
+        kMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
+        aggKwargs = self.searchParams["agglomerativeArgs"]
+
+        scores = {k: list()
+                  for k in list(AGGLOM_NAME_TO_LINKAGE) + [KMEANS_NAME]}
         for c in clusters:
             logger.info("clusters: %s", c)
-            model = MiniBatchKMeans(n_clusters=c, **miniKMeansKwargs)
+            model = MiniBatchKMeans(n_clusters=c, **kMeansKwargs)
             self.evaluateClusteringModel(model, labels, features,
-                                         scores[kMeansName], kMeansName)
+                                         scores[KMEANS_NAME], KMEANS_NAME)
             del model
 
             # for now we try all linkages
-            for aggName, linkage in agglomNameToLinkage.items():
+            for aggName, linkage in AGGLOM_NAME_TO_LINKAGE.items():
                 affinity = "euclidean" if linkage == "ward" else "manhattan"
                 model = AgglomerativeClustering(n_clusters=c, linkage=linkage,
                                                 affinity=affinity, **aggKwargs)
@@ -49,9 +93,8 @@ class UnsupervisedPipeline(BatchPipeline):
                                              scores[aggName], aggName)
                 del model
 
-        clusterTable = PrettyTable(["clusters", "algorithm"] +
-                                   sorted(EXTERNAL_METRICS) +
-                                   sorted(INTERNAL_METRICS))
+        clusterTable = PrettyTable(["clusters", "algorithm"] + EXTERNAL_METRICS
+                                   + INTERNAL_METRICS)
         for i, c in enumerate(clusters):
             for name, intExtScores in scores.items():
                 row = ([c, name] + self._metricsToList(intExtScores[i][0]) +

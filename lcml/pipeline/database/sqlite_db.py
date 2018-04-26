@@ -1,3 +1,6 @@
+from typing import List
+
+import numpy as np
 import sqlite3
 
 from lcml.pipeline.database.serialization import deserArray
@@ -88,7 +91,7 @@ def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
 SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
 
 
-def selectFeaturesLabels(dbParams, limit=None):
+def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
     """Selects features and their associated labels"""
     # if this soaks up all the RAM,
     # a) try memory-mapped numpy array:
@@ -106,14 +109,6 @@ def selectFeaturesLabels(dbParams, limit=None):
     labels = []
     features = []
     for r in cursor.execute(query):
-        # - Can be removed
-        # rawFeats = deserArray(r[1])
-        # if not np.isfinite(rawFeats.sum()) and not np.isfinite(rawFeats).all():
-        #     for i, f in enumerate(rawFeats):
-        #         if not np.isfinite(f):
-        #             logger.warning("imputing 0.0 for: %s", f)
-        #             rawFeats[i] = 0.0
-
         features.append(deserArray(r[1]))
         labels.append(r[0])
 

@@ -1,5 +1,6 @@
 import numpy as np
 from prettytable import PrettyTable
+from typing import Dict, List
 
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
@@ -8,12 +9,12 @@ from lcml.utils.format_util import fmtPct
 logger = BasicLogging.getLogger(__name__)
 
 
-def convertClassLabels(labels):
-    """Converts all class labels to integer values unique to individual
-    classes. Labels are modified in-place.
-    :param labels: Unique class labels
-    :return Mapping version of original input and a dict containing the mapping
-    from integer to original class label
+def convertClassLabels(labels: List[str]) -> (List[int], Dict[int, str]):
+    """Converts all class labels in-place to integer values for each unique
+    class. Also returns a decoder mapping from integer to readable label
+    :param labels: class labels of some dataset
+    :return Labels converted to ints as well as a mapping from integer class
+    label to original string class label
     """
     # 'LPV'-> 1
     labelToInt = {v: i for i, v in enumerate(np.unique(labels))}
