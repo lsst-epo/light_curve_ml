@@ -106,8 +106,8 @@ def selectFeaturesLabels(dbParams, limit=None):
     labels = []
     features = []
     for r in cursor.execute(query):
+        # - Can be removed
         # rawFeats = deserArray(r[1])
-        # # TODO eventually remove when features have been rerun
         # if not np.isfinite(rawFeats.sum()) and not np.isfinite(rawFeats).all():
         #     for i, f in enumerate(rawFeats):
         #         if not np.isfinite(f):

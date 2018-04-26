@@ -45,8 +45,8 @@ def testIris():
     lw = 2
 
     for color, i, target_name in zip(colors, [0, 1, 2], target_names):
-        plt.scatter(X_r[y == i, 0], X_r[y == i, 1], color=color, alpha=.8, lw=lw,
-                    label=target_name)
+        plt.scatter(X_r[y == i, 0], X_r[y == i, 1], color=color, alpha=.8,
+                    lw=lw, label=target_name)
     plt.legend(loc='best', shadow=False, scatterpoints=1)
     plt.title('PCA of IRIS dataset')
 
@@ -61,6 +61,16 @@ def testIris():
 
 
 def main():
+    """Inputs:
+    - feature vectors of length 63
+    - range of components
+
+    Outputs:
+    - fit PCA and LDA models each including explained variance ratio
+
+    Can take models and transform feature vectors down to lower spaces for
+    clustering
+    """
     conf = jsonConfig("pipeline.json")
     dbConf = conf["database"]
     dbConf["dbPath"] = "data/macho/macho_processed.db"
@@ -75,8 +85,6 @@ def main():
     componentsStop = 55  # using around 63 features total
     components = list(range(componentsStart, componentsStop))
     for c in components:
-        # TODO what are the rules of thumb for number of components for clustering
-        # TODO similar what is a good amount of variance capture to go ahead and use?
         pca = PCA(n_components=c)
         s = time.time()
         pca.fit_transform(X_normed)
@@ -92,8 +100,6 @@ def main():
         ldaVarianceExplained.append(ldaVe)
         logger.info("components: %s PCA: %s LDA: %s", c, pcaVe, ldaVe)
 
-
-    # TODO look into the guts of LDA to see what we can take away
     plt.semilogy(components, pcaVarianceExplained, label="PCA (unlabeled)")
     plt.semilogy(components, ldaVarianceExplained, label="LDA (labeled)")
     plt.xlabel("components")

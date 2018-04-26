@@ -68,7 +68,11 @@ def loadPipelineConf(conf):
         raise ValueError("unsupported search function: %s" % searchType)
 
     searchParams = conf[MODEL_SEARCH]["params"]
-    searchParams["model"] = _initModel(conf[MODEL_SEARCH]["model"])
+    if "model" in conf[MODEL_SEARCH]:
+        searchParams["model"] = _initModel(conf[MODEL_SEARCH]["model"])
+    else:
+        searchParams["model"] = None
+
     modelSearch = FunctionAndParams(searchFcn, searchParams)
 
     serialParams = conf[SERIALIZATION]["params"]
