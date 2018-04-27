@@ -4,6 +4,8 @@
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db",
+    "clean_lc_table": "standardized_clean_lcs",
+    "feature_table": "lc_standardized_features",
     "commitFrequency": 5000,
     "pageSize": 5000
   },
@@ -11,9 +13,9 @@
     "params": {
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
-      "skip": true,
+      "skip": false,
 
-      "skipCleaning": true,
+      "skipCleaning": false,
       "filter": [-99.0],
       "standardize": true
     }
@@ -57,8 +59,8 @@
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/rf-classifier-macho.pkl",
-      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised"
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/lc_standardized_rf-classifier-macho.pkl",
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/lc_standardized"
     }
   }
 }
