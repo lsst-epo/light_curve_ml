@@ -82,7 +82,7 @@ def main():
     pcaVarianceExplained = []
     ldaVarianceExplained = []
     componentsStart = 2
-    componentsStop = 55  # using around 63 features total
+    componentsStop = 63  # using around 63 features total
     components = list(range(componentsStart, componentsStop))
     for c in components:
         pca = PCA(n_components=c)

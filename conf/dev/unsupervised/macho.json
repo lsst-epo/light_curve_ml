@@ -1,7 +1,7 @@
 {
   "globalParams": {
     "type": "unsupervised",
-    "trainSize": 0.999999
+    "trainSize": 1.0
   },
   "database": {
     "dbPath": "/data/db/macho/macho_processed.db"
@@ -25,9 +25,9 @@
   "modelSearch": {
     "function": "grid",
     "params": {
-      "componentsStart": 2,
-      "componentsStop": 63,
-      "componentsStep": 1,
+      "componentsStart": 5,
+      "componentsStop": 41,
+      "componentsStep": 2,
       "clusterValues": [10, 11, 12],
       "miniBatchKMeansArgs": {
         "init": "k-means++",
@@ -48,7 +48,8 @@
         "algorithm": "full"
       },
       "agglomerativeArgs": {
-        "memory": "/data/tmp"
+        "linkages": {"agglomerative (ward)": "ward"},
+        "memory": "/Users/ryanjmccall/code/light_curve_ml/tmp"
       }
     }
   },

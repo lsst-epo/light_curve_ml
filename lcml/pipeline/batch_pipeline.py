@@ -91,8 +91,12 @@ class BatchPipeline:
             logger.info("Loaded %s feature vectors", len(features))
             intLabels, labelMapping = convertClassLabels(labels)
             trainSize = self.globalParams["trainSize"]
-            XTrain, XTest, yTrain, yTest = train_test_split(features, intLabels,
-                train_size=trainSize, test_size=1 - trainSize)
+            if trainSize == 1:
+                XTrain, XTest, yTrain, yTest = features, [], intLabels, []
+            else:
+                XTrain, XTest, yTrain, yTest = train_test_split(features,
+                    intLabels, train_size=trainSize, test_size=1 - trainSize)
+
             logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
             best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
             testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
