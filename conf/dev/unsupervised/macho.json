@@ -49,7 +49,7 @@
       },
       "agglomerativeArgs": {
         "linkages": {"agglomerative (ward)": "ward"},
-        "memory": "/Users/ryanjmccall/code/light_curve_ml/tmp"
+        "memory": "/data/tmp"
       }
     }
   },
