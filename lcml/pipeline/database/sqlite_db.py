@@ -54,10 +54,17 @@ def connFromParams(dbParams):
 def ensureDbTables(dbParams: dict):
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
-    cursor.execute(CREATE_TABLE_LCS % dbParams["raw_lc_table"])
-    cursor.execute(CREATE_TABLE_LCS % dbParams["clean_lc_table"])
-    cursor.execute(CREATE_TABLE_FEATURES % dbParams["feature_table"])
+    for query, table in [(CREATE_TABLE_LCS, dbParams["raw_lc_table"]),
+                         (CREATE_TABLE_LCS, dbParams["clean_lc_table"]),
+                         (CREATE_TABLE_FEATURES, dbParams["feature_table"])]:
+        _ensureTable(cursor, query, table)
+
     conn.commit()
+
+
+def _ensureTable(cursor, query, table):
+    logger.info("initializing table: %s", table)
+    cursor.execute(query % table)
 
 
 def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
@@ -118,7 +125,7 @@ def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
     return features, labels
 
 
-def classLabelHistogram(dbParams):
+def classLabelHistogram(dbParams: dict):
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
     histogramQry = "SELECT label, COUNT(*) FROM %s GROUP BY label"
@@ -128,6 +135,6 @@ def classLabelHistogram(dbParams):
     return histogram
 
 
-def reportTableCount(cursor, table, msg=""):
+def reportTableCount(cursor, table: str, msg: str=""):
     count = cursor.execute("SELECT COUNT(*) FROM %s" % table)
-    logger.info("Table %s rows: %s", msg, [_ for _ in count][0][0])
+    logger.info("Table '%s' %s rows: %s", table, msg, [_ for _ in count][0][0])

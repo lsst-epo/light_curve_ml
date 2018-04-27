@@ -49,6 +49,7 @@ class UnsupervisedPipeline(BatchPipeline):
 
         allRows = list()
         for c in components:
+            logger.info("testing: %s components", c)
             self._runDimReduct(c, X_normed, y, "pca", PCA, allRows)
             self._runDimReduct(c, X_normed, y, "lda",
                                LinearDiscriminantAnalysis, allRows)
