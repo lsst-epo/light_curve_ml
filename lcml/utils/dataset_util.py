@@ -1,6 +1,6 @@
 import numpy as np
 from prettytable import PrettyTable
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
@@ -26,7 +26,7 @@ def convertClassLabels(labels: List[str]) -> (List[int], Dict[int, str]):
     return labels, intToLabel
 
 
-def reportDataset(dataset, labels=None):
+def reportDataset(dataset: list, labels: list=None):
     """Reports the characteristics of a dataset"""
     size = len(dataset)
     dataSizes = [len(x) for x in dataset]
@@ -41,7 +41,8 @@ def reportDataset(dataset, labels=None):
         print("Unique labels: %s" % sorted(np.unique(labels)))
 
 
-def attachLabels(values, indexToLabel):
+def attachLabels(values: List[float],
+                 indexToLabel: Dict[int, str]) -> List[Tuple[str, float]]:
     """Attaches readable labels to a list of values.
 
     :param values: a list of object to be labeled
@@ -51,7 +52,7 @@ def attachLabels(values, indexToLabel):
     return [(indexToLabel[i], v) for i, v in enumerate(values)]
 
 
-def reportClassHistogram(labels):
+def reportClassHistogram(labels: Dict[str, int]):
     """Logs a histogram of the distribution of class labels
     :param labels: dict from label to frequency
     """

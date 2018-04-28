@@ -1,4 +1,5 @@
 from multiprocessing import cpu_count, Pool
+from typing import Iterable
 
 from lcml.utils.basic_logging import BasicLogging
 
@@ -6,7 +7,9 @@ from lcml.utils.basic_logging import BasicLogging
 logger = BasicLogging.getLogger(__name__)
 
 
-def reportingImapUnordered(func, jobArgs, reportFrequency=100):
+def reportingImapUnordered(func,
+                           jobArgs: Iterable[tuple],
+                           reportFrequency: int=100):
     """Executes a function on a batch of inputs using multiprocessing in an
     unordered fashion (`multiprocessing.Pool.imap_unordered`). Reports progress
     periodically as jobs complete
@@ -28,7 +31,7 @@ def reportingImapUnordered(func, jobArgs, reportFrequency=100):
     logger.info("multiprocessing: total completed: %s", i)
 
 
-def feetsExtract(args):
+def feetsExtract(args) -> (str, str, list, list):
     """Wrapper function conforming to Python multiprocessing API performing the
     `feets` library's feature extraction.
     """

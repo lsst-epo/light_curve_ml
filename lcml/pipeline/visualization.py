@@ -1,8 +1,8 @@
 import itertools
+from typing import List
+
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
-
-
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
@@ -11,12 +11,16 @@ from lcml.utils.basic_logging import BasicLogging
 logger = BasicLogging.getLogger(__name__)
 
 
-def normalizeConfusionMatrix(matrix):
+def normalizeConfusionMatrix(matrix: np.ndarray) -> np.ndarray:
     return matrix.astype("float") / matrix.sum(axis=1)[:, np.newaxis]
 
 
-def plotConfusionMatrix(matrix, classes, savePath=None, normalize=True,
-                        title="Confusion matrix", cmap=None):
+def plotConfusionMatrix(matrix: np.ndarray,
+                        classes: List[str],
+                        savePath: str=None,
+                        normalize: bool=True,
+                        title: str="Confusion matrix",
+                        cmap=None) -> np.ndarray:
     """Plots a confusion matrix and its classes.
 
     :param matrix: ndarray confusion matrix

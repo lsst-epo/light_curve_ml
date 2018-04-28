@@ -20,6 +20,7 @@ SERIALIZATION = "serialization"
 FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])
 
 
+# Candidate for data class
 class MlPipelineConf:
     """Container for functions and parameter of the major components of a ML
      pipeline"""
@@ -33,7 +34,7 @@ class MlPipelineConf:
         self.serialParams = serialParams
 
 
-def _initModel(modelConfig: dict):
+def _initModel(modelConfig: dict) -> object:
     modelClass = modelConfig["class"]
     strInd = modelClass.rfind(".")
     moduleName = modelClass[:strInd]
@@ -43,7 +44,7 @@ def _initModel(modelConfig: dict):
     return class_(**modelConfig["params"])
 
 
-def loadPipelineConf(conf):
+def loadPipelineConf(conf: dict) -> MlPipelineConf:
     """Constructs a pipeline from a .json config."""
     # load data fcn
     # loadType = conf[LOAD_DATA]["function"].lower()

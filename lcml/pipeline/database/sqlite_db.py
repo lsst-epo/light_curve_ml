@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import sqlite3
+from sqlite3 import Connection, Cursor
 
 from lcml.pipeline.database.serialization import deserArray
 from lcml.utils.basic_logging import BasicLogging
@@ -42,7 +43,7 @@ SINGLE_COL_PAGED_SELECT_QRY = ("SELECT {0} FROM {1} "
 SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
 
 
-def connFromParams(dbParams):
+def connFromParams(dbParams: dict) -> Union[Connection, None]:
     p = joinRoot(dbParams["dbPath"])
     timeout = dbParams["timeout"]
     conn = None
@@ -65,20 +66,21 @@ def ensureDbTables(dbParams: dict):
     conn.commit()
 
 
-def _ensureTable(cursor, query, table):
+def _ensureTable(cursor: Cursor, query: str, table: str):
     logger.info("initializing table: %s", table)
     cursor.execute(query % table)
 
 
-def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
-                       pageSize=1000, textField=True):
+def singleColPagingItr(cursor: Cursor, table: str, column: str,
+                       selectRows: str= "*", columnInd=0,
+                       pageSize: int=1000, textField: bool=True):
     """Perform a find with sqlite using single-column paging to maintain a
     reasonable memory footprint.
 
     :param cursor: db cursor
     :param table: table to query
     :param column: single column to page over
-    :param selRows: desired rows returned
+    :param selectRows: desired rows returned
     :param columnInd: 0-based index of paging column
     :param pageSize: limit on the number of records returned in a single page
     :param textField: flag specifying whether column's data type is text
@@ -87,7 +89,7 @@ def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
     rows = True
     while rows:
         _fmtPrevVal = "\"{}\"".format(prevVal) if textField else prevVal
-        q = SINGLE_COL_PAGED_SELECT_QRY.format(selRows, table, column,
+        q = SINGLE_COL_PAGED_SELECT_QRY.format(selectRows, table, column,
                                                _fmtPrevVal, pageSize)
         cursor.execute(q)
         rows = cursor.fetchall()
@@ -99,7 +101,7 @@ def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
 
 
 def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
-    """Selects features and their associated labels"""
+    """Selects light curve features and class labels"""
     # if this soaks up all the RAM,
     # a) try memory-mapped numpy array:
     # https://docs.scipy.org/doc/numpy/reference/generated/numpy.memmap.html
@@ -122,10 +124,11 @@ def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
     conn.close()
     if features:
         logger.info("Feature vectors have length: %s", len(features[0]))
+
     return features, labels
 
 
-def classLabelHistogram(dbParams: dict):
+def classLabelHistogram(dbParams: dict) -> dict:
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
     histogramQry = "SELECT label, COUNT(*) FROM %s GROUP BY label"
@@ -135,6 +138,6 @@ def classLabelHistogram(dbParams: dict):
     return histogram
 
 
-def reportTableCount(cursor, table: str, msg: str=""):
+def reportTableCount(cursor: Cursor, table: str, msg: str=""):
     count = cursor.execute("SELECT COUNT(*) FROM %s" % table)
     logger.info("Table '%s' %s rows: %s", table, msg, [_ for _ in count][0][0])

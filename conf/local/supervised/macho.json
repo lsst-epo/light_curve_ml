@@ -7,8 +7,8 @@
     "dbPath": "data/macho/macho_processed.db",
     "clean_lc_table": "standardized_clean_lcs",
     "feature_table": "lc_standardized_features",
-    "commitFrequency": 5000,
-    "pageSize": 5000
+    "commitFrequency": 500,
+    "pageSize": 500
   },
   "loadData": {
     "params": {

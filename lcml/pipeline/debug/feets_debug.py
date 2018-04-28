@@ -1,4 +1,6 @@
-"""Run a particular light curve against feets features detecting failures"""
+#!/usr/bin/env python3
+"""Script to run a single light curve against all feets feature extractors and
+to catch and report any unhandled exceptions"""
 import argparse
 from datetime import timedelta
 import time

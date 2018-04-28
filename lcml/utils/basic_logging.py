@@ -33,13 +33,13 @@ _levelNames = {
 }
 
 
-def nameToLevel(name):
+def nameToLevel(name: str) -> int:
     """Converts the English name for logging level to the logging module's
     internal integer code"""
     return _levelNames[name.upper()]
 
 
-def levelToName(level):
+def levelToName(level: int) -> str:
     return _levelNames[level]
 
 
@@ -51,7 +51,7 @@ class BasicLogging:
         pass
 
     @classmethod
-    def initLogging(cls, fileName=None, fmt=None):
+    def initLogging(cls, fileName: str=None, fmt: str=None):
         """Initializes logging across app. Intended to be called before logger
         objects are created. Configuration read from
         `$LCML/conf/common/logging.json`.
@@ -95,7 +95,7 @@ class BasicLogging:
             logging.getLogger(setting["module"]).setLevel(level)
 
     @classmethod
-    def getLogger(cls, name):
+    def getLogger(cls, name: str) -> logging.Logger:
         logger = logging.getLogger(name)
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(cls._consoleLevel)
@@ -107,7 +107,7 @@ class BasicLogging:
 def getBasicLogger(name, fileName,
                    logFormat=DEFAULT_FORMAT,
                    dateFmt=DATE_FORMAT,
-                   level=logging.INFO):
+                   level=logging.INFO) -> logging.Logger:
     """Initializes logging. Intended to be used by one-offs scripts isolated
     to a single file. See also lcml.utils.basic_logging.BasicLogging#getLogger
     """
@@ -121,10 +121,8 @@ def getBasicLogger(name, fileName,
                         level=level)
 
     logger = logging.getLogger(name)
-
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.DEBUG)
     handler.setFormatter(logging.Formatter(logFormat))
     logger.addHandler(handler)
-
     return logger

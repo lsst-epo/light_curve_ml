@@ -2,8 +2,8 @@ import functools
 import time
 
 
-def retry(timeoutSec, initialRetryDelaySec, maxRetryDelaySec,
-          retryExceptions=(Exception,),
+def retry(timeoutSec: float, initialRetryDelaySec: float,
+          maxRetryDelaySec: float, retryExceptions=(Exception,),
           retryFilter=lambda e, args, kwargs: True):
     """ Returns a closure suitable for use as function/method decorator for
     retrying a function being decorated.
