@@ -1,4 +1,5 @@
 {
+  "__MACHO dataset, supervised, for Nix deploy__": null,
   "globalParams": {
     "type": "supervised"
   },

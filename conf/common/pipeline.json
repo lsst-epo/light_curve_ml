@@ -1,5 +1,5 @@
 {
-  "__Generic pipeline params__": null,
+  "__Default pipeline params__": null,
   "globalParams": {
     "places": 3,
     "trainSize": 0.80

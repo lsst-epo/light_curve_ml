@@ -1,11 +1,10 @@
 astropy>=2
-
-# recent commit from feets library
--e git+https://github.com/carpyncho/feets.git@40157f9bbfad87cc23753bad76a8414614e56814#egg=feets
+feets==0.4
 matplotlib
 numpy
 pandas
 prettytable
 pytz
-scikit-learn
+requests
+scikit-learn>=0.19
 scipy

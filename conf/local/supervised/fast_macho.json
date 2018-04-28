@@ -1,4 +1,5 @@
 {
+  "__Limited MACHO dataset for pipeline debugging__": null,
   "globalParams": {
     "type": "supervised",
     "dataLimit": 500
@@ -10,7 +11,9 @@
     "params": {
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
-      "filter": [-99.0],
+      "filter": [
+        -99.0
+      ],
       "skip": true
     }
   },
@@ -29,24 +32,35 @@
       }
     },
     "params": {
-        "cv": {
-          "n_splits": 5,
-          "n_repeats": 1
+      "cv": {
+        "n_splits": 5,
+        "n_repeats": 1
+      },
+      "gridSearch": {
+        "param_grid": {
+          "n_estimators": [
+            20,
+            30
+          ],
+          "criterion": [
+            "gini",
+            "entropy"
+          ],
+          "max_features": [
+            3,
+            6
+          ],
+          "min_samples_leaf": [
+            1
+          ]
         },
-        "gridSearch": {
-          "param_grid": {
-            "n_estimators": [20, 30],
-            "criterion": ["gini", "entropy"],
-            "max_features": [3, 6],
-            "min_samples_leaf": [1]
-          },
-          "scoring": "f1_weighted",
-          "pre_dispatch": "10 * n_jobs",
-          "n_jobs": -1,
-          "iid": true,
-          "verbose": 2,
-          "error_score": "raise"
-        }
+        "scoring": "f1_weighted",
+        "pre_dispatch": "10 * n_jobs",
+        "n_jobs": -1,
+        "iid": true,
+        "verbose": 2,
+        "error_score": "raise"
+      }
     }
   },
   "serialization": {

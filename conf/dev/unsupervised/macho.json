@@ -1,4 +1,5 @@
 {
+  "__MACHO dataset, unsupervised, for Nix deploy__": null,
   "globalParams": {
     "type": "unsupervised",
     "trainSize": 1.0
@@ -11,9 +12,10 @@
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv",
       "skip": true,
-
       "skipCleaning": true,
-      "filter": [-99.0],
+      "filter": [
+        -99.0
+      ],
       "standardize": false
     }
   },
@@ -28,7 +30,11 @@
       "componentsStart": 5,
       "componentsStop": 41,
       "componentsStep": 2,
-      "clusterValues": [10, 11, 12],
+      "clusterValues": [
+        10,
+        11,
+        12
+      ],
       "miniBatchKMeansArgs": {
         "init": "k-means++",
         "max_iter": 1000,
@@ -48,7 +54,9 @@
         "algorithm": "full"
       },
       "agglomerativeArgs": {
-        "linkages": {"agglomerative (ward)": "ward"},
+        "linkages": {
+          "agglomerative (ward)": "ward"
+        },
         "memory": "/data/tmp"
       }
     }

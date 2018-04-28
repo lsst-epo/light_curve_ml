@@ -4,7 +4,7 @@ import importlib
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.stage.extract import feetsExtractFeatures
 from lcml.pipeline.stage.model_selection import gridSearchCv
-from lcml.utils.pathing import ensureDir
+from lcml.utils.pathing import ensurePath
 
 
 #: global parameters section of the pipeline conf file
@@ -57,7 +57,7 @@ def loadPipelineConf(conf):
     else:
         raise ValueError("unsupported extract function: %s" % extractType)
 
-    ensureDir(conf[DB_PARAMS]["dbPath"])
+    ensurePath(conf[DB_PARAMS]["dbPath"])
     extParams = conf[EXTRACT_FEATURES]["params"]
     extractFeatures = FunctionAndParams(extractFcn, extParams)
 
@@ -76,6 +76,6 @@ def loadPipelineConf(conf):
     modelSearch = FunctionAndParams(searchFcn, searchParams)
 
     serialParams = conf[SERIALIZATION]["params"]
-    ensureDir(serialParams["modelSavePath"])
+    ensurePath(serialParams["modelSavePath"])
     return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadData,
                           extractFeatures, modelSearch, serialParams)

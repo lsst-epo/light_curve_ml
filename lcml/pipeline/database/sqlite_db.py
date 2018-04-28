@@ -39,6 +39,9 @@ SINGLE_COL_PAGED_SELECT_QRY = ("SELECT {0} FROM {1} "
                                "LIMIT {4}")
 
 
+SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
+
+
 def connFromParams(dbParams):
     p = joinRoot(dbParams["dbPath"])
     timeout = dbParams["timeout"]
@@ -93,9 +96,6 @@ def singleColPagingItr(cursor, table, column, selRows="*", columnInd=0,
 
         if rows:
             prevVal = rows[-1][columnInd]
-
-
-SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
 
 
 def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):

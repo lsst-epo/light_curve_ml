@@ -1,23 +1,26 @@
 # Machine learning for light curves. 
-
 Currently focusing on broad classification of astronomical objects.
 
-Current development install
-1. Set LCML environment variable
-2. Add LCML to PYTHONPATH
-3. pip install -r $LCML/requirements.txt
-4. Install `feets` library by cloning the repo:
- 
-https://github.com/carpyncho/feets
- 
-and checking out commit:
- 
-8df90f7eed63885d2e5885f4944e74121f49e5bd 
+Requirements:
+- Python 3
 
-then running its install
+Development install
+- Set `LCML` environment variable to repo checkout's path 
+(e.g., `export LCML=/Users/*/code/light_curve_ml`)
+- `cd $LCML && python setup.py develop`
 
-`pip install -e .`
+# Running ML pipeline
+`python lcml/pipeline/run_pipeline.py --path conf/local/supervised/macho.json
+--logFileName super_macho.log`
 
-# Running pipeline
+## Job File
+The pipeline expects a job file (`macho.json` in above example) specifying the 
+configuration of the pipeline and detailed declaration of experiment parameters.
 
-Use `lcml/pipeline/run_pipeline.py`
+The specified job file supercedes the default job file on a per field basis recursively. 
+So any, or none, of the default fields may be overridden. The default settings are located
+ at `conf/common/pipeline.json`. 
+
+# Other Scripts
+- `lcml.data.acquisistion` - Scripts used to acquire and/or process various datasets including MACHO, OGLE3, Catalina, and Gaia
+- `lcml.poc` - One-off proof-of-concept scripts of how to use various libaries

@@ -17,65 +17,32 @@ logger = BasicLogging.getLogger(__name__)
 
 
 class LcDataAdapter:
+    """An interface / contract to allow a generic method to load a variety
+    of CSV light curve datasets having disparate columnar format. All files must
+    respect a 'flat' representation where 1) each row is a single timeseries
+    data point, 2) individual lightcurves are concatenated together, each in
+    their temporal order 3) all rows contain light curve UID information """
     def __init__(self):
         pass
 
     @staticmethod
     @abstractmethod
-    def rowEquals(row, uid):
+    def rowEquals(row, uid: str) -> True:
+        """Returns True if row equals uid"""
         pass
 
     @staticmethod
     @abstractmethod
-    def initLcFrom(row):
+    def initLcFrom(row) -> (str, str, list, list, list):
+        """Initialize a new light curve object.
+        Returns: uid, label, times, mags, errors
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def appendRow(times, mags, errors, row):
-        pass
-
-
-class K2Adapter(LcDataAdapter):
-    """Parses Light curves from LSST's csv K2 data. Ignore data having nonzero
-    SAP_QUALITY.
-
-    Col 0 - TIME [64-bit floating point] - The time at the mid-point of the
-    cadence in BKJD. Kepler Barycentric Julian Day (BKJD) is Julian day minus
-    2454833.0 (UTC=January 1, 2009 12:00:00) and corrected to be the arrival
-    times at the barycenter of the Solar System.
-
-    Col 7 - PDCSAP_FLUX [32-bit floating point] - The flux contained in the
-    optimal aperture in electrons per second after the PDC module has applied
-    its cotrending algorithm to the PA light curve. To better understand how
-    PDC manipulated the light curve, read Section 2.3.1.2 and see the PDCSAPFL
-    keyword in the header.
-
-    Col 8 - PDCSAP_FLUX_ERR [32-bit floating point] - The 1-sigma error in PDC
-    flux values.
-
-    Col 9 - SAP_QUALITY [32-bit integer] - Flags containing information about
-    the quality of the data. Table 2-3 explains the meaning of each active bit.
-    See the Data Characteristics Handbook and Data Release Notes for more
-    details on safe modes, coarse point, argabrightenings, attitude tweaks, etc.
-    Unused bits are reserved for future use.
-
-    # only select data where SAP quality flags are 0
-    goodRows = np.where(data[:, 9] == 0)[0]
-    """
-    @staticmethod
-    def rowEquals(row, uid):
-        pass
-
-    @staticmethod
-    def initLcFrom(row):
-        pass
-        # times = data[goodRows, 0]
-        # magnitudes = data[goodRows, 7]
-        # errors = data[goodRows, 8]
-
-    @staticmethod
-    def appendRow(times, mags, errors, row):
+        """Append a single row to an in-progress light curve"""
         pass
 
 
@@ -122,7 +89,53 @@ class MachoAdapter(LcDataAdapter):
         errors.append(row[4])
 
 
-def loadFlatLcDataset(params, dbParams, limit: float):
+class K2Adapter(LcDataAdapter):
+    """Parses Light curves from LSST's csv K2 data. Ignore data having nonzero
+    SAP_QUALITY.
+
+    Col 0 - TIME [64-bit floating point] - The time at the mid-point of the
+    cadence in BKJD. Kepler Barycentric Julian Day (BKJD) is Julian day minus
+    2454833.0 (UTC=January 1, 2009 12:00:00) and corrected to be the arrival
+    times at the barycenter of the Solar System.
+
+    Col 7 - PDCSAP_FLUX [32-bit floating point] - The flux contained in the
+    optimal aperture in electrons per second after the PDC module has applied
+    its cotrending algorithm to the PA light curve. To better understand how
+    PDC manipulated the light curve, read Section 2.3.1.2 and see the PDCSAPFL
+    keyword in the header.
+
+    Col 8 - PDCSAP_FLUX_ERR [32-bit floating point] - The 1-sigma error in PDC
+    flux values.
+
+    Col 9 - SAP_QUALITY [32-bit integer] - Flags containing information about
+    the quality of the data. Table 2-3 explains the meaning of each active bit.
+    See the Data Characteristics Handbook and Data Release Notes for more
+    details on safe modes, coarse point, argabrightenings, attitude tweaks, etc.
+    Unused bits are reserved for future use.
+
+    # only select data where SAP quality flags are 0
+    goodRows = np.where(data[:, 9] == 0)[0]
+    """
+    @staticmethod
+    def rowEquals(row, uid):
+        # Incomplete
+        pass
+
+    @staticmethod
+    def initLcFrom(row):
+        # Incomplete
+        pass
+        # times = data[goodRows, 0]
+        # magnitudes = data[goodRows, 7]
+        # errors = data[goodRows, 8]
+
+    @staticmethod
+    def appendRow(times, mags, errors, row):
+        # Incomplete
+        pass
+
+
+def loadFlatLcDataset(params: dict, dbParams: dict, limit: float):
     """Loads and aggregates light curves from single csv file of individual data
     points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])

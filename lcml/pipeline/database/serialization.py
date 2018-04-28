@@ -2,6 +2,8 @@ import pickle
 
 import numpy as np
 
+from typing import Union
+
 
 def serLc(times, mags, errors) -> (bytes, bytes, bytes):
     """Serializes light curve attributes (as arrays or lists) to bytes objs
@@ -12,7 +14,7 @@ def serLc(times, mags, errors) -> (bytes, bytes, bytes):
     return t, m, e
 
 
-def serArray(a: np.ndarray) -> bytes:
+def serArray(a: Union[np.ndarray, list]) -> bytes:
     return pickle.dumps(a)
 
 

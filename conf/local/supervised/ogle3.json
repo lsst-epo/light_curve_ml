@@ -1,4 +1,5 @@
 {
+  "__local super OGLE3__": null,
   "globalParams": {
     "type": "supervised"
   },

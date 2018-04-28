@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-"""Testing out running the small Catalina periodic dataset through HTM
-classifier."""
-from __future__ import print_function
+"""Parsing and viewing various datasets."""
 import csv
 import os
 
 import numpy as np
 
-import lcml.utils.pathing
 from lcml.utils import dataset_util, format_util
+import lcml.utils.pathing
 
 
 def loadDataset(dataName, datasetName, useDeltaEncoder=False):

@@ -27,14 +27,19 @@ def unarchiveAll(directory, ext="tar", mode="r:", remove=False):
             os.remove(f)
 
 
-def ensureDir(p):
-    """Given a full path, ensures the directory structure for that path exists.
-    """
-    d = os.path.dirname(p)
-    ensurePath(d)
-
-
 def ensurePath(p):
-    """Given a full path, ensure the directory structure exists"""
+    """Given a full path, ensures the directory structure for that path exists.
+    E.g., given '/a/b/c.txt' generates /a/b
+    """
+    ensureDirs(os.path.dirname(p))
+
+
+def ensureDirs(p):
+    """Given a directory path, ensures the directory structure exists.
+    E.g., given '/a/b/' generates /a/b"""
     if not os.path.exists(p):
         os.makedirs(p)
+
+
+if __name__ == "__main__":
+    ensurePath("/Users/ryanjmccall/Desktop/foobar/foobar.txt")
