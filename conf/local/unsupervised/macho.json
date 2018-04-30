@@ -29,8 +29,8 @@
     "function": "grid",
     "params": {
       "componentsStart": 5,
-      "componentsStop": 41,
-      "componentsStep": 10,
+      "componentsStop": 10,
+      "componentsStep": 1,
       "clusterValues": [10],
       "miniBatchKMeansArgs": {
         "init": "k-means++",

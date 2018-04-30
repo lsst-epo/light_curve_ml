@@ -30,6 +30,11 @@ DEFAULT_LINKAGES = {"agglomerative (ward)": "ward",
 _INITIAL_TABLE_COLUMNS = ["reduction algorithm", "components",
                           "variance explained", "clusters", "cluster algorithm"]
 
+
+reduceStage = namedtuple("ReduceStage", ["components", "modelName",
+                                         "modelClass"])
+
+
 class UnsupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
@@ -46,55 +51,36 @@ class UnsupervisedPipeline(BatchPipeline):
                                 self.searchParams["componentsStop"],
                                 self.searchParams["componentsStep"]))
 
-
         allRows = list()
-        for c in components:
-            logger.info("testing: %s components", c)
-            self._runDimReduct(c, X_normed, y, "pca", PCA, allRows)
-            self._runDimReduct(c, X_normed, y, "lda",
-                               LinearDiscriminantAnalysis, allRows)
+        tests = [[reduceStage(c, "pca", PCA)] for c in components]
+        tests += [[reduceStage(c, "lda", LinearDiscriminantAnalysis)]
+                   for c in components]
+        tests += [[reduceStage(c1, "pca", PCA),
+                   reduceStage(c2, "lda", LinearDiscriminantAnalysis)]
+                   for c1 in components for c2 in components]
+        tests += [[reduceStage(c2, "lda", LinearDiscriminantAnalysis),
+                   reduceStage(c1, "pca", PCA)]
+                   for c1 in components for c2 in components]
+        for i, test in enumerate(tests):
+            logger.info("running test: %s", i)
+            self._runDimReduct(X_normed, y, test, allRows)
 
         self._reportAllResults(allRows)
         self._reportBestMetrics(allRows)
 
-    @staticmethod
-    def _reportAllResults(allRows):
-        t = PrettyTable(_INITIAL_TABLE_COLUMNS + EXTERNAL_METRICS +
-                        INTERNAL_METRICS)
-        for r in allRows:
-            t.add_row(r)
-        logger.info("\n" + str(t))
+    def _runDimReduct(self, X, y, test: List[namedtuple], allRows: list):
+        XReduced = X
+        varianceExplained = ""
+        modelName = ""
+        components = ""
+        for stage in test:
+            model = stage.modelClass(n_components=stage.components)
+            XReduced = model.fit_transform(XReduced, y)
+            varianceExplained += str(round(sum(model.explained_variance_ratio_),
+                                     self.places)) + " "
+            modelName += stage.modelName + " "
+            components += str(stage.components) + " "
 
-    def _reportBestMetrics(self, allRows):
-        t = PrettyTable(["metric", "max value"] + _INITIAL_TABLE_COLUMNS)
-        for name, index in [("adjMutualInfo", 5), ("adjustedRand", 6),
-                            ("fowlkesMallows", 8), ("calinskiHarabaz", 11),
-                            ("silhouetteCoef", 12)]:
-            t.add_row(self._addMaxAndConditions(allRows, name, index))
-        logger.info("\n" + str(t))
-
-    @staticmethod
-    def _addMaxAndConditions(rows: List[List[str]], metricName: str,
-                             index: int) -> list:
-        maxInd = None
-        maxVal = -float("inf")
-        for i, r in enumerate(rows):
-            if float(r[index]) > maxVal:
-                maxInd = index
-                maxVal = float(r[index])
-
-        return [metricName, maxVal] + rows[maxInd][:5]
-
-    def _runDimReduct(self, components: int, X, y, modelName: str, modelClass,
-                      allRows: list):
-        model = modelClass(n_components=components)
-        s = time.time()
-        XReduced = model.fit_transform(X, y)
-        logger.info("%s in %.2fs", modelName, time.time() - s)
-        varianceExplained = round(sum(model.explained_variance_ratio_),
-                                  self.places)
-
-        logger.info("model selection for %s reduced...", modelName)
         rows = self._runClusters(XReduced, y)
         for r in rows:
             allRows.append([modelName, components, varianceExplained] + r)
@@ -105,8 +91,7 @@ class UnsupervisedPipeline(BatchPipeline):
         kMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
         aggKwargs = self.searchParams["agglomerativeArgs"]
 
-        allScores = {k: list()
-                  for k in list(self.linkages) + [KMEANS_NAME]}
+        allScores = {k: list() for k in list(self.linkages) + [KMEANS_NAME]}
         for c in clusters:
             logger.info("clusters: %s", c)
             model = MiniBatchKMeans(n_clusters=c, **kMeansKwargs)
@@ -136,6 +121,35 @@ class UnsupervisedPipeline(BatchPipeline):
         sorted order"""
         tf = truncatedFloat(places)
         return [tf % v for _, v in sorted(scores._asdict().items())]
+
+
+    @staticmethod
+    def _reportAllResults(allRows):
+        t = PrettyTable(_INITIAL_TABLE_COLUMNS + EXTERNAL_METRICS +
+                        INTERNAL_METRICS)
+        for r in allRows:
+            t.add_row(r)
+        logger.info("\n" + str(t))
+
+    def _reportBestMetrics(self, allRows):
+        t = PrettyTable(["metric", "max value"] + _INITIAL_TABLE_COLUMNS)
+        for name, index in [("adjMutualInfo", 5), ("adjustedRand", 6),
+                            ("fowlkesMallows", 8), ("calinskiHarabaz", 11),
+                            ("silhouetteCoef", 12)]:
+            t.add_row(self._addMaxAndConditions(allRows, name, index))
+        logger.info("\n" + str(t))
+
+    @staticmethod
+    def _addMaxAndConditions(rows: List[List[str]], metricName: str,
+                             index: int) -> list:
+        maxInd = None
+        maxVal = -float("inf")
+        for i, r in enumerate(rows):
+            if float(r[index]) > maxVal:
+                maxInd = index
+                maxVal = float(r[index])
+
+        return [metricName, maxVal] + rows[maxInd][:5]
 
     @staticmethod
     def evaluateClusteringModel(model, labels, features, scores, name=""):
