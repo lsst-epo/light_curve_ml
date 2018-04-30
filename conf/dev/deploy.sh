@@ -40,4 +40,3 @@ vim [fname]
 
 # copy dirs recursively into EBS mount
 scp -rp -i ~/.ssh/rjm_lsst_2018.pem ogle3/ ubuntu@ec2-34-215-180-36.us-west-2.compute.amazonaws.com:/data
-

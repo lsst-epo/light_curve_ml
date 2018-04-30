@@ -27,9 +27,9 @@
   "modelSearch": {
     "function": "grid",
     "params": {
-      "componentsStart": 5,
-      "componentsStop": 41,
-      "componentsStep": 2,
+      "componentsStart": 3,
+      "componentsStop": 13,
+      "componentsStep": 1,
       "clusterValues": [
         10,
         11,
