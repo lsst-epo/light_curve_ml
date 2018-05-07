@@ -31,6 +31,8 @@ _INITIAL_TABLE_COLUMNS = ["reduction algorithm", "components",
                           "variance explained", "clusters", "cluster algorithm"]
 
 
+#: single stage in dimensionality reduction, e.g.,
+#: (5, "LDA", LinearDiscriminantAnalysis)
 reduceStage = namedtuple("ReduceStage", ["components", "modelName",
                                          "modelClass"])
 
@@ -38,9 +40,10 @@ reduceStage = namedtuple("ReduceStage", ["components", "modelName",
 class UnsupervisedPipeline(BatchPipeline):
     def __init__(self, conf):
         BatchPipeline.__init__(self, conf)
-        aggKwargs = self.searchParams["agglomerativeArgs"]
-        aggKwargs["memory"] = Memory(cachedir=aggKwargs["memory"])
-        self.linkages = aggKwargs.pop("linkages", DEFAULT_LINKAGES)
+        agglomKwargs = self.searchParams["agglomerativeArgs"]
+        agglomKwargs["memory"] = Memory(cachedir=agglomKwargs["memory"])
+        self.linkages = agglomKwargs.pop("linkages", DEFAULT_LINKAGES)
+        self.clusterModels = list(self.linkages) + [KMEANS_NAME]
         self.places = self.globalParams["places"]
 
     def modelSelectionPhase(self, X: List[np.ndarray], y: List[str],
@@ -51,29 +54,32 @@ class UnsupervisedPipeline(BatchPipeline):
                                 self.searchParams["componentsStop"],
                                 self.searchParams["componentsStep"]))
 
-        allRows = list()
+        testResults = list()
         tests = [[reduceStage(c, "pca", PCA)] for c in components]
         tests += [[reduceStage(c, "lda", LinearDiscriminantAnalysis)]
                    for c in components]
         tests += [[reduceStage(c1, "pca", PCA),
                    reduceStage(c2, "lda", LinearDiscriminantAnalysis)]
                    for c1 in components for c2 in components]
-        tests += [[reduceStage(c2, "lda", LinearDiscriminantAnalysis),
-                   reduceStage(c1, "pca", PCA)]
+        tests += [[reduceStage(c1, "lda", LinearDiscriminantAnalysis),
+                   reduceStage(c2, "pca", PCA)]
                    for c1 in components for c2 in components]
         for i, test in enumerate(tests):
             logger.info("running test: %s", i)
-            self._runDimReduct(X_normed, y, test, allRows)
+            self._runDimReduct(X_normed, y, test, testResults)
 
-        self._reportAllResults(allRows)
-        self._reportBestMetrics(allRows)
+        self._reportAllResults(testResults)
+        self._reportBestMetrics(testResults)
 
-    def _runDimReduct(self, X, y, test: List[namedtuple], allRows: list):
+    def _runDimReduct(self, X, y, test: List[namedtuple], testResults: list):
+        """Runs a single dimensionality reduction test. First the data is
+        simplified then the clustering test is run."""
         XReduced = X
         varianceExplained = ""
         modelName = ""
         components = ""
         for stage in test:
+            logger.info("- running stage: %s", stage.modelName)
             model = stage.modelClass(n_components=stage.components)
             XReduced = model.fit_transform(XReduced, y)
             varianceExplained += str(round(sum(model.explained_variance_ratio_),
@@ -83,15 +89,19 @@ class UnsupervisedPipeline(BatchPipeline):
 
         rows = self._runClusters(XReduced, y)
         for r in rows:
-            allRows.append([modelName, components, varianceExplained] + r)
+            testResults.append([modelName, components, varianceExplained] + r)
 
-    def _runClusters(self, features: List[np.ndarray],
-                     labels: List[str]) -> List[List[str]]:
+    def _runClusters(self, features: List[np.ndarray], labels: List[str]) -> (
+            List[List[str]]):
+        """Tests mini-batch kmeans and agglomerative clustering techniques
+        returning a row for each test result.:
+
+        :return row for each test containing: clusters, technique name,
+        external and internal metrics"""
         clusters = self.searchParams["clusterValues"]
         kMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
         aggKwargs = self.searchParams["agglomerativeArgs"]
-
-        allScores = {k: list() for k in list(self.linkages) + [KMEANS_NAME]}
+        allScores = {k: list() for k in self.clusterModels}
         for c in clusters:
             logger.info("clusters: %s", c)
             model = MiniBatchKMeans(n_clusters=c, **kMeansKwargs)
@@ -116,42 +126,6 @@ class UnsupervisedPipeline(BatchPipeline):
         return rows
 
     @staticmethod
-    def _asSortedList(scores: namedtuple, places: int=4) -> List[str]:
-        """Converts namedtuple of scores to a list of rounded values in name
-        sorted order"""
-        tf = truncatedFloat(places)
-        return [tf % v for _, v in sorted(scores._asdict().items())]
-
-
-    @staticmethod
-    def _reportAllResults(allRows):
-        t = PrettyTable(_INITIAL_TABLE_COLUMNS + EXTERNAL_METRICS +
-                        INTERNAL_METRICS)
-        for r in allRows:
-            t.add_row(r)
-        logger.info("\n" + str(t))
-
-    def _reportBestMetrics(self, allRows):
-        t = PrettyTable(["metric", "max value"] + _INITIAL_TABLE_COLUMNS)
-        for name, index in [("adjMutualInfo", 5), ("adjustedRand", 6),
-                            ("fowlkesMallows", 8), ("calinskiHarabaz", 11),
-                            ("silhouetteCoef", 12)]:
-            t.add_row(self._addMaxAndConditions(allRows, name, index))
-        logger.info("\n" + str(t))
-
-    @staticmethod
-    def _addMaxAndConditions(rows: List[List[str]], metricName: str,
-                             index: int) -> list:
-        maxInd = None
-        maxVal = -float("inf")
-        for i, r in enumerate(rows):
-            if float(r[index]) > maxVal:
-                maxInd = index
-                maxVal = float(r[index])
-
-        return [metricName, maxVal] + rows[maxInd][:5]
-
-    @staticmethod
     def evaluateClusteringModel(model, labels, features, scores, name=""):
         s = time.time()
         model.fit(features)
@@ -161,6 +135,47 @@ class UnsupervisedPipeline(BatchPipeline):
         internal = computeInternalMetrics(features, model.labels_)
         scores.append((external, internal))
         return scores
+
+    @staticmethod
+    def _asSortedList(scores: namedtuple, places: int=4) -> List[str]:
+        """Converts namedtuple of scores to a list of rounded values in name-
+        sorted order"""
+        tf = truncatedFloat(places)
+        return [tf % v for _, v in sorted(scores._asdict().items())]
+
+    @staticmethod
+    def _reportAllResults(allRows):
+        t = PrettyTable(_INITIAL_TABLE_COLUMNS + EXTERNAL_METRICS +
+                        INTERNAL_METRICS)
+        for r in allRows:
+            t.add_row(r)
+        logger.info("\n" + str(t))
+
+    _SCORE_IDXS = [("adjMutualInfo", 5), ("adjustedRand", 6),
+                   ("fowlkesMallows", 8), ("calinskiHarabaz", 11),
+                   ("silhouetteCoef", 12)]
+
+    @staticmethod
+    def _reportBestMetrics(rows):
+        """Reports the IV's responsible for the best scores of several
+        unsupervised learning scores."""
+        t = PrettyTable(["metric", "max value"] + _INITIAL_TABLE_COLUMNS)
+        for scoreName, idx in UnsupervisedPipeline._SCORE_IDXS:
+            t.add_row(UnsupervisedPipeline._bestMetricRow(rows, scoreName, idx))
+        logger.info("\n" + str(t))
+
+    @staticmethod
+    def _bestMetricRow(rows: List[List[str]], metricName: str,
+                       index: int) -> list:
+        """Compute best metric as a row containing max value and conditions"""
+        maxInd = None
+        maxVal = -float("inf")
+        for i, r in enumerate(rows):
+            if float(r[index]) > maxVal:
+                maxInd = index
+                maxVal = float(r[index])
+
+        return [metricName, maxVal] + rows[maxInd][:5]
 
     def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
         pass

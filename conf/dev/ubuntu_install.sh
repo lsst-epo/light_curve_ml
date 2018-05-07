@@ -1,4 +1,5 @@
-# Instructions for how to install `lcml` on Ubuntu 16
+#!/bin/bash
+# Installing `lcml` on Ubuntu 16
 
 # OS libraries
 sudo apt update
@@ -18,6 +19,7 @@ git config --global alias.st status
 
 # shell environment
 vim ~/.bashrc
+# add lines
 export LCML=/home/ubuntu/light_curve_ml
 export PYTHONPATH=/home/ubuntu/light_curve_ml:$PYTHONPATH
 alias python=/usr/bin/python3
@@ -37,6 +39,3 @@ python
 >>> matplotlib.matplotlib_fname()
 vim [fname]
 # switch backend property to: Agg
-
-# copy dirs recursively into EBS mount
-scp -rp -i ~/.ssh/rjm_lsst_2018.pem ogle3/ ubuntu@ec2-34-215-180-36.us-west-2.compute.amazonaws.com:/data
