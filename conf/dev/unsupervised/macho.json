@@ -28,7 +28,7 @@
     "function": "grid",
     "params": {
       "componentsStart": 3,
-      "componentsStop": 13,
+      "componentsStop": 20,
       "componentsStep": 1,
       "clusterValues": [
         10,

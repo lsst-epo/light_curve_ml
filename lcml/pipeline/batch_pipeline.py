@@ -88,7 +88,6 @@ class BatchPipeline:
 
         features, labels = selectFeaturesLabels(self.dbParams, dataLimit)
         if features:
-            logger.info("Loaded %s feature vectors", len(features))
             intLabels, labelMapping = convertClassLabels(labels)
             trainSize = self.globalParams["trainSize"]
             if trainSize == 1:

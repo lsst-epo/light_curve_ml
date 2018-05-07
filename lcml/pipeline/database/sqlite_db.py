@@ -123,7 +123,8 @@ def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
 
     conn.close()
     if features:
-        logger.info("Feature vectors have length: %s", len(features[0]))
+        logger.info("Loaded %s feature vectors having length: %s",
+                    len(features), len(features[0]))
 
     return features, labels
 

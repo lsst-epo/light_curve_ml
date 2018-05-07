@@ -8,7 +8,7 @@ import numpy as np
 from prettytable import PrettyTable
 from sklearn.cluster import AgglomerativeClustering, MiniBatchKMeans
 from sklearn.decomposition import PCA
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.externals.joblib import Memory
 from sklearn.preprocessing import StandardScaler
 
@@ -48,48 +48,62 @@ class UnsupervisedPipeline(BatchPipeline):
 
     def modelSelectionPhase(self, X: List[np.ndarray], y: List[str],
                             classToLabel: Dict[int, str]):
-        logger.info("feature vectors: %s", len(X))
         X_normed = StandardScaler().fit_transform(X)
-        components = list(range(self.searchParams["componentsStart"],
-                                self.searchParams["componentsStop"],
-                                self.searchParams["componentsStep"]))
 
+        start, stop, step = (self.searchParams["componentsStart"],
+                             self.searchParams["componentsStop"],
+                             self.searchParams["componentsStep"])
         testResults = list()
-        tests = [[reduceStage(c, "pca", PCA)] for c in components]
-        tests += [[reduceStage(c, "lda", LinearDiscriminantAnalysis)]
-                   for c in components]
-        tests += [[reduceStage(c1, "pca", PCA),
-                   reduceStage(c2, "lda", LinearDiscriminantAnalysis)]
-                   for c1 in components for c2 in components]
-        tests += [[reduceStage(c1, "lda", LinearDiscriminantAnalysis),
-                   reduceStage(c2, "pca", PCA)]
-                   for c1 in components for c2 in components]
+        tests = [[reduceStage(c, "pca", PCA)] for c in range(start, stop, step)]
+        tests += [[reduceStage(c, "lda", LDA)] for c in range(start, stop,step)]
+        tests += self._pcaLdaTests(start, stop, step)
+        tests += self._pcaLdaTests(start, stop, step, reverse=True)
         for i, test in enumerate(tests):
-            logger.info("running test: %s", i)
+            logger.info("\nrunning test: %s / %s", i + 1, len(tests))
             self._runDimReduct(X_normed, y, test, testResults)
 
         self._reportAllResults(testResults)
         self._reportBestMetrics(testResults)
 
+    @staticmethod
+    def _pcaLdaTests(start: int, stop: int, step: int, reverse: bool=False):
+        tests = []
+        nameAlg = [("pca", PCA), ("lda", LDA)]
+        if reverse:
+            nameAlg.reverse()
+
+        for c1 in range(start + 1, stop, step):
+            for c2 in range(start, c1, step):
+                stage0 = nameAlg[0]
+                stage1 = nameAlg[1]
+                test = [reduceStage(c1, stage0[0], stage0[1]),
+                        reduceStage(c2, stage1[0], stage1[1])]
+                tests.append(test)
+        return tests
+
     def _runDimReduct(self, X, y, test: List[namedtuple], testResults: list):
         """Runs a single dimensionality reduction test. First the data is
         simplified then the clustering test is run."""
         XReduced = X
-        varianceExplained = ""
         modelName = ""
         components = ""
+        varExpl = ""
         for stage in test:
-            logger.info("- running stage: %s", stage.modelName)
             model = stage.modelClass(n_components=stage.components)
             XReduced = model.fit_transform(XReduced, y)
-            varianceExplained += str(round(sum(model.explained_variance_ratio_),
-                                     self.places)) + " "
-            modelName += stage.modelName + " "
-            components += str(stage.components) + " "
+            varExpl += str(round(sum(model.explained_variance_ratio_),
+                                     self.places)) + "_"
+            modelName += stage.modelName + "_"
+            components += str(stage.components) + "_"
 
+        varExpl = varExpl[:-1]
+        modelName = modelName[:-1]
+        components = components[:-1]
+        logger.info("IVs: %s components=%s variance-explained=%s",
+                    modelName, components, varExpl)
         rows = self._runClusters(XReduced, y)
         for r in rows:
-            testResults.append([modelName, components, varianceExplained] + r)
+            testResults.append([modelName, components, varExpl] + r)
 
     def _runClusters(self, features: List[np.ndarray], labels: List[str]) -> (
             List[List[str]]):
@@ -105,16 +119,16 @@ class UnsupervisedPipeline(BatchPipeline):
         for c in clusters:
             logger.info("clusters: %s", c)
             model = MiniBatchKMeans(n_clusters=c, **kMeansKwargs)
-            self.evaluateClusteringModel(model, labels, features,
-                                         allScores[KMEANS_NAME], KMEANS_NAME)
+            self._evalClustering(model, labels, features,
+                                 allScores[KMEANS_NAME], KMEANS_NAME)
             del model
 
             for aggName, linkage in self.linkages.items():
                 affinity = "euclidean" if linkage == "ward" else "manhattan"
                 model = AgglomerativeClustering(n_clusters=c, linkage=linkage,
                                                 affinity=affinity, **aggKwargs)
-                self.evaluateClusteringModel(model, labels, features,
-                                             allScores[aggName], aggName)
+                self._evalClustering(model, labels, features,
+                                     allScores[aggName], aggName)
                 del model
 
         rows = []
@@ -126,7 +140,7 @@ class UnsupervisedPipeline(BatchPipeline):
         return rows
 
     @staticmethod
-    def evaluateClusteringModel(model, labels, features, scores, name=""):
+    def _evalClustering(model, labels, features, scores, name=""):
         s = time.time()
         model.fit(features)
         logger.info("%s fit in: %s", name,
@@ -144,10 +158,10 @@ class UnsupervisedPipeline(BatchPipeline):
         return [tf % v for _, v in sorted(scores._asdict().items())]
 
     @staticmethod
-    def _reportAllResults(allRows):
+    def _reportAllResults(rows):
         t = PrettyTable(_INITIAL_TABLE_COLUMNS + EXTERNAL_METRICS +
                         INTERNAL_METRICS)
-        for r in allRows:
+        for r in rows:
             t.add_row(r)
         logger.info("\n" + str(t))
 
@@ -162,7 +176,7 @@ class UnsupervisedPipeline(BatchPipeline):
         t = PrettyTable(["metric", "max value"] + _INITIAL_TABLE_COLUMNS)
         for scoreName, idx in UnsupervisedPipeline._SCORE_IDXS:
             t.add_row(UnsupervisedPipeline._bestMetricRow(rows, scoreName, idx))
-        logger.info("\n" + str(t))
+        logger.info("All test results...\n" + str(t))
 
     @staticmethod
     def _bestMetricRow(rows: List[List[str]], metricName: str,
@@ -172,7 +186,7 @@ class UnsupervisedPipeline(BatchPipeline):
         maxVal = -float("inf")
         for i, r in enumerate(rows):
             if float(r[index]) > maxVal:
-                maxInd = index
+                maxInd = i
                 maxVal = float(r[index])
 
         return [metricName, maxVal] + rows[maxInd][:5]

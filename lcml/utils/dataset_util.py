@@ -62,4 +62,4 @@ def reportClassHistogram(labels: Dict[str, int]):
     for k, v in sorted(labels.items(), key=lambda x: x[1], reverse=True):
         t.add_row([k, v, fmtPct(v, total)])
 
-    logger.info("Class histogram:\n" + str(t))
+    logger.info("\n" + str(t))
