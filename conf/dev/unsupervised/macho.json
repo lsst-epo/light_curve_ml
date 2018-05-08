@@ -21,7 +21,8 @@
   },
   "extractFeatures": {
     "params": {
-      "skip": true
+      "skip": true,
+      "excludedFeatures": []
     }
   },
   "modelSearch": {

@@ -22,6 +22,8 @@
   "extractFeatures": {
     "function": "feets",
     "params": {
+      "skip": false,
+      "offset": 0,
       "excludedFeatures": ["CAR_mean", "CAR_sigma", "CAR_tau"],
       "impute": true
     }

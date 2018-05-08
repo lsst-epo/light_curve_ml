@@ -16,7 +16,7 @@ from lcml.utils.multiprocess import feetsExtract, reportingImapUnordered
 logger = BasicLogging.getLogger(__name__)
 
 
-def feetsJobGenerator(fs, dbParams, selRows="*"):
+def feetsJobGenerator(fs, dbParams, selRows="*", offset: int=0):
     """Returns a generator of tuples of the form:
     (featureSpace (feets.FeatureSpace),  id (str), label (str), times (ndarray),
      mags (ndarray), errors(ndarray))
@@ -25,6 +25,7 @@ def feetsJobGenerator(fs, dbParams, selRows="*"):
     :param fs: feets.FeatureSpace object required to perform extraction
     :param dbParams: additional params
     :param selRows: which rows to select from clean LC table
+    :param offset: number of light curves to skip in db table before processing
     """
     table = dbParams["clean_lc_table"]
     pageSize = dbParams["pageSize"]
@@ -37,7 +38,7 @@ def feetsJobGenerator(fs, dbParams, selRows="*"):
     while rows:
         _fmtPrevId = "\"{}\"".format(previousId)
         q = SINGLE_COL_PAGED_SELECT_QRY.format(selRows, table, column,
-                                               _fmtPrevId, pageSize)
+                                               _fmtPrevId, pageSize, offset)
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
@@ -75,7 +76,8 @@ def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
     insertOrReplQry = INSERT_REPLACE_INTO_FEATURES % featuresTable
     reportTableCount(cursor, featuresTable, msg="before extracting")
 
-    jobs = feetsJobGenerator(fs, dbParams)
+    offset = params.get("offset", 0)
+    jobs = feetsJobGenerator(fs, dbParams, offset=offset)
     lcCount = 0
     dbExceptions = 0
     for uid, label, ftNames, features in reportingImapUnordered(feetsExtract,

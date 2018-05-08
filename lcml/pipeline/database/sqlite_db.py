@@ -37,7 +37,8 @@ INSERT_REPLACE_INTO_FEATURES = "INSERT OR REPLACE INTO %s VALUES (?, ?, ?)"
 SINGLE_COL_PAGED_SELECT_QRY = ("SELECT {0} FROM {1} "
                                "WHERE {2} > {3} "
                                "ORDER BY {2} "
-                               "LIMIT {4}")
+                               "LIMIT {4}"
+                               "OFFSET {5}")
 
 
 SELECT_FEATURES_LABELS_QRY = "SELECT label, features FROM %s"
@@ -76,33 +77,40 @@ def tableCount(cursor: Cursor, tableName: str) -> int:
     return [_ for _ in cursor.execute(_COUNT_QRY % tableName)][0][0]
 
 
-def singleColPagingItr(cursor: Cursor, table: str, column: str,
-                       selectRows: str= "*", columnInd=0,
-                       pageSize: int=1000, textField: bool=True):
-    """Perform a find with sqlite using single-column paging to maintain a
-    reasonable memory footprint.
+def singleColPagingItr(cursor: Cursor,
+                       table: str,
+                       columnName: str,
+                       columnIndex: int,
+                       columnEscaped: bool,
+                       selectRows: str="*",
+                       pageSize: int=1000,
+                       offset: int=0):
+    """Executes a sqlite SELECT using single-column paging to minimize memory
+    demands.
 
     :param cursor: db cursor
     :param table: table to query
-    :param column: single column to page over
-    :param selectRows: desired rows returned
-    :param columnInd: 0-based index of paging column
+    :param columnName: paging column name
+    :param columnIndex: paging column 0-based index
+    :param columnEscaped: flag specifying whether paging column data type
+    requires escaping
+    :param selectRows: row names to return
     :param pageSize: limit on the number of records returned in a single page
-    :param textField: flag specifying whether column's data type is text
+    :param offset: SQL offset specifying number of rows to skip
     """
     prevVal = ""
     rows = True
     while rows:
-        _fmtPrevVal = "\"{}\"".format(prevVal) if textField else prevVal
-        q = SINGLE_COL_PAGED_SELECT_QRY.format(selectRows, table, column,
-                                               _fmtPrevVal, pageSize)
+        _fmtPrevVal = "\"{}\"".format(prevVal) if columnEscaped else prevVal
+        q = SINGLE_COL_PAGED_SELECT_QRY.format(selectRows, table, columnName,
+                                               _fmtPrevVal, pageSize, offset)
         cursor.execute(q)
         rows = cursor.fetchall()
         for r in rows:
             yield r
 
         if rows:
-            prevVal = rows[-1][columnInd]
+            prevVal = rows[-1][columnIndex]
 
 
 def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):

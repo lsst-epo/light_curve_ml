@@ -103,7 +103,9 @@ def cleanLightCurves(params, dbParams, limit: float):
     insertCount = 0
     scaler = StandardScaler(copy=False)
     standardize = params.get("standardize", False)
-    for i, r in enumerate(singleColPagingItr(cursor, rawTable, "id")):
+    itr = singleColPagingItr(cursor, rawTable, columnName="id", columnIndex=0,
+                             columnEscaped=True)
+    for i, r in enumerate(itr):
         times, mags, errors = deserLc(*r[2:])
         lc, issue, _ = preprocessLc(times, mags, errors, removes=removes,
                                     stdLimit=stdLimit, errorLimit=errorLimit)
