@@ -84,7 +84,6 @@ def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
     for uid, label, ftNames, features in reportingImapUnordered(feetsExtract,
                                                                 jobs):
         # loop variables come from lcml.utils.multiprocess._feetsExtract
-        logger.info(ftNames)
         args = (uid, label, serArray(features))
         try:
             cursor.execute(insertOrReplQry, args)

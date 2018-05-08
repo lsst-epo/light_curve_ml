@@ -33,3 +33,27 @@ def fixedValueImpute(features: List[List[float]], value: float):
                        fmtPct(count, totalImputes)])
 
         logger.info("\n" + str(t))
+
+    # Nice-to-have, associated Counter keys (int) with feature names:
+    # ['Amplitude' 'AndersonDarling' 'Autocor_length' 'Beyond1Std' 'CAR_mean'
+    #  'CAR_sigma' 'CAR_tau' 'Con' 'Eta_e' 'FluxPercentileRatioMid20'
+    #  'FluxPercentileRatioMid35' 'FluxPercentileRatioMid50'
+    #  'FluxPercentileRatioMid65' 'FluxPercentileRatioMid80'
+    #  'Freq1_harmonics_amplitude_0' 'Freq1_harmonics_amplitude_1'
+    #  'Freq1_harmonics_amplitude_2' 'Freq1_harmonics_amplitude_3'
+    #  'Freq1_harmonics_rel_phase_0' 'Freq1_harmonics_rel_phase_1'
+    #  'Freq1_harmonics_rel_phase_2' 'Freq1_harmonics_rel_phase_3'
+    #  'Freq2_harmonics_amplitude_0' 'Freq2_harmonics_amplitude_1'
+    #  'Freq2_harmonics_amplitude_2' 'Freq2_harmonics_amplitude_3'
+    #  'Freq2_harmonics_rel_phase_0' 'Freq2_harmonics_rel_phase_1'
+    #  'Freq2_harmonics_rel_phase_2' 'Freq2_harmonics_rel_phase_3'
+    #  'Freq3_harmonics_amplitude_0' 'Freq3_harmonics_amplitude_1'
+    #  'Freq3_harmonics_amplitude_2' 'Freq3_harmonics_amplitude_3'
+    #  'Freq3_harmonics_rel_phase_0' 'Freq3_harmonics_rel_phase_1'
+    #  'Freq3_harmonics_rel_phase_2' 'Freq3_harmonics_rel_phase_3' 'Gskew'
+    #  'LinearTrend' 'MaxSlope' 'Mean' 'Meanvariance' 'MedianAbsDev' 'MedianBRP'
+    #  'PairSlopeTrend' 'PercentAmplitude' 'PercentDifferenceFluxPercentile'
+    #  'PeriodLS' 'Period_fit' 'Psi_CS' 'Psi_eta' 'Q31' 'Rcs' 'Skew'
+    #  'SlottedA_length' 'SmallKurtosis' 'Std' 'StetsonK' 'StetsonK_AC'
+    #  'StructureFunction_index_21' 'StructureFunction_index_31'
+    #  'StructureFunction_index_32']
