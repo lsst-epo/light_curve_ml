@@ -77,6 +77,7 @@ def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
     reportTableCount(cursor, featuresTable, msg="before extracting")
 
     offset = params.get("offset", 0)
+    logger.info("Beginning extraction at offset: %s in LC table", offset)
     jobs = feetsJobGenerator(fs, dbParams, offset=offset)
     lcCount = 0
     dbExceptions = 0

@@ -37,7 +37,7 @@ INSERT_REPLACE_INTO_FEATURES = "INSERT OR REPLACE INTO %s VALUES (?, ?, ?)"
 SINGLE_COL_PAGED_SELECT_QRY = ("SELECT {0} FROM {1} "
                                "WHERE {2} > {3} "
                                "ORDER BY {2} "
-                               "LIMIT {4}"
+                               "LIMIT {4} "
                                "OFFSET {5}")
 
 
