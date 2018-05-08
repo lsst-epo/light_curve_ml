@@ -1,0 +1,68 @@
+{
+  "__MACHO dataset, supervised, for Nix deploy__": null,
+  "globalParams": {
+    "type": "supervised"
+  },
+  "database": {
+    "dbPath": "/data/db/macho/macho_processed.db",
+    "clean_lc_table": "standardized_lcs",
+    "feature_table": "standard_lc_features",
+    "commitFrequency": 200,
+    "pageSize": 100
+  },
+  "loadData": {
+    "params": {
+      "dataName": "macho",
+      "relativePath": "/data/datasets/macho/macho-train.csv",
+      "skip": false,
+
+      "skipCleaning": false,
+      "filter": [-99.0],
+      "standardize": true
+    }
+  },
+  "extractFeatures": {
+    "params": {
+      "excludedFeatures": [],
+      "skip": false,
+      "standardize": false
+    }
+  },
+  "modelSearch": {
+    "function": "grid",
+    "model": {
+      "class": "sklearn.ensemble.RandomForestClassifier",
+      "params": {
+        "n_jobs": -1,
+        "class_weight": "balanced"
+      }
+    },
+    "params": {
+        "cv": {
+          "n_splits": 5,
+          "n_repeats": 1
+        },
+        "gridSearch": {
+          "param_grid": {
+            "n_estimators": [1150, 1200, 1250],
+            "criterion": ["entropy"],
+            "max_features": [26, 27, 28, 29, 30],
+            "min_samples_leaf": [2]
+          },
+          "scoring": "f1_weighted",
+          "pre_dispatch": "10 * n_jobs",
+          "n_jobs": -1,
+          "iid": true,
+          "verbose": 2,
+          "error_score": "raise"
+        }
+    }
+  },
+  "serialization": {
+    "params": {
+      "modelLoadPath": null,
+      "modelSavePath": "/data/models/macho/supervised/rf-classifier-macho-train-standard-nonstandard.pkl",
+      "imgPath": "/data/models/macho/supervised"
+    }
+  }
+}

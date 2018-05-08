@@ -11,10 +11,12 @@ from datetime import timedelta
 import time
 
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
                                               ensureDbTables,
                                               selectFeaturesLabels)
+from lcml.pipeline.stage.feature_process import fixedValueImpute
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
 from lcml.pipeline.stage.persistence import savePipelineResults
@@ -87,19 +89,27 @@ class BatchPipeline:
             logger.info("extracted in %s", extractElapsed)
 
         features, labels = selectFeaturesLabels(self.dbParams, dataLimit)
-        if features:
-            intLabels, labelMapping = convertClassLabels(labels)
-            trainSize = self.globalParams["trainSize"]
-            if trainSize == 1:
-                XTrain, XTest, yTrain, yTest = features, [], intLabels, []
-            else:
-                XTrain, XTest, yTrain, yTest = train_test_split(features,
-                    intLabels, train_size=trainSize, test_size=1 - trainSize)
+        if not features:
+            logger.warning("No features returned from db")
+            return
 
-            logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
-            best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
-            testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
-            savePipelineResults(self.conf, labelMapping, best, testMetrics)
+        # ideally impute function would be job-file customizable
+        fixedValueImpute(features, value=0.0)
+        if self.extractParams.get("standardize", None):
+            features = StandardScaler().fit_transform(features)
+
+        intLabels, labelMapping = convertClassLabels(labels)
+        trainSize = self.globalParams["trainSize"]
+        if trainSize == 1:
+            XTrain, XTest, yTrain, yTest = features, [], intLabels, []
+        else:
+            XTrain, XTest, yTrain, yTest = train_test_split(features,
+                intLabels, train_size=trainSize, test_size=1 - trainSize)
+
+        logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
+        best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
+        testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
+        savePipelineResults(self.conf, labelMapping, best, testMetrics)
 
         elapsedMins = timedelta(seconds=time.time() - startAll)
         logger.info("Pipeline completed in: %s", elapsedMins)

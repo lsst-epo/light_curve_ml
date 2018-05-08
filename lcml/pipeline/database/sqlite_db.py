@@ -71,6 +71,11 @@ def _ensureTable(cursor: Cursor, query: str, table: str):
     cursor.execute(query % table)
 
 
+_COUNT_QRY = "SELECT COUNT(*) from %s"
+def tableCount(cursor: Cursor, tableName: str) -> int:
+    return [_ for _ in cursor.execute(_COUNT_QRY % tableName)][0][0]
+
+
 def singleColPagingItr(cursor: Cursor, table: str, column: str,
                        selectRows: str= "*", columnInd=0,
                        pageSize: int=1000, textField: bool=True):

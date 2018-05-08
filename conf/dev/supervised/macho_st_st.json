@@ -16,15 +16,16 @@
       "relativePath": "/data/datasets/macho/macho-train.csv",
       "skip": true,
 
-      "skipCleaning": false,
+      "skipCleaning": true,
       "filter": [-99.0],
-      "standardize": false
+      "standardize": true
     }
   },
   "extractFeatures": {
     "params": {
       "excludedFeatures": [],
-      "skip": true
+      "skip": true,
+      "standardize": true
     }
   },
   "modelSearch": {
@@ -60,7 +61,7 @@
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/data/models/macho/supervised/rf-classifier-macho-train.pkl",
+      "modelSavePath": "/data/models/macho/supervised/rf-classifier-macho-train-standard-nonstandard.pkl",
       "imgPath": "/data/models/macho/supervised"
     }
   }

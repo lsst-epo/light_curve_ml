@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_LCS,
                                               connFromParams,
                                               reportTableCount,
-                                              singleColPagingItr)
+                                              singleColPagingItr, tableCount)
 from lcml.pipeline.database.serialization import deserLc, serLc
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
@@ -79,7 +79,6 @@ def _standardizeArray(scaler: StandardScaler, a: np.ndarray) -> np.ndarray:
     return _transformed.reshape(-1)
 
 
-_COUNT_QRY = "SELECT COUNT(*) from %s"
 def cleanLightCurves(params, dbParams, limit: float):
     """Clean lightcurves and report details on discards."""
     removes = set(params["filter"]) if "filter" in params else set()
@@ -94,7 +93,7 @@ def cleanLightCurves(params, dbParams, limit: float):
     cursor = conn.cursor()
     reportTableCount(cursor, cleanTable, msg="before cleaning")
     insertOrReplace = INSERT_REPLACE_INTO_LCS % cleanTable
-    totalLcs = [_ for _ in cursor.execute(_COUNT_QRY % rawTable)][0][0]
+    totalLcs = tableCount(cursor, rawTable)
     if limit != float("inf"):
         totalLcs = max(totalLcs, limit)
 
