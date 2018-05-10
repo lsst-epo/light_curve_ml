@@ -16,7 +16,7 @@
       "relativePath": "/data/datasets/macho/macho-train.csv",
       "skip": true,
 
-      "skipCleaning": false,
+      "skipCleaning": true,
       "filter": [-99.0],
       "standardize": true
     }
