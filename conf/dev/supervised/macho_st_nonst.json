@@ -14,7 +14,7 @@
     "params": {
       "dataName": "macho",
       "relativePath": "/data/datasets/macho/macho-train.csv",
-      "skip": false,
+      "skip": true,
 
       "skipCleaning": false,
       "filter": [-99.0],
@@ -24,7 +24,7 @@
   "extractFeatures": {
     "params": {
       "excludedFeatures": [],
-      "skip": false,
+      "skip": true,
       "standardize": false
     }
   },
