@@ -17,7 +17,7 @@
   },
   "extractFeatures": {
     "params": {
-      "skip": true,
+      "skip": false,
       "excludedFeatures": [],
       "standardize": false
     }
