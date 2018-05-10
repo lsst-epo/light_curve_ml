@@ -17,9 +17,9 @@
   },
   "extractFeatures": {
     "params": {
-      "skip": false,
-      "offset": 425200,
-      "excludedFeatures": []
+      "skip": true,
+      "excludedFeatures": [],
+      "standardize": false
     }
   },
   "modelSearch": {

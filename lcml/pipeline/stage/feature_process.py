@@ -15,7 +15,13 @@ logger = BasicLogging.getLogger(__name__)
 def fixedValueImpute(features: List[List[float]], value: float):
     """Sets non-finite feature values to specified value"""
     imputes = Counter()
+    vectorLengths = dict()
     for fv in features:
+        vectorLengths[len(fv)] = fv
+        if len(vectorLengths) > 1:
+            raise ValueError("Multiple vector lengths: %s. Vectors: %s " % (
+                list(vectorLengths), list(vectorLengths.values())))
+
         for i, v in enumerate(fv):
             if not np.isfinite(v):
                 imputes[i] += 1

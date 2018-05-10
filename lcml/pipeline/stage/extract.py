@@ -52,20 +52,20 @@ def feetsJobGenerator(fs, dbParams, selRows="*", offset: int=0):
     conn.close()
 
 
-def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
+def feetsExtractFeatures(extractParams: dict, dbParams: dict, limit: int):
     """Runs light curves through 'feets' library obtaining feature vectors.
     Perfoms the extraction using multiprocessing. Output order of jobs will not
     necessarily correspond to input order, therefore, class labels are returned
     with corresponding feature vectors to avoid confusion.
 
-    :param params: extract parameters
+    :param extractParams: extract parameters
     :param dbParams: db parameters
     :param limit: upper limit on the number of LC processed
     :returns feature vectors for each LC and list of corresponding class labels
     """
     # recommended excludes (slow): "CAR_mean", "CAR_sigma", "CAR_tau"
     # also produces nan's: "ls_fap"
-    exclude = params["excludedFeatures"]
+    exclude = extractParams["excludedFeatures"]
     fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
     logger.info("Excluded features: %s", exclude)
 
@@ -76,7 +76,7 @@ def feetsExtractFeatures(params: dict, dbParams: dict, limit: int):
     insertOrReplQry = INSERT_REPLACE_INTO_FEATURES % featuresTable
     reportTableCount(cursor, featuresTable, msg="before extracting")
 
-    offset = params.get("offset", 0)
+    offset = extractParams.get("offset", 0)
     logger.info("Beginning extraction at offset: %s in LC table", offset)
     jobs = feetsJobGenerator(fs, dbParams, offset=offset)
     lcCount = 0
