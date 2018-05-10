@@ -15,6 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import truncatedFloat
+from lcml.utils.memory import reportProcessMemoryUsage
 from lcml.utils.unsupervised_metrics import (EXTERNAL_METRICS, INTERNAL_METRICS,
                                              computeExternalMetrics,
                                              computeInternalMetrics)
@@ -142,7 +143,9 @@ class UnsupervisedPipeline(BatchPipeline):
     @staticmethod
     def _evalClustering(model, labels, features, scores, name=""):
         s = time.time()
+        reportProcessMemoryUsage()
         model.fit(features)
+        reportProcessMemoryUsage()
         logger.info("%s fit in: %s", name,
                     timedelta(seconds=(time.time() - s)))
         external = computeExternalMetrics(labels, model.labels_)
