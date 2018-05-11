@@ -2,27 +2,45 @@
   "__Limited MACHO dataset for pipeline debugging__": null,
   "globalParams": {
     "type": "supervised",
-    "dataLimit": 500
+    "dataLimit": 50
   },
   "database": {
-    "dbPath": "data/macho/macho_processed.db"
+    "dbPath": "data/macho/macho_processed.db",
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "clean_lcs",
+    "feature_table": "lc_features"
   },
   "loadData": {
+    "skip": false,
     "params": {
       "dataName": "macho",
-      "relativePath": "data/macho/macho-train.csv",
-      "filter": [
-        -99.0
-      ],
-      "skip": true
-    }
+      "relativePath": "data/macho/macho-train.csv"
+    },
+    "writeTable": "raw_lc_table"
+  },
+  "preprocessData": {
+    "skip": false,
+    "params": {
+      "filter": [-99.0],
+      "standardize": true
+    },
+    "writeTable": "clean_lcs"
   },
   "extractFeatures": {
+    "skip": false,
     "params": {
-      "skip": true,
       "offset": 0,
       "excludedFeatures": []
-    }
+    },
+    "writeTable": "feature_table"
+  },
+  "postprocessFeatures": {
+    "skip": false,
+    "params": {
+      "impute": true,
+      "standardize": true
+    },
+    "writeTable": null
   },
   "modelSearch": {
     "function": "grid",

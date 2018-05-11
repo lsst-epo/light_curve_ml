@@ -13,6 +13,7 @@ from sklearn.externals.joblib import Memory
 from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
+from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import truncatedFloat
 from lcml.utils.memory import reportProcessMemoryUsage
@@ -39,8 +40,9 @@ reduceStage = namedtuple("ReduceStage", ["components", "modelName",
 
 
 class UnsupervisedPipeline(BatchPipeline):
-    def __init__(self, conf):
+    def __init__(self, conf: MlPipelineConf):
         BatchPipeline.__init__(self, conf)
+        self.searchParams = self.searchStage.params
         agglomKwargs = self.searchParams["agglomerativeArgs"]
         agglomKwargs["memory"] = Memory(cachedir=agglomKwargs["memory"])
         self.linkages = agglomKwargs.pop("linkages", DEFAULT_LINKAGES)

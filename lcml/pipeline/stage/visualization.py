@@ -1,8 +1,8 @@
 import itertools
+import os
+
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
-
-
 import numpy as np
 
 from lcml.utils.basic_logging import BasicLogging
@@ -81,3 +81,23 @@ def contourPlot(x, y, z, savePath=None, title="Contour Plot", xLabel=None,
         plt.savefig(savePath, bbox_inches="tight")
     else:
         plt.show()
+
+
+def plotHyperparamSearch(allResults, imgPath):
+    # plot effects of hyperparameters on weight-average F1
+    x, y, z = zip(*[(r.hyperparameters["n_estimators"],
+                     r.hyperparameters["max_features"],
+                     r.metrics.f1Weighted)
+                    for r in allResults])
+    savePath = os.path.join(imgPath, "hyper.png")
+    xAxis = sorted(np.unique(x))
+    yAxis = sorted(np.unique(y))
+    if len(xAxis) > 1 and len(yAxis) > 1:
+        title = "RF Hyperparams"
+        if np.any([not x or isinstance(x, str) for x in yAxis]):
+            title += " - features: " + str(yAxis)
+            yAxis = np.arange(len(yAxis))
+
+        zMat = np.array(z).reshape(len(yAxis), len(xAxis))
+        contourPlot(xAxis, yAxis, zMat, savePath, title=title,
+                    yLabel="trees")

@@ -1,15 +1,15 @@
 from datetime import timedelta
-import numpy as np
 import os
 import time
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
+from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  defaultClassificationMetrics,
                                                  ModelSelectionResult,
                                                  reportModelSelection)
 from lcml.pipeline.stage.persistence import loadModelAndHyperparms
-from lcml.pipeline.stage.visualization import contourPlot, plotConfusionMatrix
+from lcml.pipeline.stage.visualization import plotConfusionMatrix
 from lcml.utils.basic_logging import BasicLogging
 
 
@@ -17,7 +17,7 @@ logger = BasicLogging.getLogger(__name__)
 
 
 class SupervisedPipeline(BatchPipeline):
-    def __init__(self, conf):
+    def __init__(self, conf: MlPipelineConf):
         BatchPipeline.__init__(self, conf)
 
     def modelSelectionPhase(self, XTrain, yTrain,
@@ -32,9 +32,9 @@ class SupervisedPipeline(BatchPipeline):
             result = ModelSelectionResult(model, hyperparams, None)
         else:
             start = time.time()
-            result = self.searchFcn(self.searchParams["model"], XTrain, yTrain,
-                                    self.searchParams["cv"],
-                                    self.searchParams["gridSearch"])
+            params = self.searchStage.params
+            result = self.searchStage.fcn(params["model"], XTrain, yTrain,
+                                          params["cv"], params["gridSearch"])
             logger.info("search completed in: %s",
                         timedelta(seconds=time.time() - start))
 
@@ -49,26 +49,6 @@ class SupervisedPipeline(BatchPipeline):
         plotConfusionMatrix(result.metrics.confusionMatrix, classLabels,
                             matSavePath, title="Best-model CV confusion matrix")
         return result
-
-    @staticmethod
-    def plotHyperparamSearch(allResults, imgPath):
-        # plot effects of hyperparameters on weight-average F1
-        x, y, z = zip(*[(r.hyperparameters["n_estimators"],
-                         r.hyperparameters["max_features"],
-                         r.metrics.f1Weighted)
-                        for r in allResults])
-        savePath = os.path.join(imgPath, "hyper.png")
-        xAxis = sorted(np.unique(x))
-        yAxis = sorted(np.unique(y))
-        if len(xAxis) > 1 and len(yAxis) > 1:
-            title = "RF Hyperparams"
-            if np.any([not x or isinstance(x, str) for x in yAxis]):
-                title += " - features: " + str(yAxis)
-                yAxis = np.arange(len(yAxis))
-
-            zMat = np.array(z).reshape(len(yAxis), len(xAxis))
-            contourPlot(xAxis, yAxis, zMat, savePath, title=title,
-                        yLabel="trees")
 
     def evaluateTestSet(self, modelResult, XTest, yTest, intToStrLabels) -> (
             ClassificationMetrics):

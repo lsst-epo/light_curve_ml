@@ -12,8 +12,8 @@ from lcml.utils.format_util import fmtPct
 logger = BasicLogging.getLogger(__name__)
 
 
-def fixedValueImpute(features: List[List[float]], value: float):
-    """Sets non-finite feature values to specified value"""
+def fixedValueImpute(features: List[np.ndarray], value: float):
+    """Sets non-finite feature values to specified value in-place"""
     imputes = Counter()
     vectorLengths = dict()
     for fv in features:

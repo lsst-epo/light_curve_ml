@@ -5,10 +5,10 @@
     "trainSize": 0.80
   },
   "database": {
-    "timeout": 300,
     "raw_lc_table": "raw_lcs",
     "clean_lc_table": "clean_lcs",
     "feature_table": "lc_features",
+    "timeout": 300,
     "commitFrequency": 200,
     "pageSize": 100
   },

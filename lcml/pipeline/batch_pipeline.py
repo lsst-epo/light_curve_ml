@@ -11,16 +11,14 @@ from datetime import timedelta
 import time
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
                                               ensureDbTables,
                                               selectFeaturesLabels)
-from lcml.pipeline.stage.feature_process import fixedValueImpute
+from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
 from lcml.pipeline.stage.persistence import savePipelineResults
-from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
 
@@ -29,27 +27,16 @@ logger = BasicLogging.getLogger(__name__)
 
 
 class BatchPipeline:
-    def __init__(self, conf):
+    def __init__(self, conf: MlPipelineConf):
         self.conf = conf
         self.globalParams = conf.globalParams
-
-        # database params
         self.dbParams = conf.dbParams
-
-        # loading data from external source and converting to valid light curves
-        self.loadFcn = conf.loadData.fcn
-        self.loadParams = conf.loadData.params
-
-        # extracting feature vectors from light curves
-        self.extractFcn = conf.extractFeatures.fcn
-        self.extractParams = conf.extractFeatures.params
-
-        # searching over hyperparameters for best model configuration
-        self.searchFcn = conf.modelSearch.fcn
-        self.searchParams = conf.modelSearch.params
-
-        # serialization of state to disk
-        self.serParams = conf.serialParams
+        self.loadStage = conf.loadStage
+        self.preprocStage = conf.preprocessStage
+        self.extractStage = conf.extractStage
+        self.searchStage = conf.searchStage
+        self.postprocStage = conf.postprocessStage
+        self.serParams = conf.serParams
 
     def runPipe(self):
         """Runs initial phase of batch machine learning pipeline storing
@@ -63,47 +50,44 @@ class BatchPipeline:
 
         ensureDbTables(self.dbParams)
 
-        dataLimit = self.globalParams.get("dataLimit", float("inf"))
-        if self.loadParams.get("skip", False):
+        lim = self.globalParams.get("dataLimit", float("inf"))
+        if self.loadStage.skip:
             logger.info("Skip dataset loading")
         else:
             logger.info("Loading dataset...")
-            self.loadFcn(self.loadParams, self.dbParams, dataLimit)
+            self.loadStage.fcn(self.loadStage.params, self.dbParams, lim)
 
-        if self.loadParams.get("skipCleaning", False):
+        if self.preprocStage.skip:
             logger.info("Skip dataset cleaning")
         else:
             logger.info("Cleaning dataset...")
-            cleanLightCurves(self.loadParams, self.dbParams, dataLimit)
+            self.preprocStage.fcn(self.preprocStage.params, self.dbParams, lim)
 
         logger.info("Cleaned dataset class histogram...")
         histogram = classLabelHistogram(self.dbParams)
         reportClassHistogram(histogram)
-        if self.extractParams.get("skip", False):
+        if self.extractStage.skip:
             logger.info("Skip extract features")
         else:
             logger.info("Extracting features from LCs...")
             extractStart = time.time()
-            self.extractFcn(self.extractParams, self.dbParams, dataLimit)
+            self.extractStage.fcn(self.extractStage.params, self.dbParams, lim)
             extractElapsed = timedelta(seconds=time.time() - extractStart)
             logger.info("extracted in %s", extractElapsed)
 
-        features, labels = selectFeaturesLabels(self.dbParams, dataLimit)
+        features, labels = selectFeaturesLabels(self.dbParams, lim)
         if not features:
             logger.warning("No features returned from db")
             return
 
-        # ideally impute function would be job-file customizable
-        fixedValueImpute(features, value=0.0)
-        if self.extractParams.get("standardize", None):
-            features = StandardScaler().fit_transform(features)
+        procFeats = self.postprocStage.fcn(features, self.postprocStage.params)
 
         intLabels, labelMapping = convertClassLabels(labels)
         trainSize = self.globalParams["trainSize"]
         if trainSize == 1:
-            XTrain, XTest, yTrain, yTest = features, [], intLabels, []
+            XTrain, XTest, yTrain, yTest = procFeats, [], intLabels, []
         else:
-            XTrain, XTest, yTrain, yTest = train_test_split(features,
+            XTrain, XTest, yTrain, yTest = train_test_split(procFeats,
                 intLabels, train_size=trainSize, test_size=1 - trainSize)
 
         logger.info("train size: %s test size: %s", len(XTrain), len(XTest))

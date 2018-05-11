@@ -37,7 +37,7 @@ def savePipelineResults(conf: MlPipelineConf, classMapping: dict,
     :param result: ModelSelectionResult of best model found in cross-validation
     :param testMetrics: best model's scores on test set
     """
-    path = conf.serialParams["modelSavePath"]
+    path = conf.serParams["modelSavePath"]
     if not path or not result:
         return
 
@@ -46,11 +46,11 @@ def savePipelineResults(conf: MlPipelineConf, classMapping: dict,
 
     archBits = platform.architecture()[0]
     mainFile = sys.modules["__main__"].__file__
-    searchParams = conf.modelSearch.params.copy()
+    searchParams = conf.searchStage.params.copy()
     searchParams.pop("model", None)  # remove class object
     params = {META_MODEL_HYPERPARAMS: result.hyperparameters,
-              "loadParams": conf.loadData.params,
-              "extractParams": conf.extractFeatures.params,
+              "loadParams": conf.loadStage.params,
+              "extractParams": conf.extractStage.params,
               "searchParams": searchParams,
               "mapping": classMapping}
     cvMetricsDict = _metricsToDict(result.metrics)

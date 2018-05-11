@@ -4,79 +4,120 @@ import importlib
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.stage.extract import feetsExtractFeatures
 from lcml.pipeline.stage.model_selection import gridSearchCv
+from lcml.pipeline.stage.postprocess import postprocessFeatures
+from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.pathing import ensurePath
 
 
-#: global parameters section of the pipeline conf file
+#: global parameters used throughout pipeline stages
 GLOBAL_PARAMS = "globalParams"
+
+
+#: pipeline's database and tables
 DB_PARAMS = "database"
-LOAD_DATA = "loadData"
-EXTRACT_FEATURES = "extractFeatures"
-MODEL_SEARCH = "modelSearch"
+
+
+#: stage moving data from original format (e.g., csv) to db table
+LOAD_DATA_STAGE = "loadData"
+
+
+#: light curve preprocessing
+PREPROCESS_DATA_STAGE = "preprocessData"
+
+
+#: stage processing clean data into feature vectors
+EXTRACT_FEATURES_STAGE = "extractFeatures"
+
+
+#: additional processing after feature extraction
+POST_PROC_FEATS_STAGE = "postprocessFeatures"
+
+
+#: model search and selection
+MODEL_SEARCH_STAGE = "modelSearch"
+
+
+#: persisting pipeline results to disk
 SERIALIZATION = "serialization"
 
 
-#: Some pipeline components consist of a function and parameters
-FunctionAndParams = namedtuple("FunctionAndParams", ["fcn", "params"])
+#: Major pipeline processing stage involving data processing writing results to
+#: table
+PipelineStage = namedtuple("PipelineStage", ["skip", "fcn", "params",
+                                             "writeTable"])
 
 
 # Candidate for data class
 class MlPipelineConf:
     """Container for functions and parameter of the major components of a ML
      pipeline"""
-    def __init__(self, globalParams, dbParams, loadData, extractFeatures,
-                 modelSearch, serialParams):
+    def __init__(self, globalParams: dict, dbParams: dict,
+                 loadStage: PipelineStage, preprocessStage: PipelineStage,
+                 extractStage: PipelineStage, ftProcessStage: PipelineStage,
+                 searchStage: PipelineStage, serParams: dict):
         self.globalParams = globalParams
         self.dbParams = dbParams
-        self.loadData = loadData
-        self.extractFeatures = extractFeatures
-        self.modelSearch = modelSearch
-        self.serialParams = serialParams
+        self.loadStage = loadStage
+        self.preprocessStage = preprocessStage
+        self.extractStage = extractStage
+        self.postprocessStage = ftProcessStage
+        self.searchStage = searchStage
+        self.serParams = serParams
 
 
-def _initModel(modelConfig: dict) -> object:
-    modelClass = modelConfig["class"]
+def _makeInstance(modelClass: str, params: dict) -> object:
     strInd = modelClass.rfind(".")
     moduleName = modelClass[:strInd]
     className = modelClass[strInd + 1:]
     module = importlib.import_module(moduleName)
     class_ = getattr(module, className)
-    return class_(**modelConfig["params"])
+    return class_(**params)
 
 
 def loadPipelineConf(conf: dict) -> MlPipelineConf:
     """Constructs a pipeline from a .json config."""
-    # load data fcn
-    # loadType = conf[LOAD_DATA]["function"].lower()
-    loadFcn = loadFlatLcDataset
-    loadParams = conf[LOAD_DATA]["params"]
-    loadData = FunctionAndParams(loadFcn, loadParams)
+    ensurePath(conf[DB_PARAMS]["dbPath"])
 
-    extractType = conf[EXTRACT_FEATURES]["function"]
+    # Stage: Load Data
+    loadStage = _loadStage(conf[LOAD_DATA_STAGE], loadFlatLcDataset)
+
+    # Stage: Clean Data
+    cleanStage = _loadStage(conf[PREPROCESS_DATA_STAGE], cleanLightCurves)
+
+    # Stage: Extract Features
+    extractType = conf[EXTRACT_FEATURES_STAGE]["function"]
     if extractType == "feets":
-        extractFcn = feetsExtractFeatures
+        extFcn = feetsExtractFeatures
     else:
         raise ValueError("unsupported extract function: %s" % extractType)
+    extractStage = _loadStage(conf[EXTRACT_FEATURES_STAGE], extFcn)
 
-    ensurePath(conf[DB_PARAMS]["dbPath"])
-    extParams = conf[EXTRACT_FEATURES]["params"]
-    extractFeatures = FunctionAndParams(extractFcn, extParams)
+    # Stage: Postprocess features
+    postprocessStage = _loadStage(conf[POST_PROC_FEATS_STAGE],
+                                  postprocessFeatures)
 
-    searchType = conf[MODEL_SEARCH]["function"]
+    # Stage: Model Search
+    stgCnf = conf[MODEL_SEARCH_STAGE]
+    searchType = stgCnf["function"]
     if searchType == "grid":
         searchFcn = gridSearchCv
     else:
         raise ValueError("unsupported search function: %s" % searchType)
+    searchParams = stgCnf["params"]
+    searchParams["model"] = (_makeInstance(stgCnf["model"]["class"],
+                                           stgCnf["model"]["params"])
+                             if "model" in stgCnf else None)
+    searchStage = _loadStage(conf[MODEL_SEARCH_STAGE], searchFcn)
 
-    searchParams = conf[MODEL_SEARCH]["params"]
-    if "model" in conf[MODEL_SEARCH]:
-        searchParams["model"] = _initModel(conf[MODEL_SEARCH]["model"])
-    else:
-        searchParams["model"] = None
-
-    modelSearch = FunctionAndParams(searchFcn, searchParams)
-
+    # ser
     serialParams = conf[SERIALIZATION]["params"]
     ensurePath(serialParams["modelSavePath"])
-    return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadData,
-                          extractFeatures, modelSearch, serialParams)
+    return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadStage,
+                          cleanStage, extractStage, postprocessStage,
+                          searchStage, serialParams)
+
+
+def _loadStage(stageConf: dict, fcn) -> PipelineStage:
+    return PipelineStage(stageConf.get("skip", None), fcn,
+                         stageConf["params"],
+                         stageConf.get("writeTable", None))
