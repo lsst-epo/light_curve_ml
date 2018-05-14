@@ -36,7 +36,7 @@ def serPipelineResults(conf, classMapping: dict,
     :param result: ModelSelectionResult of best model found in cross-validation
     :param testMetrics: best model's scores on test set
     """
-    path = conf.serStage["modelSavePath"]
+    path = conf.serStage.params["modelSavePath"]
     if not path or not result:
         return
 
