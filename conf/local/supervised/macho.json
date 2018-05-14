@@ -1,30 +1,43 @@
 {
-  "__local super MACHO__": null,
+  "__Local supervised MACHO pipeline__": null,
   "globalParams": {
     "type": "supervised"
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db",
-    "clean_lc_table": "standardized_clean_lcs",
-    "feature_table": "lc_standardized_features",
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "clean_lcs",
+    "feature_table": "lc_features",
     "commitFrequency": 500,
     "pageSize": 500
   },
   "loadData": {
+    "skip": false,
     "params": {
       "dataName": "macho",
-      "relativePath": "data/macho/macho-train.csv",
-      "skip": true,
-      "skipCleaning": true,
+      "relativePath": "data/macho/macho-train.csv"
+    },
+    "writeTable": "raw_lc_table"
+  },
+  "preprocessData": {
+    "skip": false,
+    "params": {
       "filter": [-99.0],
       "standardize": true
-    }
+    },
+    "writeTable": "clean_lcs"
   },
   "extractFeatures": {
+    "skip": false,
     "params": {
-      "skip": false,
-      "offset": 10,
+      "offset": 0,
       "excludedFeatures": []
+    },
+    "writeTable": "feature_table"
+  },
+  "postprocessFeatures": {
+    "skip": true,
+    "params": {
     }
   },
   "modelSearch": {
@@ -58,10 +71,11 @@
     }
   },
   "serialization": {
+    "skip": false,
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/lc_standardized_rf-classifier-macho.pkl",
-      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/lc_standardized"
+      "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/rf-classifier-macho.pkl",
+      "imgPath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised"
     }
   }
 }

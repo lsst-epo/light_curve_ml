@@ -11,20 +11,31 @@
     "pageSize": 100
   },
   "loadData": {
+    "skip": true,
     "params": {
       "dataName": "macho",
-      "relativePath": "/data/datasets/macho/macho-train.csv",
-      "skip": true,
-
-      "skipCleaning": true,
+      "relativePath": "/data/datasets/macho/macho-train.csv"
+    },
+    "writeTable": "raw_lc_table"
+  },
+  "preprocessData": {
+    "skip": true,
+    "params": {
       "filter": [-99.0],
       "standardize": true
-    }
+    },
+    "writeTable": "clean_lcs"
   },
   "extractFeatures": {
+    "skip": true,
     "params": {
-      "excludedFeatures": [],
-      "skip": true,
+      "excludedFeatures": []
+    },
+    "writeTable": "feature_table"
+  },
+  "postprocessFeatures": {
+    "skip": false,
+    "params": {
       "standardize": true
     }
   },

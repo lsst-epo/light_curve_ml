@@ -1,5 +1,5 @@
 {
-  "__local super OGLE3__": null,
+  "__Local supervised OGLE3 pipeline__": null,
   "globalParams": {
     "type": "supervised"
   },
@@ -7,18 +7,33 @@
     "dbPath": "data/ogle3/ogle3_processed.db"
   },
   "loadData": {
+    "skip": false,
     "params": {
       "dataName": "ogle3",
-      "relativePath": "data/ogle3/ogle3.csv",
-      "skip": false,
-      "skipCleaning": false
-    }
+      "relativePath": "data/ogle3/ogle3.csv"
+    },
+    "writeTable": "raw_lc_table"
+  },
+  "preprocessData": {
+    "skip": false,
+    "params": {
+      "filter": [-99.0],
+      "standardize": true
+    },
+    "writeTable": "clean_lcs"
   },
   "extractFeatures": {
+    "skip": false,
     "params": {
-      "skip": false,
       "offset": 0,
-      "excludedFeatures": []
+      "excludedFeatures": [],
+      "standardize": false
+    },
+    "writeTable": "feature_table"
+  },
+  "postprocessFeatures": {
+    "skip": true,
+    "params": {
     }
   },
   "modelSearch": {
@@ -31,27 +46,49 @@
       }
     },
     "params": {
-        "cv": {
-          "n_splits": 5,
-          "n_repeats": 1
+      "cv": {
+        "n_splits": 5,
+        "n_repeats": 1
+      },
+      "gridSearch": {
+        "param_grid": {
+          "n_estimators": [
+            50,
+            100,
+            250,
+            900,
+            1000,
+            1100,
+            1200
+          ],
+          "criterion": [
+            "gini",
+            "entropy"
+          ],
+          "max_features": [
+            3,
+            6,
+            9,
+            12,
+            18
+          ],
+          "min_samples_leaf": [
+            1,
+            2,
+            3
+          ]
         },
-        "gridSearch": {
-          "param_grid": {
-            "n_estimators": [50, 100, 250, 900, 1000, 1100, 1200],
-            "criterion": ["gini", "entropy"],
-            "max_features": [3, 6, 9, 12, 18],
-            "min_samples_leaf": [1, 2, 3]
-          },
-          "scoring": "f1_weighted",
-          "pre_dispatch": "10 * n_jobs",
-          "n_jobs": -1,
-          "iid": true,
-          "verbose": 2,
-          "error_score": "raise"
-        }
+        "scoring": "f1_weighted",
+        "pre_dispatch": "10 * n_jobs",
+        "n_jobs": -1,
+        "iid": true,
+        "verbose": 2,
+        "error_score": "raise"
+      }
     }
   },
   "serialization": {
+    "skip": false,
     "params": {
       "modelLoadPath": null,
       "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/ogle3/supervised/rf-classifier-ogle3.pkl",

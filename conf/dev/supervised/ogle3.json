@@ -7,19 +7,31 @@
     "dbPath": "/data/db/ogle3/ogle3_processed.db"
   },
   "loadData": {
+    "skip": true,
     "params": {
       "dataName": "ogle3",
-      "relativePath": "/data/datasets/ogle3/ogle3.csv",
-      "skip": true,
-      "skipCleaning": true,
+      "relativePath": "/data/datasets/ogle3/ogle3.csv"
+    },
+    "writeTable": "raw_lc_table"
+  },
+  "preprocessData": {
+    "skip": true,
+    "params": {
       "standardize": false
-    }
+    },
+    "writeTable": "clean_lcs"
   },
   "extractFeatures": {
+    "skip": false,
     "params": {
-      "skip": false,
       "excludedFeatures": [],
       "standardize": false
+    },
+    "writeTable": "feature_table"
+  },
+  "postprocessFeatures": {
+    "skip": true,
+    "params": {
     }
   },
   "modelSearch": {

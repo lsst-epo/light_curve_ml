@@ -78,7 +78,7 @@
         "pre_dispatch": "10 * n_jobs",
         "n_jobs": -1,
         "iid": true,
-        "verbose": 2,
+        "verbose": 1,
         "error_score": "raise"
       }
     }
