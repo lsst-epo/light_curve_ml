@@ -26,7 +26,7 @@ class SupervisedPipeline(BatchPipeline):
         Loads a model and its hyperparams from disk if specified or performs
         model selection and to obtain a ModelSelectionResult.
         """
-        modelLoadPath = self.serParams["modelLoadPath"]
+        modelLoadPath = self.serStage.params["modelLoadPath"]
         if modelLoadPath:
             model, hyperparams = loadModelAndHyperparms(modelLoadPath)
             result = ModelSelectionResult(model, hyperparams, None)
@@ -43,7 +43,7 @@ class SupervisedPipeline(BatchPipeline):
                                  intToStrLabel, roundPlaces,
                                  title="Best result")
 
-        imgPath = self.serParams["imgPath"]
+        imgPath = self.serStage.params["imgPath"]
         classLabels = [intToStrLabel[i] for i in sorted(intToStrLabel)]
         matSavePath = os.path.join(imgPath, "train-set-confusion-matrix.png")
         plotConfusionMatrix(result.metrics.confusionMatrix, classLabels,
@@ -56,7 +56,7 @@ class SupervisedPipeline(BatchPipeline):
         yHat = modelResult.model.predict(XTest)
         metrics = defaultClassificationMetrics(yTest, yHat)
 
-        imgPath = self.serParams["imgPath"]
+        imgPath = self.serStage.params["imgPath"]
         matSavePath = os.path.join(imgPath, "test-set-confusion-matrix.png")
         classLabels = [intToStrLabels[i] for i in sorted(intToStrLabels)]
         plotConfusionMatrix(metrics.confusionMatrix, classLabels,

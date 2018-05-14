@@ -1,8 +1,9 @@
 from datetime import datetime
 import logging
 import os
-from pytz import timezone, utc
 import sys
+
+from pytz import timezone, utc
 
 from lcml.utils.context_util import joinRoot, jsonConfig
 
@@ -102,27 +103,3 @@ class BasicLogging:
         handler.setFormatter(logging.Formatter(cls._format))
         logger.addHandler(handler)
         return logger
-
-
-def getBasicLogger(name, fileName,
-                   logFormat=DEFAULT_FORMAT,
-                   dateFmt=DATE_FORMAT,
-                   level=logging.INFO) -> logging.Logger:
-    """Initializes logging. Intended to be used by one-offs scripts isolated
-    to a single file. See also lcml.utils.basic_logging.BasicLogging#getLogger
-    """
-    outFile = fileName.split(os.path.sep)[-1]
-    outFile = outFile.replace("py", "log")
-    logPath = joinRoot("logs", outFile)
-    logging.basicConfig(filename=logPath,
-                        filemode="a",
-                        format=logFormat,
-                        datefmt=dateFmt,
-                        level=level)
-
-    logger = logging.getLogger(name)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(logging.Formatter(logFormat))
-    logger.addHandler(handler)
-    return logger

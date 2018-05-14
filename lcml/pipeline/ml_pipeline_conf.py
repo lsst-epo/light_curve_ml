@@ -4,6 +4,7 @@ import importlib
 from lcml.data.loading.csv_file_loading import loadFlatLcDataset
 from lcml.pipeline.stage.extract import feetsExtractFeatures
 from lcml.pipeline.stage.model_selection import gridSearchCv
+from lcml.pipeline.stage.persistence import serPipelineResults
 from lcml.pipeline.stage.postprocess import postprocessFeatures
 from lcml.pipeline.stage.preprocess import cleanLightCurves
 from lcml.utils.pathing import ensurePath
@@ -54,7 +55,7 @@ class MlPipelineConf:
     def __init__(self, globalParams: dict, dbParams: dict,
                  loadStage: PipelineStage, preprocessStage: PipelineStage,
                  extractStage: PipelineStage, ftProcessStage: PipelineStage,
-                 searchStage: PipelineStage, serParams: dict):
+                 searchStage: PipelineStage, serStage: PipelineStage):
         self.globalParams = globalParams
         self.dbParams = dbParams
         self.loadStage = loadStage
@@ -62,7 +63,7 @@ class MlPipelineConf:
         self.extractStage = extractStage
         self.postprocessStage = ftProcessStage
         self.searchStage = searchStage
-        self.serParams = serParams
+        self.serStage = serStage
 
 
 def _makeInstance(modelClass: str, params: dict) -> object:
@@ -109,12 +110,13 @@ def loadPipelineConf(conf: dict) -> MlPipelineConf:
                              if "model" in stgCnf else None)
     searchStage = _loadStage(conf[MODEL_SEARCH_STAGE], searchFcn)
 
-    # ser
-    serialParams = conf[SERIALIZATION]["params"]
-    ensurePath(serialParams["modelSavePath"])
+    # Stage: Pipeline result serialization
+    stgCnf = conf[SERIALIZATION]
+    ensurePath(stgCnf["params"]["modelSavePath"])
+    serialStage = _loadStage(stgCnf, serPipelineResults)
     return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadStage,
                           cleanStage, extractStage, postprocessStage,
-                          searchStage, serialParams)
+                          searchStage, serialStage)
 
 
 def _loadStage(stageConf: dict, fcn) -> PipelineStage:

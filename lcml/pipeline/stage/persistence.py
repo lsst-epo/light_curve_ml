@@ -8,7 +8,6 @@ import numpy as np
 import sklearn
 from sklearn.externals import joblib
 
-from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
 from lcml.utils.basic_logging import BasicLogging
@@ -27,9 +26,9 @@ META_TEST_METRICS = "testMetrics"
 _META_FILENAME = "metadata.json"
 
 
-def savePipelineResults(conf: MlPipelineConf, classMapping: dict,
-                        result: ModelSelectionResult,
-                        testMetrics: ClassificationMetrics):
+def serPipelineResults(conf, classMapping: dict,
+                       result: ModelSelectionResult,
+                       testMetrics: ClassificationMetrics):
     """Save the key aspects and results of a pipeline run to disk.
 
     :param conf: ML pipeline conf containing params
@@ -37,7 +36,7 @@ def savePipelineResults(conf: MlPipelineConf, classMapping: dict,
     :param result: ModelSelectionResult of best model found in cross-validation
     :param testMetrics: best model's scores on test set
     """
-    path = conf.serParams["modelSavePath"]
+    path = conf.serStage["modelSavePath"]
     if not path or not result:
         return
 

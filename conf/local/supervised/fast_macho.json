@@ -84,6 +84,7 @@
     }
   },
   "serialization": {
+    "skip": false,
     "params": {
       "modelLoadPath": null,
       "modelSavePath": "/Users/ryanjmccall/code/light_curve_ml/models/macho/supervised/rf-classifier-macho.pkl",

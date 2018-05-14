@@ -18,7 +18,6 @@ from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
 from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
-from lcml.pipeline.stage.persistence import savePipelineResults
 from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
 
@@ -36,7 +35,7 @@ class BatchPipeline:
         self.extractStage = conf.extractStage
         self.searchStage = conf.searchStage
         self.postprocStage = conf.postprocessStage
-        self.serParams = conf.serParams
+        self.serStage = conf.serStage
 
     def runPipe(self):
         """Runs initial phase of batch machine learning pipeline storing
@@ -93,7 +92,11 @@ class BatchPipeline:
         logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
         best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
         testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
-        savePipelineResults(self.conf, labelMapping, best, testMetrics)
+        if self.serStage.skip:
+            logger.info("Skip serialization")
+        else:
+            logger.info("Serializing pipeline results")
+            self.serStage.fcn(self.conf, labelMapping, best, testMetrics)
 
         elapsedMins = timedelta(seconds=time.time() - startAll)
         logger.info("Pipeline completed in: %s", elapsedMins)
