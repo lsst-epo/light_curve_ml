@@ -77,13 +77,15 @@ def _makeInstance(modelClass: str, params: dict) -> object:
 
 def loadPipelineConf(conf: dict) -> MlPipelineConf:
     """Constructs a pipeline from a .json config."""
-    ensurePath(conf[DB_PARAMS]["dbPath"])
+    dbParams = conf[DB_PARAMS]
+    ensurePath(dbParams["dbPath"])
 
     # Stage: Load Data
-    loadStage = _loadStage(conf[LOAD_DATA_STAGE], loadFlatLcDataset)
+    loadStage = _loadStage(conf[LOAD_DATA_STAGE], dbParams, loadFlatLcDataset)
 
     # Stage: Clean Data
-    cleanStage = _loadStage(conf[PREPROCESS_DATA_STAGE], cleanLightCurves)
+    preprocStage = _loadStage(conf[PREPROCESS_DATA_STAGE], dbParams,
+                              cleanLightCurves)
 
     # Stage: Extract Features
     extractType = conf[EXTRACT_FEATURES_STAGE]["function"]
@@ -91,10 +93,10 @@ def loadPipelineConf(conf: dict) -> MlPipelineConf:
         extFcn = feetsExtractFeatures
     else:
         raise ValueError("unsupported extract function: %s" % extractType)
-    extractStage = _loadStage(conf[EXTRACT_FEATURES_STAGE], extFcn)
+    extractStage = _loadStage(conf[EXTRACT_FEATURES_STAGE], dbParams, extFcn)
 
     # Stage: Postprocess features
-    postprocessStage = _loadStage(conf[POST_PROC_FEATS_STAGE],
+    postprocessStage = _loadStage(conf[POST_PROC_FEATS_STAGE], dbParams,
                                   postprocessFeatures)
 
     # Stage: Model Search
@@ -108,18 +110,24 @@ def loadPipelineConf(conf: dict) -> MlPipelineConf:
     searchParams["model"] = (_makeInstance(stgCnf["model"]["class"],
                                            stgCnf["model"]["params"])
                              if "model" in stgCnf else None)
-    searchStage = _loadStage(conf[MODEL_SEARCH_STAGE], searchFcn)
+    searchStage = _loadStage(conf[MODEL_SEARCH_STAGE], dbParams, searchFcn)
 
     # Stage: Pipeline result serialization
     stgCnf = conf[SERIALIZATION]
     ensurePath(stgCnf["params"]["modelSavePath"])
-    serialStage = _loadStage(stgCnf, serPipelineResults)
+    serialStage = _loadStage(stgCnf, dbParams, serPipelineResults)
     return MlPipelineConf(conf[GLOBAL_PARAMS], conf[DB_PARAMS], loadStage,
-                          cleanStage, extractStage, postprocessStage,
+                          preprocStage, extractStage, postprocessStage,
                           searchStage, serialStage)
 
 
-def _loadStage(stageConf: dict, fcn) -> PipelineStage:
-    return PipelineStage(stageConf.get("skip", None), fcn,
+def _loadStage(stageConf: dict, dbParams: dict, fcn) -> PipelineStage:
+    writeTable = stageConf.get("writeTable", None)
+    if writeTable:
+        # retrieve actual db name from db table definition
+        writeTable = dbParams[writeTable]
+
+    return PipelineStage(stageConf.get("skip", None),
+                         fcn,
                          stageConf["params"],
-                         stageConf.get("writeTable", None))
+                         writeTable)

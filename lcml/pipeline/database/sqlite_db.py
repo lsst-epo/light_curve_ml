@@ -113,7 +113,8 @@ def singleColPagingItr(cursor: Cursor,
             prevVal = rows[-1][columnIndex]
 
 
-def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
+def selectFeaturesLabels(dbParams: dict, featureTable: str,
+                         limit: int=None) -> (List[np.ndarray], List[str]):
     """Selects light curve features and class labels"""
     # if this soaks up all the RAM,
     # a) try memory-mapped numpy array:
@@ -124,7 +125,7 @@ def selectFeaturesLabels(dbParams, limit=None) -> (List[np.ndarray], List[str]):
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
 
-    query = SELECT_FEATURES_LABELS_QRY % dbParams["feature_table"]
+    query = SELECT_FEATURES_LABELS_QRY % featureTable
     if limit not in (None, float("inf")):
         query += " LIMIT %s" % limit
 

@@ -16,7 +16,8 @@ from lcml.utils.multiprocess import feetsExtract, reportingImapUnordered
 logger = BasicLogging.getLogger(__name__)
 
 
-def feetsJobGenerator(fs, dbParams, selRows="*", offset: int=0):
+def feetsJobGenerator(fs: FeatureSpace, dbParams: dict, tableName: str,
+                      selRows: str="*", offset: int=0):
     """Returns a generator of tuples of the form:
     (featureSpace (feets.FeatureSpace),  id (str), label (str), times (ndarray),
      mags (ndarray), errors(ndarray))
@@ -24,10 +25,10 @@ def feetsJobGenerator(fs, dbParams, selRows="*", offset: int=0):
 
     :param fs: feets.FeatureSpace object required to perform extraction
     :param dbParams: additional params
+    :param tableName: table containing light curves
     :param selRows: which rows to select from clean LC table
     :param offset: number of light curves to skip in db table before processing
     """
-    table = dbParams["clean_lc_table"]
     pageSize = dbParams["pageSize"]
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
@@ -37,7 +38,7 @@ def feetsJobGenerator(fs, dbParams, selRows="*", offset: int=0):
     rows = True
     while rows:
         _fmtPrevId = "\"{}\"".format(previousId)
-        q = SINGLE_COL_PAGED_SELECT_QRY.format(selRows, table, column,
+        q = SINGLE_COL_PAGED_SELECT_QRY.format(selRows, tableName, column,
                                                _fmtPrevId, pageSize, offset)
         cursor.execute(q)
         rows = cursor.fetchall()
@@ -52,7 +53,8 @@ def feetsJobGenerator(fs, dbParams, selRows="*", offset: int=0):
     conn.close()
 
 
-def feetsExtractFeatures(extractParams: dict, dbParams: dict, limit: int):
+def feetsExtractFeatures(extractParams: dict, dbParams: dict, lcTable: str,
+                         featuresTable: str, limit: int):
     """Runs light curves through 'feets' library obtaining feature vectors.
     Perfoms the extraction using multiprocessing. Output order of jobs will not
     necessarily correspond to input order, therefore, class labels are returned
@@ -60,6 +62,8 @@ def feetsExtractFeatures(extractParams: dict, dbParams: dict, limit: int):
 
     :param extractParams: extract parameters
     :param dbParams: db parameters
+    :param lcTable: name of lc table
+    :param featuresTable: name of features table
     :param limit: upper limit on the number of LC processed
     :returns feature vectors for each LC and list of corresponding class labels
     """
@@ -69,7 +73,6 @@ def feetsExtractFeatures(extractParams: dict, dbParams: dict, limit: int):
     fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
     logger.info("Excluded features: %s", exclude)
 
-    featuresTable = dbParams["feature_table"]
     ciFreq = dbParams["commitFrequency"]
     conn = connFromParams(dbParams)
     cursor = conn.cursor()
@@ -78,7 +81,8 @@ def feetsExtractFeatures(extractParams: dict, dbParams: dict, limit: int):
 
     offset = extractParams.get("offset", 0)
     logger.info("Beginning extraction at offset: %s in LC table", offset)
-    jobs = feetsJobGenerator(fs, dbParams, offset=offset)
+
+    jobs = feetsJobGenerator(fs, dbParams, lcTable, offset=offset)
     lcCount = 0
     dbExceptions = 0
     for uid, label, ftNames, features in reportingImapUnordered(feetsExtract,

@@ -54,13 +54,17 @@ class BatchPipeline:
             logger.info("Skip dataset loading")
         else:
             logger.info("Loading dataset...")
-            self.loadStage.fcn(self.loadStage.params, self.dbParams, lim)
+            self.loadStage.fcn(self.loadStage.params, self.dbParams,
+                               self.loadStage.writeTable, lim)
 
         if self.preprocStage.skip:
             logger.info("Skip dataset cleaning")
         else:
             logger.info("Cleaning dataset...")
-            self.preprocStage.fcn(self.preprocStage.params, self.dbParams, lim)
+            self.preprocStage.fcn(self.preprocStage.params, self.dbParams,
+                                  rawTable=self.loadStage.writeTable,
+                                  cleanTable=self.preprocStage.writeTable,
+                                  limit=lim)
 
         logger.info("Cleaned dataset class histogram...")
         histogram = classLabelHistogram(self.dbParams)
@@ -70,11 +74,16 @@ class BatchPipeline:
         else:
             logger.info("Extracting features from LCs...")
             extractStart = time.time()
-            self.extractStage.fcn(self.extractStage.params, self.dbParams, lim)
+            self.extractStage.fcn(self.extractStage.params, self.dbParams,
+                                  lcTable=self.preprocStage.writeTable,
+                                  featuresTable=self.extractStage.writeTable,
+                                  limit=lim)
             extractElapsed = timedelta(seconds=time.time() - extractStart)
-            logger.info("extracted in %s", extractElapsed)
+            logger.info("extracted in: %s", extractElapsed)
 
-        features, labels = selectFeaturesLabels(self.dbParams, lim)
+        features, labels = selectFeaturesLabels(self.dbParams,
+                                                self.extractStage.writeTable,
+                                                lim)
         if not features:
             logger.warning("No features returned from db")
             return

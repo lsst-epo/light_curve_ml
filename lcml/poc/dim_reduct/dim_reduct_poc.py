@@ -75,7 +75,7 @@ def main():
     dbConf = conf["database"]
     dbConf["dbPath"] = "data/macho/macho_processed.db"
 
-    X, y = selectFeaturesLabels(dbConf)
+    X, y = selectFeaturesLabels(dbConf, dbConf["feature_table"])
     logger.info("feature vectors: %s", len(X))
     X_normed = StandardScaler().fit_transform(X)
 

@@ -79,15 +79,13 @@ def _standardizeArray(scaler: StandardScaler, a: np.ndarray) -> np.ndarray:
     return _transformed.reshape(-1)
 
 
-def cleanLightCurves(params, dbParams, limit: float):
+def cleanLightCurves(params: dict, dbParams: dict, rawTable: str,
+                     cleanTable: str, limit: float):
     """Clean lightcurves and report details on discards."""
     removes = set(params["filter"]) if "filter" in params else set()
     removes = removes.union(NON_FINITE_VALUES)
     stdLimit = params.get("stdLimit", DEFAULT_STD_LIMIT)
     errorLimit = params.get("errorLimit", DEFAULT_ERROR_LIMIT)
-
-    rawTable = dbParams["raw_lc_table"]
-    cleanTable = dbParams["clean_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
     conn = connFromParams(dbParams)
     cursor = conn.cursor()

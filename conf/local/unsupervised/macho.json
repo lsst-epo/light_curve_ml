@@ -6,16 +6,15 @@
     "dataLimit": 50
   },
   "database": {
-    "dbPath": "data/macho/macho_processed.db",
-    "commitFrequency": 5000,
-    "pageSize": 5000
+    "dbPath": "data/macho/macho_processed.db"
   },
   "loadData": {
     "skip": false,
     "params": {
       "dataName": "macho",
       "relativePath": "data/macho/macho-train.csv"
-    }
+    },
+    "writeTable": "raw_lc_table"
   },
   "preprocessData": {
     "skip": false,
@@ -23,7 +22,7 @@
       "filter": [-99.0],
       "standardize": false
     },
-    "writeTable": "clean_lcs"
+    "writeTable": "clean_lc_table"
   },
   "extractFeatures": {
     "skip": true,

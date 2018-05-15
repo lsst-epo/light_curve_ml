@@ -4,12 +4,7 @@
     "type": "supervised"
   },
   "database": {
-    "dbPath": "data/macho/macho_processed.db",
-    "raw_lc_table": "raw_lcs",
-    "clean_lc_table": "clean_lcs",
-    "feature_table": "lc_features",
-    "commitFrequency": 500,
-    "pageSize": 500
+    "dbPath": "data/macho/macho_processed.db"
   },
   "loadData": {
     "skip": false,
@@ -25,7 +20,7 @@
       "filter": [-99.0],
       "standardize": true
     },
-    "writeTable": "clean_lcs"
+    "writeTable": "clean_lc_table"
   },
   "extractFeatures": {
     "skip": false,

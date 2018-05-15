@@ -20,7 +20,7 @@
       "filter": [-99.0],
       "standardize": true
     },
-    "writeTable": "clean_lcs"
+    "writeTable": "clean_lc_table"
   },
   "extractFeatures": {
     "skip": false,

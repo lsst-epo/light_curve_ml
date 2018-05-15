@@ -135,13 +135,12 @@ class K2Adapter(LcDataAdapter):
         pass
 
 
-def loadFlatLcDataset(params: dict, dbParams: dict, limit: float):
+def loadFlatLcDataset(params: dict, dbParams: dict, table: str, limit: float):
     """Loads and aggregates light curves from single csv file of individual data
     points storing results in a database."""
     dataPath = joinRoot(params["relativePath"])
     logger.info("Loading from: %s", dataPath)
     skiprows = params["skiprows"]
-    table = dbParams["raw_lc_table"]
     commitFrequency = dbParams["commitFrequency"]
 
     dataName = params["dataName"]
@@ -156,6 +155,7 @@ def loadFlatLcDataset(params: dict, dbParams: dict, limit: float):
         raise ValueError("Unsupported dataName: %s" % dataName)
 
     conn = connFromParams(dbParams)
+
     cursor = conn.cursor()
     reportTableCount(cursor, table, msg="before loading")
     insertOrReplaceQuery = INSERT_REPLACE_INTO_LCS % table

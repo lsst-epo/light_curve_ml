@@ -57,7 +57,8 @@ Some representative job files provided in this repo include:
 through all supervised stages. Useful for pipeline debugging and for integration
  testing.
 - `local/supervised/macho.json` - Full supervised learning pipeline for MACHO 
-dataset. Uses `feets` library for feature extraction & Random Forest classifier.
+dataset. Uses `feets` library for feature extraction and random forests for 
+classification.
 - `local/supervised/ogle3.json` - Ditto for OGLE3
 - `local/unsupervised/macho.json` - Unsupervised learning pipeline for MACHO 
 focused on Mini-batch KMeans and Agglomerative clustering

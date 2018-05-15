@@ -19,7 +19,7 @@
     "params": {
       "standardize": false
     },
-    "writeTable": "clean_lcs"
+    "writeTable": "clean_lc_table"
   },
   "extractFeatures": {
     "skip": false,

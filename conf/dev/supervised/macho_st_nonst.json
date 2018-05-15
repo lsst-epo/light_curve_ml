@@ -6,9 +6,7 @@
   "database": {
     "dbPath": "/data/db/macho/macho_processed.db",
     "clean_lc_table": "standardized_lcs",
-    "feature_table": "standard_lc_features",
-    "commitFrequency": 200,
-    "pageSize": 100
+    "feature_table": "standard_lc_features"
   },
   "loadData": {
     "skip": true,
@@ -24,7 +22,7 @@
       "filter": [-99.0],
       "standardize": true
     },
-    "writeTable": "clean_lcs"
+    "writeTable": "clean_lc_table"
   },
   "extractFeatures": {
     "skip": true,
