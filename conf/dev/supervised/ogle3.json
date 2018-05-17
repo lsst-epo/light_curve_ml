@@ -4,10 +4,14 @@
     "type": "supervised"
   },
   "database": {
-    "dbPath": "/data/db/ogle3/ogle3_processed.db"
+    "dbPath": "/data/db/ogle3/ogle3_processed.db",
+
+    "raw_lc_table": "raw_lcs",
+    "clean_lc_table": "std_clean_lcs",
+    "feature_table": "std_lc_features"
   },
   "loadData": {
-    "skip": true,
+    "skip": false,
     "params": {
       "dataName": "ogle3",
       "relativePath": "/data/datasets/ogle3/ogle3.csv"
@@ -15,9 +19,9 @@
     "writeTable": "raw_lc_table"
   },
   "preprocessData": {
-    "skip": true,
+    "skip": false,
     "params": {
-      "standardize": false
+      "standardize": true
     },
     "writeTable": "clean_lc_table"
   },
