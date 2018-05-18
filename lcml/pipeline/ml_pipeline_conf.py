@@ -106,10 +106,16 @@ def loadPipelineConf(conf: dict) -> MlPipelineConf:
         searchFcn = gridSearchCv
     else:
         raise ValueError("unsupported search function: %s" % searchType)
+
     searchParams = stgCnf["params"]
-    searchParams["model"] = (_makeInstance(stgCnf["model"]["class"],
-                                           stgCnf["model"]["params"])
-                             if "model" in stgCnf else None)
+    if "model" in stgCnf:
+        _params = stgCnf["model"]["params"]
+        _params["random_state"] = conf[GLOBAL_PARAMS]["randomState"]
+        searchParams["model"] = _makeInstance(stgCnf["model"]["class"],
+                                              _params)
+    else:
+        searchParams["model"] = None
+
     searchStage = _loadStage(conf[MODEL_SEARCH_STAGE], dbParams, searchFcn)
 
     # Stage: Pipeline result serialization

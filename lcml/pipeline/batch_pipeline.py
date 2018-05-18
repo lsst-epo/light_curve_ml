@@ -10,12 +10,15 @@ from abc import abstractmethod
 from datetime import timedelta
 import time
 
+from prettytable import PrettyTable
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 
 from lcml.pipeline.database.sqlite_db import (classLabelHistogram,
                                               ensureDbTables,
                                               selectFeaturesLabels)
 from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
+from lcml.pipeline.stage.extract import getFeatureSpace
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
 from lcml.utils.basic_logging import BasicLogging
@@ -100,6 +103,20 @@ class BatchPipeline:
 
         logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
         best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
+
+        bestimator = best.model
+        if isinstance(bestimator, RandomForestClassifier):
+            # connect feets features names with feature importances
+            feats = getFeatureSpace(self.extractStage.params).features_as_array_
+            namedImportances = list(zip(feats, bestimator.feature_importances_))
+            namedImportances.sort(key=lambda x: x[1], reverse=True)
+            t = PrettyTable(["rank", "feature name", "importance"])
+            t.align = "l"
+            for i, namedImports in enumerate(namedImportances):
+                t.add_row([i, namedImports[0],
+                           round(namedImports[1], self.globalParams["places"])])
+            logger.info("rf feat. importances: \n%s", str(t))
+
         testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
         if self.serStage.skip:
             logger.info("Skip serialization")

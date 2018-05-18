@@ -1,8 +1,9 @@
 {
   "__Default pipeline params__": null,
   "globalParams": {
-    "places": 3,
-    "trainSize": 0.80
+    "places": 5,
+    "trainSize": 0.80,
+    "randomState": 42
   },
   "database": {
     "raw_lc_table": "raw_lcs",

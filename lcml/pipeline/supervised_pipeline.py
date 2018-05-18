@@ -34,7 +34,8 @@ class SupervisedPipeline(BatchPipeline):
             start = time.time()
             params = self.searchStage.params
             result = self.searchStage.fcn(params["model"], XTrain, yTrain,
-                                          params["cv"], params["gridSearch"])
+                                          params["cv"], params["gridSearch"],
+                                          self.globalParams)
             logger.info("search completed in: %s",
                         timedelta(seconds=time.time() - start))
 

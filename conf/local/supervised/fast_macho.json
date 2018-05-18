@@ -24,7 +24,7 @@
     "writeTable": "clean_lc_table"
   },
   "extractFeatures": {
-    "skip": false,
+    "skip": true,
     "params": {
       "offset": 0,
       "excludedFeatures": []

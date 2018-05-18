@@ -1,8 +1,12 @@
 from lcml.pipeline.batch_pipeline import BatchPipeline
-from lcml.pipeline.ml_pipeline_conf import loadPipelineConf
+from lcml.pipeline.ml_pipeline_conf import GLOBAL_PARAMS, loadPipelineConf
 from lcml.pipeline.supervised_pipeline import SupervisedPipeline
 from lcml.pipeline.unsupervised_pipeline import UnsupervisedPipeline
 from lcml.utils.context_util import joinRoot, loadJson
+from lcml.utils.basic_logging import BasicLogging
+
+
+logger = BasicLogging.getLogger(__name__)
 
 
 _DEFAULT_PIPE_CONF_REL_PATH = "conf/common/pipeline.json"
@@ -32,7 +36,7 @@ def fromRelativePath(relPath: str) -> BatchPipeline:
     defaultConf = loadJson(joinRoot(_DEFAULT_PIPE_CONF_REL_PATH))
     relConf = loadJson(joinRoot(relPath))
     conf = recursiveMerge(defaultConf.copy(), relConf)
-
+    logger.info("Global params: %s", conf[GLOBAL_PARAMS])
     pipeConf = loadPipelineConf(conf)
     pipeType = pipeConf.globalParams["type"]
     if pipeType == "supervised":

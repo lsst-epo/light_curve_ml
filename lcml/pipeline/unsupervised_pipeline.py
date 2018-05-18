@@ -92,7 +92,10 @@ class UnsupervisedPipeline(BatchPipeline):
         components = ""
         varExpl = ""
         for stage in test:
-            model = stage.modelClass(n_components=stage.components)
+            kwargs = {"n_components": stage.components}
+            if stage.modelClass is PCA:
+                kwargs["random_state"] = self.globalParams["randomState"]
+            model = stage.modelClass(**kwargs)
             XReduced = model.fit_transform(XReduced, y)
             varExpl += str(round(sum(model.explained_variance_ratio_),
                                      self.places)) + "_"

@@ -53,6 +53,11 @@ def feetsJobGenerator(fs: FeatureSpace, dbParams: dict, tableName: str,
     conn.close()
 
 
+def getFeatureSpace(params: dict) -> FeatureSpace:
+    return FeatureSpace(data=STANDARD_INPUT_DATA_TYPES,
+                        exclude=params["excludedFeatures"])
+
+
 def feetsExtractFeatures(extractParams: dict, dbParams: dict, lcTable: str,
                          featuresTable: str, limit: int):
     """Runs light curves through 'feets' library obtaining feature vectors.
@@ -69,9 +74,8 @@ def feetsExtractFeatures(extractParams: dict, dbParams: dict, lcTable: str,
     """
     # recommended excludes (slow): "CAR_mean", "CAR_sigma", "CAR_tau"
     # also produces nan's: "ls_fap"
-    exclude = extractParams["excludedFeatures"]
-    fs = FeatureSpace(data=STANDARD_INPUT_DATA_TYPES, exclude=exclude)
-    logger.info("Excluded features: %s", exclude)
+    logger.info("Excluded features: %s", extractParams["excludedFeatures"])
+    fs = getFeatureSpace(extractParams)
 
     ciFreq = dbParams["commitFrequency"]
     conn = connFromParams(dbParams)

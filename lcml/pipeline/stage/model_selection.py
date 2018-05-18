@@ -49,16 +49,18 @@ def reportParamGrid(paramGrid: dict):
 
 
 def gridSearchCv(estimator, X, y, cvParams: dict,
-                 gridSearchParams: dict) -> ModelSelectionResult:
+                 gridSearchParams: dict,
+                 globalParams: dict) -> ModelSelectionResult:
     reportParamGrid(gridSearchParams["param_grid"])
+    randomStage = globalParams["randomState"]
     cv = RepeatedStratifiedKFold(**cvParams)
     clf = GridSearchCV(estimator=estimator, cv=cv, refit=True,
                        **gridSearchParams)
     clf.fit(X, y)
-
-    yHat = clf.best_estimator_.predict(X)
+    bestimator = clf.best_estimator_
+    yHat = bestimator.predict(X)
     metrics = defaultClassificationMetrics(y, yHat)
-    return ModelSelectionResult(clf.best_estimator_, clf.best_params_, metrics)
+    return ModelSelectionResult(bestimator, clf.best_params_, metrics)
 
 
 _REPORT_COLS = ["Hyperparameters", "F1 micro", "F1 macro", "F1 weighted",
