@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 from collections import Counter
+import logging
 import os
 import re
 
 import numpy as np
 
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import absoluteFilePaths, joinRoot
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 #: Source: MACHO Tap server (http://machotap.asvo.nci.org.au/ncitap/tap),

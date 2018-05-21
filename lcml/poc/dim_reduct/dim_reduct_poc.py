@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import time
 
 import matplotlib.pyplot as plt
@@ -8,12 +9,12 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.database.sqlite_db import selectFeaturesLabels
-from lcml.utils.basic_logging import BasicLogging
+from lcml.utils.logging_manager import LoggingManager
 from lcml.utils.context_util import jsonConfig
 
 
-BasicLogging.initLogging()
-logger = BasicLogging.getLogger(__name__)
+LoggingManager.initLogging()
+logger = logging.getLogger(__name__)
 
 
 def testIris():

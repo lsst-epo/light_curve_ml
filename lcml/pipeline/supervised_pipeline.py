@@ -1,4 +1,5 @@
 from datetime import timedelta
+import logging
 import os
 import time
 
@@ -10,10 +11,9 @@ from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  reportModelSelection)
 from lcml.pipeline.stage.persistence import loadModelAndHyperparms
 from lcml.pipeline.stage.visualization import plotConfusionMatrix
-from lcml.utils.basic_logging import BasicLogging
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SupervisedPipeline(BatchPipeline):

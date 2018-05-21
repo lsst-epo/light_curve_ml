@@ -26,8 +26,7 @@
     "skip": false,
     "params": {
       "offset": 0,
-      "excludedFeatures": [],
-      "standardize": false
+      "excludedFeatures": []
     },
     "writeTable": "feature_table"
   },
@@ -53,13 +52,8 @@
       "gridSearch": {
         "param_grid": {
           "n_estimators": [
-            50,
             100,
-            250,
-            900,
-            1000,
-            1100,
-            1200
+            200
           ],
           "criterion": [
             "gini",

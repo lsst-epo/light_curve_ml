@@ -1,14 +1,13 @@
 import itertools
+import logging
 import os
 
 import matplotlib.pyplot as plt
 from matplotlib.font_manager import FontProperties
 import numpy as np
 
-from lcml.utils.basic_logging import BasicLogging
 
-
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def normalizeConfusionMatrix(matrix):

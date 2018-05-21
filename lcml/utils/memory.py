@@ -1,11 +1,10 @@
+import logging
 import os
 
 from psutil import Process
 
-from lcml.utils.basic_logging import BasicLogging
 
-
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 _BYTES_IN_GB = 10e9
@@ -27,8 +26,3 @@ def reportProcessMemoryUsage():
     _rssGb = mi.rss / _BYTES_IN_GB
     _vmsGb = mi.vms / _BYTES_IN_GB
     logger.info("ram %.2f GB vm: %.2f GB", _rssGb, _vmsGb)
-
-
-if __name__ == "__main__":
-    BasicLogging.initLogging()
-    reportProcessMemoryUsage()

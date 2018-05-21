@@ -9,11 +9,10 @@ from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_LCS,
                                               connFromParams,
                                               reportTableCount)
 from lcml.pipeline.database.serialization import serLc
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class LcDataAdapter:

@@ -1,7 +1,7 @@
+import logging
 from sqlite3 import OperationalError
 
 from feets import FeatureSpace
-
 
 from lcml.pipeline.database import STANDARD_INPUT_DATA_TYPES
 from lcml.pipeline.database.serialization import deserLc, serArray
@@ -9,11 +9,10 @@ from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_FEATURES,
                                               SINGLE_COL_PAGED_SELECT_QRY,
                                               connFromParams,
                                               reportTableCount)
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.multiprocess import feetsExtract, reportingImapUnordered
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def feetsJobGenerator(fs: FeatureSpace, dbParams: dict, tableName: str,

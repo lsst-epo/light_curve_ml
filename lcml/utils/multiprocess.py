@@ -1,10 +1,9 @@
+import logging
 from multiprocessing import cpu_count, Pool
 from typing import Iterable
 
-from lcml.utils.basic_logging import BasicLogging
 
-
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def reportingImapUnordered(func,

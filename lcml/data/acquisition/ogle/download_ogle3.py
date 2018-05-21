@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 import argparse
+import logging
+import os
 import tarfile
 import time
-import os
 
 from feets.datasets.ogle3 import load_OGLE3_catalog, fetch_OGLE3
 import requests
 
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.error_handling import retry
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 SUFFICIENT_LENGTH = 60

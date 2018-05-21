@@ -1,12 +1,11 @@
 from datetime import datetime
+import logging
 from typing import Union
 
 from astropy.time import Time
 
-from lcml.utils.basic_logging import BasicLogging
 
-
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def toDatetime(time: int, fmt: str="mjd", scale: str="tt") -> Union[datetime,

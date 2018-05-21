@@ -1,6 +1,7 @@
 from collections import namedtuple
 from datetime import timedelta
 from functools import reduce
+import logging
 import operator
 import time
 from typing import Generator
@@ -11,12 +12,11 @@ from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 from sklearn.model_selection import (cross_validate, GridSearchCV,
                                      RepeatedStratifiedKFold)
 
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import attachLabels
 from lcml.utils.format_util import truncatedFloat
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 ModelSelectionResult = namedtuple("ModelSelectionResult",

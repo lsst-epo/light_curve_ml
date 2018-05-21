@@ -1,3 +1,4 @@
+import logging
 from typing import List, Union
 
 import numpy as np
@@ -5,11 +6,10 @@ import sqlite3
 from sqlite3 import Connection, Cursor
 
 from lcml.pipeline.database.serialization import deserArray
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 #: CREATE TABLE for light curve time series table

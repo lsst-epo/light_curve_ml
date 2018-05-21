@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import platform
 import sys
@@ -10,10 +11,9 @@ from sklearn.externals import joblib
 
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
-from lcml.utils.basic_logging import BasicLogging
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 META_ARCH_BITS = "archBits"

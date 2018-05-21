@@ -69,11 +69,13 @@ datasets including MACHO, OGLE3, Catalina, and Gaia
 - `lcml.poc` - One-off proof-of-concept scripts for various libaries
 
 # Logging Config
-The `BasicLogging` class allows for convenient customization of Python Logger 
-objects. Logging config is specified `conf/common/logging.json`. Here global 
-and/or per-module logging settings may be declared. Main modules should 
-initialize the config by invoking `BasicLogging.initLogging` at the start of 
-execution. Module-level Logger objects using the specified Logging config can 
-then be obtained thusly:
+The `LoggingManager` class allows for convenient customization of Python Logger 
+objects. The default Logging config is specified `conf/common/logging.json`. 
+This config should contain the following main keys:
+- `basicConfig` - values passed to `logging.basicConfig`
+- `handlers` - handler definitions with a `type` attribute, which may be 
+ either `stream` or `file`
+- `modules` - list of module specific logger level settings
 
-`logger = BasicLogging.getLogger(__name__)`
+Main modules should initialize the manager by invoking `LoggingManager.initLogging` 
+at the start of execution before logger objects have been created.

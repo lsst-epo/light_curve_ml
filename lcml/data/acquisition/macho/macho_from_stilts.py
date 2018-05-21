@@ -9,11 +9,10 @@ import time
 
 from prettytable import PrettyTable
 
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def genList(start, end):

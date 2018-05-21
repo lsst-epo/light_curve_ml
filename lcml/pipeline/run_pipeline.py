@@ -2,19 +2,13 @@
 """Main entry point for running lcml ML pipeline. Expects paths to pipeline conf
 file and log file."""
 import argparse
+import logging
 
 import matplotlib
 matplotlib.use("Agg")
 import numpy as np
 
-np.warnings.filterwarnings("ignore")
-from lcml.pipeline import fromRelativePath
-np.warnings.resetwarnings()
-
-from lcml.utils.basic_logging import BasicLogging
-
-
-logger = BasicLogging.getLogger(__name__)
+from lcml.utils.logging_manager import LoggingManager
 
 
 def _pipelineArgs():
@@ -28,7 +22,14 @@ def _pipelineArgs():
 
 def main():
     args = _pipelineArgs()
-    BasicLogging.initLogging(fileName=args.logFileName)
+    LoggingManager.initLogging(fileName=args.logFileName)
+    logger = logging.getLogger(__name__)
+
+    # N.B. importing here ensures no logger objects are created before the call
+    # to `LoggingManager.initLogging`
+    np.warnings.filterwarnings("ignore")
+    from lcml.pipeline import fromRelativePath
+    np.warnings.resetwarnings()
     pipe = fromRelativePath(args.path)
     try:
         pipe.runPipe()

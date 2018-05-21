@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 
 from feets import preprocess
@@ -8,10 +9,11 @@ from lcml.pipeline.database.sqlite_db import (INSERT_REPLACE_INTO_LCS,
                                               reportTableCount,
                                               singleColPagingItr, tableCount)
 from lcml.pipeline.database.serialization import deserLc, serLc
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import fmtPct
 
-logger = BasicLogging.getLogger(__name__)
+
+logger = logging.getLogger(__name__)
+
 
 #: Additional attribute for light curve Bunch data structure specifying the
 #: number of bogus values removed from original data

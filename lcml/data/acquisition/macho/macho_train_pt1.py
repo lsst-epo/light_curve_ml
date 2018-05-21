@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Obtains _labeled_ MACHO lightcurves using STILTS command-line tool."""
 from collections import defaultdict
+import logging
 import os
 import subprocess
 from subprocess import CalledProcessError
@@ -9,11 +10,10 @@ import numpy as np
 from prettytable import PrettyTable
 
 from lcml.data.acquisition.macho.macho_from_stilts import tapCommandBase
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.context_util import joinRoot
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def genList(start, end):

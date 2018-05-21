@@ -1,14 +1,23 @@
 {
   "active": true,
   "tz": "US/Pacific",
-  "consoleLevel": "info",
-  "basicParams": {
+  "basicConfig": {
     "level": "info",
     "format": "default",
-    "datefmt": "%Y.%m.%d %H:%M:%S",
-    "filename": "main.log",
-    "filemode": "a"
+    "datefmt": "%Y.%m.%d %H:%M:%S"
   },
+  "handlers": [
+    {
+      "type": "stream",
+      "level": "info"
+    },
+    {
+      "type": "file",
+      "level": "info",
+      "filename": "main.log",
+      "mode": "a"
+    }
+  ],
   "modules": [
     {
       "module": "lcml.pipeline.standard.standard_ml_pipeline",

@@ -8,6 +8,7 @@ https://sebastianraschka.com/faq/docs/evaluate-a-model.html
 """
 from abc import abstractmethod
 from datetime import timedelta
+import logging
 import time
 
 from prettytable import PrettyTable
@@ -21,11 +22,10 @@ from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
 from lcml.pipeline.stage.extract import getFeatureSpace
 from lcml.pipeline.stage.model_selection import (ClassificationMetrics,
                                                  ModelSelectionResult)
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.dataset_util import convertClassLabels, reportClassHistogram
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BatchPipeline:

@@ -1,6 +1,7 @@
 # N.B. sklearn KMeans consumes all memory and crashes python
 from collections import namedtuple
 from datetime import timedelta
+import logging
 import time
 from typing import Dict, List
 
@@ -14,7 +15,6 @@ from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
-from lcml.utils.basic_logging import BasicLogging
 from lcml.utils.format_util import truncatedFloat
 from lcml.utils.memory import reportProcessMemoryUsage
 from lcml.utils.unsupervised_metrics import (EXTERNAL_METRICS, INTERNAL_METRICS,
@@ -22,7 +22,7 @@ from lcml.utils.unsupervised_metrics import (EXTERNAL_METRICS, INTERNAL_METRICS,
                                              computeInternalMetrics)
 
 
-logger = BasicLogging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 KMEANS_NAME = "mini-batch k-means"
