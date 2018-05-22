@@ -45,9 +45,10 @@ class UnsupervisedPipeline(BatchPipeline):
     def __init__(self, conf: MlPipelineConf):
         BatchPipeline.__init__(self, conf)
         self.searchParams = self.searchStage.params
-        agglomKwargs = self.searchParams["agglomerativeArgs"]
-        agglomKwargs["memory"] = Memory(cachedir=agglomKwargs["memory"])
-        self.linkages = agglomKwargs.pop("linkages", DEFAULT_LINKAGES)
+        self.agglomKwargs = deepcopy(self.searchParams["agglomerativeArgs"])
+        self.agglomKwargs["memory"] = Memory(
+            cachedir=self.agglomKwargs["memory"])
+        self.linkages = self.agglomKwargs.pop("linkages", DEFAULT_LINKAGES)
         self.clusterModels = list(self.linkages) + [KMEANS_NAME]
         self.places = self.globalParams["places"]
 
@@ -84,10 +85,10 @@ class UnsupervisedPipeline(BatchPipeline):
         hyper = {colName: bestRow[i]
                  for i, colName in enumerate(_INITIAL_TABLE_COLUMNS)}
         if bestRow[ind - 1] == KMEANS_NAME:
-            _algParams = deepcopy(self.searchParams["miniBatchKMeansArgs"])
+            _algParams = self.searchParams["miniBatchKMeansArgs"]
         else:
-            _algParams = deepcopy(self.searchParams["agglomerativeArgs"])
-        _algParams.pop("memory", None)
+            _algParams = self.searchParams["agglomerativeArgs"]
+
         hyper.update(_algParams)
         metricNames = EXTERNAL_METRICS + INTERNAL_METRICS
         metricVaues = bestRow[len(_INITIAL_TABLE_COLUMNS):]
@@ -147,7 +148,6 @@ class UnsupervisedPipeline(BatchPipeline):
         external and internal metrics"""
         clusters = self.searchParams["clusterValues"]
         kMeansKwargs = self.searchParams["miniBatchKMeansArgs"]
-        aggKwargs = self.searchParams["agglomerativeArgs"]
         allScores = {k: list() for k in self.clusterModels}
         for c in clusters:
             logger.info("clusters: %s", c)
@@ -159,7 +159,8 @@ class UnsupervisedPipeline(BatchPipeline):
             for aggName, linkage in self.linkages.items():
                 affinity = "euclidean" if linkage == "ward" else "manhattan"
                 model = AgglomerativeClustering(n_clusters=c, linkage=linkage,
-                                                affinity=affinity, **aggKwargs)
+                                                affinity=affinity,
+                                                **self.agglomKwargs)
                 self._evalClustering(model, labels, features,
                                      allScores[aggName], aggName)
                 del model
