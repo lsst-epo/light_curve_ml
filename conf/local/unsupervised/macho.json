@@ -3,7 +3,7 @@
   "globalParams": {
     "type": "unsupervised",
     "trainSize": 1.0,
-    "dataLimit": 50
+    "dataLimit": 20
   },
   "database": {
     "dbPath": "data/macho/macho_processed.db"
@@ -41,9 +41,9 @@
     "function": "grid",
     "params": {
       "componentsStart": 5,
-      "componentsStop": 7,
+      "componentsStop": 6,
       "componentsStep": 1,
-      "clusterValues": [10],
+      "clusterValues": [5],
       "miniBatchKMeansArgs": {
         "init": "k-means++",
         "max_iter": 1000,

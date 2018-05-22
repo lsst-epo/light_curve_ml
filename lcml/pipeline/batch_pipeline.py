@@ -102,9 +102,9 @@ class BatchPipeline:
                 intLabels, train_size=trainSize, test_size=1 - trainSize)
 
         logger.info("train size: %s test size: %s", len(XTrain), len(XTest))
-        best = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
+        bestRes = self.modelSelectionPhase(XTrain, yTrain, labelMapping)
 
-        bestimator = best.model
+        bestimator = bestRes.model
         if isinstance(bestimator, RandomForestClassifier):
             # connect feets features names with feature importances
             feats = getFeatureSpace(self.extractStage.params).features_as_array_
@@ -117,12 +117,12 @@ class BatchPipeline:
                            round(namedImports[1], self.globalParams["places"])])
             logger.info("rf feat. importances: \n%s", str(t))
 
-        testMetrics = self.evaluateTestSet(best, XTest, yTest, labelMapping)
+        testMetrics = self.evaluateTestSet(bestRes, XTest, yTest, labelMapping)
         if self.serStage.skip:
             logger.info("Skip serialization")
         else:
             logger.info("Serializing pipeline results")
-            self.serStage.fcn(self.conf, labelMapping, best, testMetrics)
+            self.serStage.fcn(self.conf, labelMapping, bestRes, testMetrics)
 
         elapsedMins = timedelta(seconds=time.time() - startAll)
         logger.info("Pipeline completed in: %s", elapsedMins)

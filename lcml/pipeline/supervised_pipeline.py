@@ -42,13 +42,13 @@ class SupervisedPipeline(BatchPipeline):
             roundPlaces = self.globalParams["places"]
             reportModelSelection([result.hyperparameters], [result.metrics],
                                  intToStrLabel, roundPlaces,
-                                 title="Best result")
+                                 title="Best train result")
 
-        imgPath = self.serStage.params["imgPath"]
+        matSavePath = os.path.join(self.serStage.params["imgPath"],
+                                   "train-set-confusion-matrix.png")
         classLabels = [intToStrLabel[i] for i in sorted(intToStrLabel)]
-        matSavePath = os.path.join(imgPath, "train-set-confusion-matrix.png")
         plotConfusionMatrix(result.metrics.confusionMatrix, classLabels,
-                            matSavePath, title="Best-model CV confusion matrix")
+                            matSavePath, title="Train-set confusion matrix")
         return result
 
     def evaluateTestSet(self, modelResult, XTest, yTest, intToStrLabels) -> (
@@ -56,14 +56,13 @@ class SupervisedPipeline(BatchPipeline):
         logger.info("Evaluating model on test set...")
         yHat = modelResult.model.predict(XTest)
         metrics = defaultClassificationMetrics(yTest, yHat)
+        reportModelSelection([modelResult.hyperparameters], [metrics],
+                             intToStrLabels,
+                             title="Test-set result")
 
-        imgPath = self.serStage.params["imgPath"]
-        matSavePath = os.path.join(imgPath, "test-set-confusion-matrix.png")
+        matSavePath = os.path.join(self.serStage.params["imgPath"],
+                                   "test-set-confusion-matrix.png")
         classLabels = [intToStrLabels[i] for i in sorted(intToStrLabels)]
         plotConfusionMatrix(metrics.confusionMatrix, classLabels,
                             matSavePath, title="Test-set confusion matrix")
-
-        reportModelSelection([modelResult.hyperparameters], [metrics],
-                             intToStrLabels,
-                             title="Test set performance")
         return metrics

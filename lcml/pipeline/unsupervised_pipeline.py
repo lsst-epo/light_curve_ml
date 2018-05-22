@@ -1,5 +1,6 @@
 # N.B. sklearn KMeans consumes all memory and crashes python
 from collections import namedtuple
+from copy import deepcopy
 from datetime import timedelta
 import logging
 import time
@@ -15,6 +16,7 @@ from sklearn.preprocessing import StandardScaler
 
 from lcml.pipeline.batch_pipeline import BatchPipeline
 from lcml.pipeline.ml_pipeline_conf import MlPipelineConf
+from lcml.pipeline.stage.model_selection import ModelSelectionResult
 from lcml.utils.format_util import truncatedFloat
 from lcml.utils.memory import reportProcessMemoryUsage
 from lcml.utils.unsupervised_metrics import (EXTERNAL_METRICS, INTERNAL_METRICS,
@@ -67,6 +69,31 @@ class UnsupervisedPipeline(BatchPipeline):
 
         self._reportAllResults(testResults)
         self._reportBestMetrics(testResults)
+
+        # find the model with the best adjustedMutualInformation and return
+        bestRow = None
+        bestScore = 0.0
+
+        # hard code selection to be based off of ami's ind
+        ind = len(_INITIAL_TABLE_COLUMNS)
+        for i, r in enumerate(testResults):
+            if float(r[ind]) > bestScore:
+                bestScore = float(r[ind])
+                bestRow = r
+
+        hyper = {colName: bestRow[i]
+                 for i, colName in enumerate(_INITIAL_TABLE_COLUMNS)}
+        if bestRow[ind - 1] == KMEANS_NAME:
+            _algParams = deepcopy(self.searchParams["miniBatchKMeansArgs"])
+        else:
+            _algParams = deepcopy(self.searchParams["agglomerativeArgs"])
+        _algParams.pop("memory", None)
+        hyper.update(_algParams)
+        metricNames = EXTERNAL_METRICS + INTERNAL_METRICS
+        metricVaues = bestRow[len(_INITIAL_TABLE_COLUMNS):]
+        metrics = {name: metricVaues[i] for i, name in enumerate(metricNames)}
+        return ModelSelectionResult(model=None, hyperparameters=hyper,
+                                    metrics=metrics)
 
     @staticmethod
     def _pcaLdaTests(start: int, stop: int, step: int, reverse: bool=False):
@@ -200,4 +227,4 @@ class UnsupervisedPipeline(BatchPipeline):
         return [metricName, maxVal] + rows[maxInd][:5]
 
     def evaluateTestSet(self, model, featuresTest, labelsTest, classLabels):
-        pass
+        return None

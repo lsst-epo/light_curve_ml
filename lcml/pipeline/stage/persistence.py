@@ -40,8 +40,9 @@ def serPipelineResults(conf, classMapping: dict,
     if not path or not result:
         return
 
-    joblib.dump(result.model, path)
-    logger.info("Saved model to: %s", path)
+    if result.model:
+        joblib.dump(result.model, path)
+        logger.info("Saved model to: %s", path)
 
     archBits = platform.architecture()[0]
     mainFile = sys.modules["__main__"].__file__
@@ -64,9 +65,13 @@ def serPipelineResults(conf, classMapping: dict,
     logger.info("Saved metadata to: %s", metadataPath)
 
 
-def _metricsToDict(metrics: ClassificationMetrics) -> dict:
+def _metricsToDict(metrics: Union[ClassificationMetrics, dict]) -> dict:
+    if metrics is None:
+        return dict()
+    if isinstance(metrics, ClassificationMetrics):
+        metrics = vars(metrics)
     return {k: v.tolist() if type(v) is np.ndarray else v
-            for k, v in vars(metrics).items()}
+            for k, v in metrics.items()}
 
 
 def loadModelAndHyperparms(modelPath) -> Tuple[Union[object, None],
