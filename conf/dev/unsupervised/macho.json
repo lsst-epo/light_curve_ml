@@ -41,9 +41,8 @@
       "componentsStart": 3,
       "componentsStop": 20,
       "componentsStep": 1,
+      "reduceSingleStep": true,
       "clusterValues": [
-        10,
-        11,
         12
       ],
       "miniBatchKMeansArgs": {

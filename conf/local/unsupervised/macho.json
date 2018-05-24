@@ -43,7 +43,10 @@
       "componentsStart": 5,
       "componentsStop": 6,
       "componentsStep": 1,
-      "clusterValues": [5],
+      "reduceSingleStep": true,
+      "clusterValues": [
+        12
+      ],
       "miniBatchKMeansArgs": {
         "init": "k-means++",
         "max_iter": 1000,

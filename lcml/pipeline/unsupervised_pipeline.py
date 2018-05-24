@@ -60,13 +60,21 @@ class UnsupervisedPipeline(BatchPipeline):
                              self.searchParams["componentsStop"],
                              self.searchParams["componentsStep"])
         testResults = list()
-        tests = [[reduceStage(c, "pca", PCA)] for c in range(start, stop, step)]
-        tests += [[reduceStage(c, "lda", LDA)] for c in range(start, stop,step)]
-        tests += self._pcaLdaTests(start, stop, step)
-        tests += self._pcaLdaTests(start, stop, step, reverse=True)
+        tests = list()
+        if self.searchParams["reduceSingleStep"]:
+            tests += [[reduceStage(c, "pca", PCA)]
+                      for c in range(start, stop, step)]
+            tests += [[reduceStage(c, "lda", LDA)]
+                      for c in range(start, stop,step)]
+        else:
+            tests += self._pcaLdaTests(start, stop, step)
+            tests += self._pcaLdaTests(start, stop, step, reverse=True)
         for i, test in enumerate(tests):
             logger.info("\nrunning test: %s / %s", i + 1, len(tests))
-            self._runDimReduct(X_normed, y, test, testResults)
+            try:
+                self._runDimReduct(X_normed, y, test, testResults)
+            except BaseException:
+                logger.exception("Test Failed!")
 
         self._reportAllResults(testResults)
         self._reportBestMetrics(testResults)

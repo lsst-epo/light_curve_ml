@@ -43,6 +43,19 @@ def reportDownloaded():
 @retry(timeoutSec=120, initialRetryDelaySec=1, maxRetryDelaySec=100,
        retryExceptions=(requests.RequestException,))
 def fetchOgle3(vid):
+    """
+    This `fetch_OGLE3` code essentially performs an HTTP GET on
+    'http://ogledb.astrouw.edu.pl/~ogle/CVS/sendobj.php?starcat={}' where {} is
+    a filename like 'OGLE-BLG-LPV-119585.tar'. Note that the tar file names are
+    important. They are of the form 'OGLE-[field]-[category]-[ogle3-id].tar'.
+    The field in the Magellanic Clouds and Galactic bulge is labeled either
+    'BLG', 'LMC', 'SMC'. The categories are: ACEP, CEP, T2CEP, DSCT, LPV, DPV,
+    RCB, RRLYR.
+    feets provides an OGLE-3 catalog file containing a host of ids.
+
+    :param vid:
+    :return:
+    """
     result = None
     try:
         result = fetch_OGLE3(vid)
