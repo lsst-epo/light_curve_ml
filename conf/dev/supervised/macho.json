@@ -68,8 +68,8 @@
   "serialization": {
     "params": {
       "modelLoadPath": null,
-      "modelSavePath": "/data/models/macho/supervised/rf-classifier-macho-train-standard-nonstandard.pkl",
-      "imgPath": "/data/models/macho/supervised"
+      "modelSavePath": "/data/models/macho/supervised/baseline/rf-classifier.pkl",
+      "imgPath": "/data/models/macho/supervised/baseline"
     }
   }
 }
