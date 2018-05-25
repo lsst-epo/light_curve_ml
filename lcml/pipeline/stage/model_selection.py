@@ -49,8 +49,7 @@ def reportParamGrid(paramGrid: dict):
 
 
 def gridSearchCv(estimator, X, y, cvParams: dict,
-                 gridSearchParams: dict,
-                 globalParams: dict) -> ModelSelectionResult:
+                 gridSearchParams: dict) -> ModelSelectionResult:
     reportParamGrid(gridSearchParams["param_grid"])
     cv = RepeatedStratifiedKFold(**cvParams)
     clf = GridSearchCV(estimator=estimator, cv=cv, refit=True,
