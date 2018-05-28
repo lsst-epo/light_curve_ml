@@ -34,6 +34,7 @@
   "postprocessFeatures": {
     "skip": false,
     "params": {
+      "impute": true,
       "standardize": true
     }
   },

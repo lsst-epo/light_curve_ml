@@ -32,8 +32,9 @@
     "writeTable": "feature_table"
   },
   "postprocessFeatures": {
-    "skip": true,
+    "skip": false,
     "params": {
+      "impute": true,
       "standardize": false
     }
   },
